@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rps_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rps
+      POSTGRES_USER: rps_dev
+      POSTGRES_PASSWORD: rps_dev_password
+      TZ: Asia/Kolkata
+    ports:
+      - "5433:5432"
+    volumes:
+      - rps_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rps_dev -d rps"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer:latest
+    container_name: rps_adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  rps_pgdata:
