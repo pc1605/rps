@@ -37,7 +37,7 @@ func Load() (*Config, error) {
 		JWTAccessSecret:  mustEnv("JWT_ACCESS_SECRET"),
 		JWTRefreshSecret: mustEnv("JWT_REFRESH_SECRET"),
 		QRHashSecret:     getEnv("QR_HASH_SECRET", ""),
-		CORSOrigins:      strings.Split(getEnv("CORS_ORIGINS", "http://localhost:3001"), ","),
+		CORSOrigins:      strings.Split(getEnv("CORS_ORIGINS", "http://localhost:3000"), ","),
 	}
 
 	accessMin, _ := strconv.Atoi(getEnv("JWT_ACCESS_TTL_MINUTES", "15"))

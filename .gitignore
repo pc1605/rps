@@ -1,3 +1,81 @@
+# ───────────────────────── Secrets / env ─────────────────────────
 .env
+.env.local
+.env.*.local
+*.local
+
+# Keep example templates tracked
+!.env.example
+
+# ───────────────────────── Node / pnpm ─────────────────────────
 node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ───────────────────────── Next.js ─────────────────────────
+.next/
+out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# ───────────────────────── Go ─────────────────────────
+# Compiled binaries
+apps/backend/server
+apps/backend/seed
+apps/backend/bin/
+*.exe
+*.test
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# ───────────────────────── Expo / React Native (Week 3) ─────────────────────────
+.expo/
+.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# ───────────────────────── Editor / OS ─────────────────────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
 .DS_Store
+Thumbs.db
+*~
+
+# ───────────────────────── Logs / temp ─────────────────────────
+*.log
+logs/
+tmp/
+temp/
+.cache/
+*.tar.gz
+*.zip
+*.tgz
+*.7z
+
+# ───────────────────────── Test / coverage ─────────────────────────
+coverage/
+*.lcov
+.nyc_output/
+
+# ───────────────────────── Docker ─────────────────────────
+# (volumes are managed by Docker, not in repo — nothing to ignore,
+#  but local override files shouldn't be committed)
+docker-compose.override.yml
