@@ -6,6 +6,7 @@
 CREATE TYPE batch_phase  AS ENUM ('cutting', 'stitching', 'packing', 'completed');
 CREATE TYPE batch_status AS ENUM ('pending', 'in_progress', 'completed', 'cancelled');
 CREATE TYPE unit_status  AS ENUM ('pending', 'packed', 'defective', 'dispatched');
+CREATE TYPE car_size AS ENUM ('small', 'medium', 'large');
 
 -- ───── car_brands ─────
 CREATE TABLE car_brands (
@@ -19,6 +20,7 @@ CREATE TABLE car_models (
   id              SERIAL PRIMARY KEY,
   brand_id        INT NOT NULL REFERENCES car_brands(id),
   name            TEXT NOT NULL CHECK (char_length(name) > 0),
+  size_class      car_size NOT NULL DEFAULT 'medium',
   pieces_per_set  INT NOT NULL DEFAULT 5 CHECK (pieces_per_set > 0),
   piece_groups    INT NOT NULL DEFAULT 2 CHECK (piece_groups > 0),
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
