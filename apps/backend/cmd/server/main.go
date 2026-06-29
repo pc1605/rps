@@ -14,9 +14,11 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/pc1605/rps/apps/backend/internal/auth"
+	"github.com/pc1605/rps/apps/backend/internal/batch"
 	"github.com/pc1605/rps/apps/backend/internal/config"
 	"github.com/pc1605/rps/apps/backend/internal/db"
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
+	"github.com/pc1605/rps/apps/backend/internal/reference"
 )
 
 func main() {
@@ -38,19 +40,21 @@ func main() {
 
 	// ───── Services (dependency wiring) ─────
 	authSvc := auth.NewService(pool, cfg.JWTAccessSecret, cfg.JWTRefreshSecret, cfg.JWTAccessTTL, cfg.JWTRefreshTTL)
-	// batchSvc := batch.NewService(pool)   ← week 2
-	// stockSvc := stock.NewService(pool)   ← week 5
-
+	batchSvc := batch.NewService(pool)
+	refSvc := reference.NewService(pool)
+	
+	
 	// ───── HTTP app ─────
 	app := newApp(cfg)
-
+	
 	// ───── Routes ─────
 	api := app.Group("/api/v1")
 	api.Use(authSvc.Guard()) // default-deny: everything under /api/v1 requires auth
-	                         // unless listed in auth.PublicPaths or under /public/
-
+	// unless listed in auth.PublicPaths or under /public/
+	
 	auth.RegisterRoutes(api, authSvc)
-	// batch.RegisterRoutes(api, batchSvc, authSvc)   ← week 2
+	batch.RegisterRoutes(api, batchSvc, authSvc)
+	reference.RegisterRoutes(api, refSvc)
 	// stock.RegisterRoutes(api, stockSvc, authSvc)   ← week 5
 
 	// ───── Lifecycle ─────
