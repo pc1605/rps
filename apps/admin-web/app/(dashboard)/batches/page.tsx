@@ -3,17 +3,17 @@ import { CreateBatchDialog } from "@/features/batches/components/create-batch-di
 
 export default function BatchesPage() {
   return (
-    <>
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-extrabold">Batches</h2>
-          <p className="text-zinc-400 text-sm mt-1">
+          <h1 className="text-3xl font-bold tracking-tight">Batches</h1>
+          <p className="text-muted-foreground mt-1">
             Production orders across all phases.
           </p>
         </div>
         <CreateBatchDialog />
       </div>
       <BatchList />
-    </>
+    </div>
   );
 }

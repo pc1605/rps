@@ -5,12 +5,13 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Scissors, Shirt, Package, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const phaseStyle: Record<string, string> = {
-  cutting: "text-cyan-600 dark:text-cyan-400",
-  stitching: "text-pink-600 dark:text-pink-400",
-  packing: "text-amber-600 dark:text-amber-400",
-  completed: "text-lime-600 dark:text-lime-400",
+  cutting: "text-cyan-600 dark:text-cyan-400 border-cyan-500/30",
+  stitching: "text-pink-600 dark:text-pink-400 border-pink-500/30",
+  packing: "text-amber-600 dark:text-amber-400 border-amber-500/30",
+  completed: "text-lime-600 dark:text-lime-400 border-lime-500/30",
 };
 
 export default function DashboardPage() {
@@ -101,25 +102,28 @@ export default function DashboardPage() {
           <div className="grid gap-2">
             {recent.map((b) => (
               <Link key={b.id} href={`/batches/${b.id}`}>
-                <Card className="p-4 flex items-center justify-between hover:bg-accent transition-colors">
-                  <div className="flex items-center gap-4">
-                    <span className="font-mono text-sm text-amber-600 dark:text-amber-400">
+                <Card className="flex items-center justify-between px-4 py-3 hover:bg-accent transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="font-mono text-sm text-amber-600 dark:text-amber-400 shrink-0">
                       {b.batch_code}
                     </span>
-                    <span className="font-medium">
+                    <span className="font-medium truncate">
                       {b.brand_name} {b.model_name}
                     </span>
-                    <span className="text-xs text-muted-foreground font-mono uppercase">
+                    <span className="font-mono text-[10px] uppercase text-muted-foreground shrink-0">
                       {b.size_class}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-muted-foreground tabular-nums">
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="font-mono text-xs text-muted-foreground tabular-nums">
                       {b.units_packed}/{b.units_total}
                     </span>
                     <Badge
                       variant="outline"
-                      className={`font-mono text-[10px] uppercase ${phaseStyle[b.current_phase]}`}
+                      className={cn(
+                        "font-mono text-[10px] uppercase",
+                        phaseStyle[b.current_phase],
+                      )}
                     >
                       {b.current_phase}
                     </Badge>

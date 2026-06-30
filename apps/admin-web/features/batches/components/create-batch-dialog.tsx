@@ -1,17 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { useCarModels, useRolls, useCreateBatch } from "../hooks";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus } from "lucide-react";
 import { CarModelSelect } from "./car-model-select";
+import { useRolls, useCreateBatch } from "../hooks";
 
 export function CreateBatchDialog() {
   const [open, setOpen] = useState(false);
   const [carModelId, setCarModelId] = useState<number | "">("");
   const [rollId, setRollId] = useState<string>("");
-  const [quantity, setQuantity] = useState<number | "">("");
+  const [quantity, setQuantity] = useState<string>("");
   const [notes, setNotes] = useState("");
 
-  const { data: models } = useCarModels();
   const { data: rolls } = useRolls();
   const createBatch = useCreateBatch();
 
@@ -23,105 +43,121 @@ export function CreateBatchDialog() {
   };
 
   const submit = async () => {
-    if (!carModelId || !quantity) return;
-    await createBatch.mutateAsync({
-      car_model_id: Number(carModelId),
-      roll_id: rollId || undefined,
-      quantity: Number(quantity),
-      notes: notes || undefined,
-    });
-    reset();
-    setOpen(false);
+    if (!carModelId || !quantity || Number(quantity) < 1) return;
+    try {
+      const batch = await createBatch.mutateAsync({
+        car_model_id: Number(carModelId),
+        roll_id: rollId || undefined,
+        quantity: Number(quantity),
+        notes: notes || undefined,
+      });
+      toast.success(`Batch ${batch.batch_code} created`, {
+        description: `${batch.units_total} units ready for cutting.`,
+      });
+      reset();
+      setOpen(false);
+    } catch (e) {
+      toast.error("Failed to create batch", {
+        description: (e as Error).message,
+      });
+    }
   };
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="rounded-lg bg-amber-500 px-4 py-2 font-semibold text-zinc-950 hover:bg-amber-400"
-      >
-        ＋ New Batch
-      </button>
-    );
-  }
-
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4"
-      onClick={(e) => e.target === e.currentTarget && setOpen(false)}
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (!o) reset();
+      }}
     >
-      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-        <h3 className="text-xl font-bold mb-4">Create batch</h3>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="h-4 w-4" /> New Batch
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create batch</DialogTitle>
+          <DialogDescription>
+            Start a new production order. Units and labels generate
+            automatically.
+          </DialogDescription>
+        </DialogHeader>
 
-        <label className="block font-mono text-xs uppercase tracking-wider text-muted-foreground mb-2">
-          Car model
-        </label>
-        <div className="mb-4">
-          <CarModelSelect value={carModelId} onChange={setCarModelId} />
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+              Car model
+            </label>
+            <CarModelSelect value={carModelId} onChange={setCarModelId} />
+          </div>
+
+          <div className="space-y-2">
+            <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+              Quantity
+            </label>
+            <Input
+              type="number"
+              min={1}
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              placeholder="10"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+              Rexine roll (optional)
+            </label>
+            <Select
+              value={rollId || "none"}
+              onValueChange={(v) => setRollId(v === "none" ? "" : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Unassigned" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Unassigned</SelectItem>
+                {rolls?.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.roll_code} — {r.color} ({r.remaining_meters}m)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
+              Notes (optional)
+            </label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              placeholder="Any special instruction…"
+            />
+          </div>
         </div>
 
-        <label className="block font-mono text-xs uppercase tracking-wider text-zinc-500 mb-2">
-          Quantity
-        </label>
-        <input
-          type="number"
-          min={1}
-          value={quantity}
-          onChange={(e) =>
-            setQuantity(e.target.value ? Number(e.target.value) : "")
-          }
-          placeholder="10"
-          className="w-full mb-4 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-zinc-100"
-        />
-
-        <label className="block font-mono text-xs uppercase tracking-wider text-zinc-500 mb-2">
-          Rexine roll (optional)
-        </label>
-        <select
-          value={rollId}
-          onChange={(e) => setRollId(e.target.value)}
-          className="w-full mb-4 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-zinc-100"
-        >
-          <option value="">Unassigned</option>
-          {rolls?.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.roll_code} — {r.color} ({r.remaining_meters}m)
-            </option>
-          ))}
-        </select>
-
-        <label className="block font-mono text-xs uppercase tracking-wider text-zinc-500 mb-2">
-          Notes (optional)
-        </label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={2}
-          className="w-full mb-4 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-zinc-100"
-        />
-
-        {createBatch.error && (
-          <p className="mb-4 rounded-lg bg-red-950 border border-red-900 px-4 py-2 text-sm text-red-400">
-            {(createBatch.error as Error).message}
-          </p>
-        )}
-
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={() => setOpen(false)}
-            className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300"
-          >
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={submit}
-            disabled={!carModelId || !quantity || createBatch.isPending}
-            className="rounded-lg bg-amber-500 px-4 py-2 font-semibold text-zinc-950 hover:bg-amber-400 disabled:opacity-40"
+            disabled={
+              !carModelId ||
+              !quantity ||
+              Number(quantity) < 1 ||
+              createBatch.isPending
+            }
           >
             {createBatch.isPending ? "Creating…" : "Create batch"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
