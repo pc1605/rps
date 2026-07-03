@@ -22,7 +22,7 @@ const items: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/batches", label: "Batches", icon: Package },
   { href: "/stock", label: "Stock", icon: Boxes, disabled: true },
-  { href: "/workers", label: "Workers", icon: Users, disabled: true },
+  { href: "/workers", label: "Workers", icon: Users },
 ];
 
 export function Sidebar() {
