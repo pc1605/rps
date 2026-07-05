@@ -13,9 +13,9 @@ import (
 // Everything else under /api/v1 requires auth. Every entry here is a
 // security decision — add consciously.
 var PublicPaths = map[string]bool{
-	"POST /api/v1/auth/login": true,
-	// "POST /api/v1/auth/worker-login": true,  ← week 3
-	// "POST /api/v1/auth/refresh":      true,  ← when refresh flow added
+	"POST /api/v1/auth/login":   true, // admin login
+	"POST /api/v1/worker/login": true, // worker badge + PIN login
+	// "POST /api/v1/auth/refresh": true,  ← when refresh flow added
 }
 
 // Guard is the global default-deny auth middleware.
@@ -24,33 +24,51 @@ var PublicPaths = map[string]bool{
 // else must present a valid Bearer access token.
 func (s *Service) Guard() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Public prefix — customer-facing endpoints, no auth ever.
-		// (Used from week 6 for the Riddhi QR landing data endpoint.)
 		if strings.HasPrefix(c.Path(), "/api/v1/public/") {
 			return c.Next()
 		}
-
-		// Exact-match public endpoints (login etc.)
 		key := c.Method() + " " + c.Path()
 		if PublicPaths[key] {
 			return c.Next()
 		}
 
-		// Everything else: validate token
 		header := c.Get("Authorization")
 		if !strings.HasPrefix(header, "Bearer ") {
 			return httpx.Unauthorized(c, "missing bearer token")
 		}
+		tokenStr := strings.TrimPrefix(header, "Bearer ")
 
-		claims, err := s.ParseAccessToken(strings.TrimPrefix(header, "Bearer "))
-		if err != nil {
-			return httpx.Unauthorized(c, "invalid or expired token")
+		// Try admin token first
+		if claims, err := s.ParseAccessToken(tokenStr); err == nil {
+			c.Locals("user_id", claims.UserID)
+			c.Locals("role", claims.Role)
+			c.Locals("actor_type", "user")
+			return c.Next()
 		}
 
-		c.Locals("user_id", claims.UserID)
-		c.Locals("role", claims.Role)
-		return c.Next()
+		// Then worker token
+		if wc, err := s.ParseWorkerToken(tokenStr); err == nil {
+			c.Locals("worker_id", wc.WorkerID)
+			c.Locals("station", wc.Station)
+			c.Locals("role", wc.Station) // station acts as role for workers
+			c.Locals("actor_type", "worker")
+			return c.Next()
+		}
+
+		return httpx.Unauthorized(c, "invalid or expired token")
 	}
+}
+
+// WorkerID extracts the authenticated worker's ID from context.
+func WorkerID(c *fiber.Ctx) (uuid.UUID, bool) {
+	wid, ok := c.Locals("worker_id").(uuid.UUID)
+	return wid, ok
+}
+
+// ActorType returns "user" or "worker".
+func ActorType(c *fiber.Ctx) string {
+	t, _ := c.Locals("actor_type").(string)
+	return t
 }
 
 // RequireRole checks the authenticated user has one of the allowed roles.

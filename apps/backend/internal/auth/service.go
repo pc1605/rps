@@ -178,3 +178,64 @@ func (s *Service) ParseAccessToken(tokenStr string) (*Claims, error) {
 	}
 	return claims, nil
 }
+
+// WorkerClaims for worker JWTs — distinct from admin Claims.
+type WorkerClaims struct {
+	WorkerID uuid.UUID `json:"wid"`
+	Station  string    `json:"station"`
+	Type     string    `json:"typ"` // "worker"
+	jwt.RegisteredClaims
+}
+
+// IssueWorkerToken creates a worker access token.
+func (s *Service) IssueWorkerToken(workerID uuid.UUID, station string) (*TokenPair, error) {
+	now := time.Now()
+
+	accessClaims := WorkerClaims{
+		WorkerID: workerID,
+		Station:  station,
+		Type:     "worker",
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "rps",
+			Subject:   workerID.String(),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.accessTTL)),
+		},
+	}
+	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString([]byte(s.accessSecret))
+	if err != nil {
+		return nil, err
+	}
+
+	refreshClaims := jwt.RegisteredClaims{
+		Issuer:    "rps",
+		Subject:   workerID.String(),
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(now.Add(s.refreshTTL)),
+	}
+	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(s.refreshSecret))
+	if err != nil {
+		return nil, err
+	}
+
+	return &TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		ExpiresIn:    int(s.accessTTL.Seconds()),
+	}, nil
+}
+
+// ParseWorkerToken validates a worker access token.
+func (s *Service) ParseWorkerToken(tokenStr string) (*WorkerClaims, error) {
+	claims := &WorkerClaims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (any, error) {
+		if t.Method != jwt.SigningMethodHS256 {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(s.accessSecret), nil
+	})
+	if err != nil || !token.Valid || claims.Type != "worker" {
+		return nil, errors.New("invalid worker token")
+	}
+	return claims, nil
+}

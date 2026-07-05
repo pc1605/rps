@@ -19,6 +19,7 @@ import (
 	"github.com/pc1605/rps/apps/backend/internal/db"
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
 	"github.com/pc1605/rps/apps/backend/internal/reference"
+	"github.com/pc1605/rps/apps/backend/internal/worker"
 )
 
 func main() {
@@ -42,6 +43,7 @@ func main() {
 	authSvc := auth.NewService(pool, cfg.JWTAccessSecret, cfg.JWTRefreshSecret, cfg.JWTAccessTTL, cfg.JWTRefreshTTL)
 	batchSvc := batch.NewService(pool)
 	refSvc := reference.NewService(pool)
+	workerSvc := worker.NewService(pool)
 	
 	
 	// ───── HTTP app ─────
@@ -55,6 +57,7 @@ func main() {
 	auth.RegisterRoutes(api, authSvc)
 	batch.RegisterRoutes(api, batchSvc, authSvc)
 	reference.RegisterRoutes(api, refSvc)
+	worker.RegisterRoutes(api, workerSvc, authSvc)
 	// stock.RegisterRoutes(api, stockSvc, authSvc)   ← week 5
 
 	// ───── Lifecycle ─────
