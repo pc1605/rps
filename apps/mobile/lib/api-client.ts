@@ -55,6 +55,7 @@ http.interceptors.request.use(async (config) => {
 http.interceptors.response.use(
   (res) => res,
   (error) => {
+    console.log("--ERROR--", error.response?.data);
     const status = error.response?.status ?? 0;
     const body = error.response?.data;
     return Promise.reject(

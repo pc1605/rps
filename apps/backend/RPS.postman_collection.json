@@ -1,0 +1,836 @@
+{
+  "info": {
+    "name": "RPS — Riddhi Production System",
+    "description": "Ambika Enterprise · Riddhi Car Floor Laminates",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "batchId", "value": "" },
+    { "key": "carModelId", "value": "1" },
+    { "key": "rollId", "value": "" },
+    { "key": "workerId", "value": "" },
+    { "key": "badgeToken", "value": "" },
+    { "key": "workerToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Healthz",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Status field equals ok', function () {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.expect(responseData.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8080/healthz",
+              "host": ["http://localhost:8080"],
+              "path": ["healthz"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data || pm.response.json();",
+                  "",
+                  "if (responseData.tokens) {",
+                  "    pm.collectionVariables.set('accessToken', responseData.tokens.access_token);",
+                  "    pm.collectionVariables.set('refreshToken', responseData.tokens.refresh_token);",
+                  "    console.log('✓ tokens saved');",
+                  "}",
+                  "",
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Access token is a non-empty string', function () {",
+                  "    pm.expect(responseData.tokens.access_token).to.be.a('string').and.to.have.length.above(0);",
+                  "});",
+                  "pm.test('User object is present', function () {",
+                  "    pm.expect(responseData.user).to.be.an('object');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@ambika.local\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Login (wrong password)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Error code is unauthorized', function () {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.expect(responseData.code).to.eql('unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@ambika.local\",\n  \"password\": \"wrong\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returned user has an email', function () {",
+                  "    const responseData = pm.response.json().data;",
+                  "    pm.expect(responseData.email).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["me"]
+            }
+          }
+        },
+        {
+          "name": "Me (no token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workers (Admin)",
+      "item": [
+        {
+          "name": "Create Worker",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data || pm.response.json();",
+                  "",
+                  "if (responseData.id) {",
+                  "    pm.collectionVariables.set('workerId', responseData.id);",
+                  "}",
+                  "if (responseData.badge_token) {",
+                  "    pm.collectionVariables.set('badgeToken', responseData.badge_token);",
+                  "    console.log('✓ workerId + badgeToken saved. Badge:', responseData.badge_token);",
+                  "}",
+                  "",
+                  "pm.test('Response status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Badge token is returned once at creation', function () {",
+                  "    pm.expect(responseData.badge_token).to.be.a('string').and.to.have.length.above(0);",
+                  "});",
+                  "pm.test('Worker has the requested station', function () {",
+                  "    pm.expect(responseData.station).to.eql('cutter');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ramesh\",\n  \"station\": \"cutter\",\n  \"pin\": \"1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workers",
+              "host": ["{{baseUrl}}"],
+              "path": ["workers"]
+            }
+          }
+        },
+        {
+          "name": "Create Worker (invalid PIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"BadPin\",\n  \"station\": \"cutter\",\n  \"pin\": \"12\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workers",
+              "host": ["{{baseUrl}}"],
+              "path": ["workers"]
+            }
+          }
+        },
+        {
+          "name": "List Workers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response data is an array', function () {",
+                  "    const responseData = pm.response.json().data;",
+                  "    pm.expect(responseData).to.be.an('array');",
+                  "});",
+                  "pm.test('Badge token is NOT exposed in the list', function () {",
+                  "    const responseData = pm.response.json().data;",
+                  "    responseData.forEach(function (worker) {",
+                  "        pm.expect(worker.badge_token).to.be.oneOf([undefined, '']);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workers",
+              "host": ["{{baseUrl}}"],
+              "path": ["workers"]
+            }
+          }
+        },
+        {
+          "name": "Create Worker (no token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"NoAuth\",\n  \"station\": \"cutter\",\n  \"pin\": \"1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workers",
+              "host": ["{{baseUrl}}"],
+              "path": ["workers"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Worker Auth",
+      "item": [
+        {
+          "name": "Worker Login (badge + PIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data || pm.response.json();",
+                  "",
+                  "if (responseData.tokens) {",
+                  "    pm.collectionVariables.set('workerToken', responseData.tokens.access_token);",
+                  "    console.log('✓ workerToken saved');",
+                  "}",
+                  "",
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Worker object is present', function () {",
+                  "    pm.expect(responseData.worker).to.be.an('object');",
+                  "});",
+                  "pm.test('Worker access token issued', function () {",
+                  "    pm.expect(responseData.tokens.access_token).to.be.a('string').and.to.have.length.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badge_token\": \"{{badgeToken}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"tablet-cutting-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["worker", "login"]
+            }
+          }
+        },
+        {
+          "name": "Worker Login (wrong PIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Error message does not reveal whether badge exists', function () {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.expect(responseData.error).to.eql('invalid badge or pin');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badge_token\": \"{{badgeToken}}\",\n  \"pin\": \"9999\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["worker", "login"]
+            }
+          }
+        },
+        {
+          "name": "Worker Login (unknown badge)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Same vague error for unknown badge (no info leak)', function () {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.expect(responseData.error).to.eql('invalid badge or pin');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badge_token\": \"BADGE-does-not-exist\",\n  \"pin\": \"1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["worker", "login"]
+            }
+          }
+        },
+        {
+          "name": "Worker Me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns worker id and station', function () {",
+                  "    const responseData = pm.response.json().data;",
+                  "    pm.expect(responseData.id).to.be.a('string');",
+                  "    pm.expect(responseData.station).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["worker", "me"]
+            }
+          }
+        },
+        {
+          "name": "Worker cannot access admin route",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Worker token rejected on admin-only route (403)', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workers",
+              "host": ["{{baseUrl}}"],
+              "path": ["workers"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reference",
+      "item": [
+        {
+          "name": "List Car Models",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data;",
+                  "",
+                  "if (Array.isArray(responseData) && responseData.length > 0) {",
+                  "    pm.collectionVariables.set('carModelId', responseData[0].id);",
+                  "    console.log('✓ carModelId saved:', responseData[0].id);",
+                  "}",
+                  "",
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response data is an array', function () {",
+                  "    pm.expect(responseData).to.be.an('array');",
+                  "});",
+                  "pm.test('Each car model has id, brand_name, name, size_class', function () {",
+                  "    responseData.forEach(function (model) {",
+                  "        pm.expect(model).to.have.property('id');",
+                  "        pm.expect(model).to.have.property('brand_name');",
+                  "        pm.expect(model).to.have.property('name');",
+                  "        pm.expect(model).to.have.property('size_class');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/car-models",
+              "host": ["{{baseUrl}}"],
+              "path": ["car-models"]
+            }
+          }
+        },
+        {
+          "name": "List Rolls",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data;",
+                  "",
+                  "if (Array.isArray(responseData) && responseData.length > 0) {",
+                  "    pm.collectionVariables.set('rollId', responseData[0].id);",
+                  "    console.log('✓ rollId saved:', responseData[0].id);",
+                  "}",
+                  "",
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response data is an array', function () {",
+                  "    pm.expect(responseData).to.be.an('array');",
+                  "});",
+                  "pm.test('Each roll has roll_code and remaining_meters', function () {",
+                  "    responseData.forEach(function (roll) {",
+                  "        pm.expect(roll).to.have.property('roll_code');",
+                  "        pm.expect(roll).to.have.property('remaining_meters');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rolls",
+              "host": ["{{baseUrl}}"],
+              "path": ["rolls"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Batches",
+      "item": [
+        {
+          "name": "Create Batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data || pm.response.json();",
+                  "",
+                  "if (responseData.id) {",
+                  "    pm.collectionVariables.set('batchId', responseData.id);",
+                  "    console.log('✓ batchId saved:', responseData.id, 'code:', responseData.batch_code);",
+                  "}",
+                  "",
+                  "pm.test('Response status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Batch code matches B-YYYY-NNN format', function () {",
+                  "    pm.expect(responseData.batch_code).to.match(/^B-\\d{4}-\\d{3}$/);",
+                  "});",
+                  "pm.test('Units total equals requested quantity', function () {",
+                  "    pm.expect(responseData.units_total).to.eql(responseData.quantity);",
+                  "});",
+                  "pm.test('Current phase is cutting', function () {",
+                  "    pm.expect(responseData.current_phase).to.eql('cutting');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": {{carModelId}},\n  \"quantity\": 10,\n  \"notes\": \"Postman test batch\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": ["{{baseUrl}}"],
+              "path": ["batches"]
+            }
+          }
+        },
+        {
+          "name": "Create Batch (with roll)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data || pm.response.json();",
+                  "",
+                  "pm.test('Response status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Roll code is attached to the batch', function () {",
+                  "    pm.expect(responseData.roll_code).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": {{carModelId}},\n  \"roll_id\": \"{{rollId}}\",\n  \"quantity\": 5,\n  \"notes\": \"Batch with assigned roll\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": ["{{baseUrl}}"],
+              "path": ["batches"]
+            }
+          }
+        },
+        {
+          "name": "List Batches",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response data is an array', function () {",
+                  "    const responseData = pm.response.json().data;",
+                  "    pm.expect(responseData).to.be.an('array');",
+                  "});",
+                  "pm.test('Each batch has a batch_code and unit roll-up', function () {",
+                  "    const responseData = pm.response.json().data;",
+                  "    responseData.forEach(function (batch) {",
+                  "        pm.expect(batch).to.have.property('batch_code');",
+                  "        pm.expect(batch).to.have.property('units_total');",
+                  "        pm.expect(batch).to.have.property('units_packed');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": ["{{baseUrl}}"],
+              "path": ["batches"]
+            }
+          }
+        },
+        {
+          "name": "Get Batch (with units)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Units is an array', function () {",
+                  "    const responseData = pm.response.json().data;",
+                  "    pm.expect(responseData.units).to.be.an('array');",
+                  "});",
+                  "pm.test('Unit count equals batch quantity', function () {",
+                  "    const responseData = pm.response.json().data;",
+                  "    pm.expect(responseData.units.length).to.eql(responseData.quantity);",
+                  "});",
+                  "pm.test('Each unit code follows the batch-unit pattern', function () {",
+                  "    const responseData = pm.response.json().data;",
+                  "    responseData.units.forEach(function (unit) {",
+                  "        pm.expect(unit.unit_code).to.match(/^B-\\d{4}-\\d{3}-\\d{3}$/);",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{batchId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["batches", "{{batchId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Batch (invalid model)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": 9999,\n  \"quantity\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": ["{{baseUrl}}"],
+              "path": ["batches"]
+            }
+          }
+        },
+        {
+          "name": "Create Batch (no token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": 1,\n  \"quantity\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": ["{{baseUrl}}"],
+              "path": ["batches"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

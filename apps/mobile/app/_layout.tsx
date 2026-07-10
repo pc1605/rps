@@ -1,3 +1,4 @@
+import "../lib/unistyles";
 import { Stack } from "expo-router";
 import { QueryProvider } from "../lib/query-provider";
 

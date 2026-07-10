@@ -126,6 +126,7 @@ func (s *Service) GetUser(ctx context.Context, id uuid.UUID) (*User, error) {
 type Claims struct {
 	UserID uuid.UUID `json:"uid"`
 	Role   string    `json:"role"`
+	Type   string    `json:"typ"`
 	jwt.RegisteredClaims
 }
 
@@ -135,6 +136,7 @@ func (s *Service) issueTokens(userID uuid.UUID, role string) (*TokenPair, error)
 	accessClaims := Claims{
 		UserID: userID,
 		Role:   role,
+		Type:   "user",
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "rps",
 			Subject:   userID.String(),
@@ -173,7 +175,7 @@ func (s *Service) ParseAccessToken(tokenStr string) (*Claims, error) {
 		}
 		return []byte(s.accessSecret), nil
 	})
-	if err != nil || !token.Valid {
+	if err != nil || !token.Valid || claims.Type != "user" {
 		return nil, errors.New("invalid token")
 	}
 	return claims, nil
@@ -190,6 +192,7 @@ type WorkerClaims struct {
 // IssueWorkerToken creates a worker access token.
 func (s *Service) IssueWorkerToken(workerID uuid.UUID, station string) (*TokenPair, error) {
 	now := time.Now()
+	workerTTL := 30 * 24 * time.Hour 
 
 	accessClaims := WorkerClaims{
 		WorkerID: workerID,
@@ -199,7 +202,7 @@ func (s *Service) IssueWorkerToken(workerID uuid.UUID, station string) (*TokenPa
 			Issuer:    "rps",
 			Subject:   workerID.String(),
 			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(s.accessTTL)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(workerTTL)),
 		},
 	}
 	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString([]byte(s.accessSecret))

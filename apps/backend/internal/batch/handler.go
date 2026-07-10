@@ -73,3 +73,29 @@ func (h *Handler) Stats(c *fiber.Ctx) error {
 	}
 	return httpx.OK(c, stats)
 }
+
+// stationPhase maps a worker's station to the batch phase they work.
+var stationPhase = map[string]Phase{
+	"cutter":   PhaseCutting,
+	"stitcher": PhaseStitching,
+	"packer":   PhasePacking,
+}
+
+// WorkerBatches — batches waiting at the calling worker's station.
+func (h *Handler) WorkerBatches(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "worker" {
+		return httpx.Forbidden(c, "worker token required")
+	}
+	phase, ok := stationPhase[auth.StationFromCtx(c)]
+	if !ok {
+		return httpx.Forbidden(c, "unknown station")
+	}
+	batches, err := h.svc.ListByPhase(c.Context(), phase)
+	if err != nil {
+		return httpx.Internal(c, "failed to load batches")
+	}
+	if batches == nil {
+		batches = []Batch{}
+	}
+	return httpx.OK(c, batches)
+}

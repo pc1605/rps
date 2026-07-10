@@ -99,3 +99,9 @@ func RoleFromCtx(c *fiber.Ctx) string {
 	role, _ := c.Locals("role").(string)
 	return role
 }
+
+// StationFromCtx extracts the worker's station from the request context.
+func StationFromCtx(c *fiber.Ctx) string {
+	s, _ := c.Locals("station").(string)
+	return s
+}

@@ -166,3 +166,19 @@ func (s *Service) List(ctx context.Context) ([]Worker, error) {
 	}
 	return out, rows.Err()
 }
+
+// GetByID returns a worker's profile.
+func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*Worker, error) {
+	var w Worker
+	err := s.pool.QueryRow(ctx, `
+		SELECT id, name, COALESCE(phone,''), station, is_active, last_login_at, created_at
+		FROM workers WHERE id = $1
+	`, id).Scan(&w.ID, &w.Name, &w.Phone, &w.Station, &w.IsActive, &w.LastLoginAt, &w.CreatedAt)
+	if err == pgx.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &w, nil
+}

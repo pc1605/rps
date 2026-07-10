@@ -240,3 +240,48 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 	}
 	return &st, nil
 }
+
+// ListByPhase returns active batches sitting at one phase, oldest first.
+// This powers the worker home screen: "what's waiting at my station."
+func (s *Service) ListByPhase(ctx context.Context, phase Phase) ([]Batch, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT b.id, b.batch_code, b.car_model_id,
+		       cb.name, cm.name, cm.size_class::text,
+		       b.roll_id, rm.roll_code,
+		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
+		       b.rework_count, b.created_by, u.name,
+		       b.version, b.created_at, b.updated_at,
+		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id),
+		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed')
+		FROM batches b
+		JOIN car_models cm ON cm.id = b.car_model_id
+		JOIN car_brands cb ON cb.id = cm.brand_id
+		JOIN users u       ON u.id = b.created_by
+		LEFT JOIN raw_materials rm ON rm.id = b.roll_id
+		WHERE b.current_phase = $1
+		  AND b.status IN ('pending', 'in_progress')
+		ORDER BY b.created_at ASC
+	`, phase)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []Batch
+	for rows.Next() {
+		var b Batch
+		if err := rows.Scan(
+			&b.ID, &b.BatchCode, &b.CarModelID,
+			&b.BrandName, &b.ModelName, &b.SizeClass,
+			&b.RollID, &b.RollCode,
+			&b.Quantity, &b.CurrentPhase, &b.Status, &b.Notes,
+			&b.ReworkCount, &b.CreatedBy, &b.CreatedByName,
+			&b.Version, &b.CreatedAt, &b.UpdatedAt,
+			&b.UnitsTotal, &b.UnitsPacked,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, b)
+	}
+	return out, rows.Err()
+}

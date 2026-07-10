@@ -71,16 +71,18 @@ func (h *Handler) Login(c *fiber.Ctx) error {
 	})
 }
 
-// Me — worker's own profile
+// Me — worker's own full profile (used by the app on cold start).
 func (h *Handler) Me(c *fiber.Ctx) error {
 	wid, ok := auth.WorkerID(c)
 	if !ok {
 		return httpx.Unauthorized(c, "not a worker token")
 	}
-	// simple: return id + station from context; full fetch optional
-	station, _ := c.Locals("station").(string)
-	return httpx.OK(c, fiber.Map{
-		"id":      wid,
-		"station": station,
-	})
+	w, err := h.svc.GetByID(c.Context(), wid)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return httpx.Error(c, fiber.StatusNotFound, "not_found", "worker not found")
+		}
+		return httpx.Internal(c, "failed to load profile")
+	}
+	return httpx.OK(c, w)
 }

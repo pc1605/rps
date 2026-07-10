@@ -23,7 +23,7 @@ services:
     container_name: rps_adminer
     restart: unless-stopped
     ports:
-      - "8081:8080"
+      - "8083:8080"
     depends_on:
       postgres:
         condition: service_healthy
