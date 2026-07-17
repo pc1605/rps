@@ -74,11 +74,60 @@ func (h *Handler) Stats(c *fiber.Ctx) error {
 	return httpx.OK(c, stats)
 }
 
-// stationPhase maps a worker's station to the batch phase they work.
-var stationPhase = map[string]Phase{
-	"cutter":   PhaseCutting,
-	"stitcher": PhaseStitching,
-	"packer":   PhasePacking,
+type completeInput struct {
+	QuantityCompleted int    `json:"quantity_completed"`
+	Notes             string `json:"notes,omitempty"`
+}
+
+func (h *Handler) StartBatch(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "worker" {
+		return httpx.Forbidden(c, "worker token required")
+	}
+	wid, _ := auth.WorkerID(c)
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	err = h.svc.StartPhase(c.Context(), id, wid, auth.StationFromCtx(c), c.IP())
+	return transitionResponse(c, err, "batch started")
+}
+
+func (h *Handler) CompleteBatch(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "worker" {
+		return httpx.Forbidden(c, "worker token required")
+	}
+	wid, _ := auth.WorkerID(c)
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	var in completeInput
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	err = h.svc.CompletePhase(c.Context(), id, wid, auth.StationFromCtx(c), in.QuantityCompleted, in.Notes, c.IP())
+	return transitionResponse(c, err, "batch completed")
+}
+
+func transitionResponse(c *fiber.Ctx, err error, okMsg string) error {
+	switch {
+	case err == nil:
+		return httpx.OK(c, fiber.Map{"message": okMsg})
+	case errors.Is(err, ErrNotFound):
+		return httpx.Error(c, fiber.StatusNotFound, "not_found", "batch not found")
+	case errors.Is(err, ErrWrongPhase):
+		return httpx.Error(c, fiber.StatusConflict, "wrong_phase", ErrWrongPhase.Error())
+	case errors.Is(err, ErrAlreadyStarted):
+		return httpx.Error(c, fiber.StatusConflict, "already_started", ErrAlreadyStarted.Error())
+	case errors.Is(err, ErrNotStarted):
+		return httpx.Error(c, fiber.StatusConflict, "not_started", ErrNotStarted.Error())
+	case errors.Is(err, ErrNotYours):
+		return httpx.Forbidden(c, ErrNotYours.Error())
+	case errors.Is(err, ErrInvalidInput):
+		return httpx.BadRequest(c, err.Error())
+	default:
+		return httpx.Internal(c, "transition failed")
+	}
 }
 
 // WorkerBatches — batches waiting at the calling worker's station.
@@ -86,7 +135,7 @@ func (h *Handler) WorkerBatches(c *fiber.Ctx) error {
 	if auth.ActorType(c) != "worker" {
 		return httpx.Forbidden(c, "worker token required")
 	}
-	phase, ok := stationPhase[auth.StationFromCtx(c)]
+	phase, ok := PhaseForStation[auth.StationFromCtx(c)]
 	if !ok {
 		return httpx.Forbidden(c, "unknown station")
 	}

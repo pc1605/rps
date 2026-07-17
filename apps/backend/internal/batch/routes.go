@@ -17,4 +17,6 @@ func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 
 	// Only owner + supervisor can create (Week 2 decision)
 	api.Post("/batches", authSvc.RequireRole("owner", "supervisor"), h.Create)
+	api.Post("/worker/batches/:id/start", h.StartBatch)
+	api.Post("/worker/batches/:id/complete", h.CompleteBatch)
 }

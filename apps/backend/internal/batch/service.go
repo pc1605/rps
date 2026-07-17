@@ -241,7 +241,8 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 	return &st, nil
 }
 
-// ListByPhase returns active batches sitting at one phase, oldest first.
+// ListByPhase returns active batches sitting at one phase, oldest first,
+// including the open claim (who's working on it) if any.
 // This powers the worker home screen: "what's waiting at my station."
 func (s *Service) ListByPhase(ctx context.Context, phase Phase) ([]Batch, error) {
 	rows, err := s.pool.Query(ctx, `
@@ -252,12 +253,17 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase) ([]Batch, error)
 		       b.rework_count, b.created_by, u.name,
 		       b.version, b.created_at, b.updated_at,
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id),
-		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed')
+		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed'),
+		       pl.worker_id, wk.name
 		FROM batches b
 		JOIN car_models cm ON cm.id = b.car_model_id
 		JOIN car_brands cb ON cb.id = cm.brand_id
 		JOIN users u       ON u.id = b.created_by
 		LEFT JOIN raw_materials rm ON rm.id = b.roll_id
+		LEFT JOIN phase_logs pl ON pl.batch_id = b.id
+		     AND pl.phase = b.current_phase
+		     AND pl.completed_at IS NULL
+		LEFT JOIN workers wk ON wk.id = pl.worker_id
 		WHERE b.current_phase = $1
 		  AND b.status IN ('pending', 'in_progress')
 		ORDER BY b.created_at ASC
@@ -278,10 +284,163 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase) ([]Batch, error)
 			&b.ReworkCount, &b.CreatedBy, &b.CreatedByName,
 			&b.Version, &b.CreatedAt, &b.UpdatedAt,
 			&b.UnitsTotal, &b.UnitsPacked,
+			&b.ActiveWorkerID, &b.ActiveWorkerName,
 		); err != nil {
 			return nil, err
 		}
 		out = append(out, b)
 	}
 	return out, rows.Err()
+}
+
+var (
+	ErrWrongPhase     = errors.New("batch is not at your station")
+	ErrAlreadyStarted = errors.New("batch already started")
+	ErrNotStarted     = errors.New("batch has not been started")
+	ErrNotYours       = errors.New("batch was started by another worker")
+)
+
+// nextPhase defines the ONLY legal forward path through production.
+func nextPhase(p Phase) (Phase, Status) {
+	switch p {
+	case PhaseCutting:
+		return PhaseStitching, StatusPending
+	case PhaseStitching:
+		return PhasePacking, StatusPending
+	case PhasePacking:
+		return PhaseCompleted, StatusCompleted
+	}
+	return p, StatusCompleted
+}
+
+// StartPhase claims a batch for a worker at their station (Rule: exclusive claim).
+func (s *Service) StartPhase(ctx context.Context, batchID, workerID uuid.UUID, station, ip string) error {
+	phase, ok := PhaseForStation[station]
+	if !ok {
+		return fmt.Errorf("%w: unknown station", ErrInvalidInput)
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var b struct {
+		Phase   Phase
+		Status  Status
+		Code    string
+	}
+	err = tx.QueryRow(ctx,
+		`SELECT current_phase, status, batch_code FROM batches WHERE id = $1 FOR UPDATE`,
+		batchID).Scan(&b.Phase, &b.Status, &b.Code)
+	if err == pgx.ErrNoRows {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if b.Phase != phase {
+		return ErrWrongPhase
+	}
+	if b.Status != StatusPending {
+		return ErrAlreadyStarted
+	}
+
+	// Atomic claim via the partial unique index.
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO phase_logs (batch_id, phase, worker_id) VALUES ($1, $2, $3)`,
+		batchID, phase, workerID); err != nil {
+		return ErrAlreadyStarted // unique violation = raced by another worker
+	}
+
+	if _, err := tx.Exec(ctx,
+		`UPDATE batches SET status = 'in_progress', version = version + 1 WHERE id = $1`,
+		batchID); err != nil {
+		return err
+	}
+
+	if err := audit.Write(ctx, tx, audit.Entry{
+		ActorID: workerID.String(), ActorRole: station,
+		EntityType: "batch", EntityID: batchID.String(),
+		Action: audit.ActionTransition,
+		Before: map[string]any{"phase": b.Phase, "status": b.Status},
+		After:  map[string]any{"phase": phase, "status": StatusInProgress, "event": "start"},
+		IP:     ip,
+	}); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+// CompletePhase closes the worker's OWN open log and advances the batch.
+func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID, station string, quantityCompleted int, notes, ip string) error {
+	phase, ok := PhaseForStation[station]
+	if !ok {
+		return fmt.Errorf("%w: unknown station", ErrInvalidInput)
+	}
+	if quantityCompleted < 0 {
+		return fmt.Errorf("%w: quantity must be >= 0", ErrInvalidInput)
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var cur struct {
+		Phase  Phase
+		Status Status
+	}
+	err = tx.QueryRow(ctx,
+		`SELECT current_phase, status FROM batches WHERE id = $1 FOR UPDATE`,
+		batchID).Scan(&cur.Phase, &cur.Status)
+	if err == pgx.ErrNoRows {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if cur.Phase != phase {
+		return ErrWrongPhase
+	}
+	if cur.Status != StatusInProgress {
+		return ErrNotStarted
+	}
+
+	// Close MY open log — worker_id in the WHERE enforces the exclusive claim.
+	ct, err := tx.Exec(ctx, `
+		UPDATE phase_logs
+		SET completed_at = NOW(), quantity_completed = $1, notes = NULLIF($2,'')
+		WHERE batch_id = $3 AND phase = $4 AND completed_at IS NULL AND worker_id = $5
+	`, quantityCompleted, notes, batchID, phase, workerID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return ErrNotYours // an open log exists (status=in_progress) but isn't this worker's
+	}
+
+	next, newStatus := nextPhase(phase)
+	if _, err := tx.Exec(ctx,
+		`UPDATE batches SET current_phase = $1, status = $2, version = version + 1 WHERE id = $3`,
+		next, newStatus, batchID); err != nil {
+		return err
+	}
+
+	if err := audit.Write(ctx, tx, audit.Entry{
+		ActorID: workerID.String(), ActorRole: station,
+		EntityType: "batch", EntityID: batchID.String(),
+		Action: audit.ActionTransition,
+		Before: map[string]any{"phase": phase, "status": cur.Status},
+		After: map[string]any{"phase": next, "status": newStatus,
+			"event": "complete", "quantity_completed": quantityCompleted},
+		IP: ip,
+	}); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }

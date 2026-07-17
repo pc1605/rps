@@ -51,6 +51,9 @@ type Batch struct {
 	// Unit roll-up (populated on detail/list)
 	UnitsTotal  int `json:"units_total"`
 	UnitsPacked int `json:"units_packed"`
+	// Open claim on the current phase, if any
+	ActiveWorkerID   *uuid.UUID `json:"active_worker_id,omitempty"`
+	ActiveWorkerName *string    `json:"active_worker_name,omitempty"`
 }
 
 // Unit is one physical mat.
@@ -76,4 +79,11 @@ type CreateInput struct {
 	RollID     *string `json:"roll_id,omitempty"`
 	Quantity   int     `json:"quantity"`
 	Notes      string  `json:"notes,omitempty"`
+}
+
+// PhaseForStation maps a worker's station to the phase they operate.
+var PhaseForStation = map[string]Phase{
+	"cutter":   PhaseCutting,
+	"stitcher": PhaseStitching,
+	"packer":   PhasePacking,
 }
