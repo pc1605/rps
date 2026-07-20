@@ -22,30 +22,58 @@ const stationLabel: Record<string, string> = {
   packer: "Packing queue",
 };
 
-function BatchCard({ batch }: { batch: Batch }) {
+function BatchCard({
+  batch,
+  myWorkerId,
+  onOpen,
+}: {
+  batch: Batch;
+  myWorkerId?: string;
+  onOpen: (b: Batch) => void;
+}) {
+  const claimed = batch.status === "in_progress";
+  const mine = claimed && batch.active_worker_id === myWorkerId;
   const daysAgo = Math.floor(
     (Date.now() - new Date(batch.created_at).getTime()) / 86_400_000,
   );
+
   return (
-    <Card style={styles.batchCard}>
-      <View style={styles.batchRow}>
-        <Text style={styles.batchCode}>{batch.batch_code}</Text>
-        <Text style={styles.batchQty}>{batch.quantity} mats</Text>
-      </View>
-      <Text style={styles.batchModel}>
-        {batch.brand_name} {batch.model_name}
-        <Text style={styles.batchSize}>
-          {" "}
-          · {batch.size_class.toUpperCase()}
+    <Pressable onPress={() => onOpen(batch)} disabled={claimed && !mine}>
+      <Card
+        style={[
+          styles.batchCard,
+          mine && styles.cardMine,
+          claimed && !mine && styles.cardTaken,
+        ]}
+      >
+        <View style={styles.batchRow}>
+          <Text style={styles.batchCode}>{batch.batch_code}</Text>
+          <Text style={styles.batchQty}>{batch.quantity} mats</Text>
+        </View>
+        <Text style={styles.batchModel}>
+          {batch.brand_name} {batch.model_name}
+          <Text style={styles.batchSize}>
+            {" "}
+            · {batch.size_class.toUpperCase()}
+          </Text>
         </Text>
-      </Text>
-      {batch.notes ? (
-        <Text style={styles.batchNotes}>✎ {batch.notes}</Text>
-      ) : null}
-      <Text style={styles.batchAge}>
-        {daysAgo === 0 ? "Added today" : `Waiting ${daysAgo}d`}
-      </Text>
-    </Card>
+        {mine && (
+          <Text style={styles.mineTag}>
+            ▶ You're working on this — tap to continue
+          </Text>
+        )}
+        {claimed && !mine && (
+          <Text style={styles.takenTag}>
+            ⏳ In progress · {batch.active_worker_name}
+          </Text>
+        )}
+        {!claimed && (
+          <Text style={styles.batchAge}>
+            {daysAgo === 0 ? "Added today" : `Waiting ${daysAgo}d`}
+          </Text>
+        )}
+      </Card>
+    </Pressable>
   );
 }
 
@@ -91,7 +119,13 @@ export default function Home() {
         <FlatList
           data={batches ?? []}
           keyExtractor={(b) => b.id}
-          renderItem={({ item }) => <BatchCard batch={item} />}
+          renderItem={({ item }) => (
+            <BatchCard
+              batch={item}
+              myWorkerId={worker?.id}
+              onOpen={(b) => router.push(`/batch/${b.id}`)}
+            />
+          )}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
@@ -167,4 +201,13 @@ const styles = StyleSheet.create((theme) => ({
     fontSize: 13,
     textAlign: "center",
   },
+  cardMine: { borderColor: theme.colors.accent, borderWidth: 1.5 },
+  cardTaken: { opacity: 0.45 },
+  mineTag: {
+    color: theme.colors.accent,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+  takenTag: { color: theme.colors.textMuted, fontSize: 12, marginTop: 4 },
 }));
