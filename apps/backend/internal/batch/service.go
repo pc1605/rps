@@ -430,6 +430,18 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 		return err
 	}
 
+	// Packing complete → mark all remaining units packed by this worker.
+	// (Coarse bulk-mark; replaced by per-unit QR scanning in the labels slice.)
+	if phase == PhasePacking {
+		if _, err := tx.Exec(ctx, `
+			UPDATE batch_units
+			SET status = 'packed', packed_by = $1, packed_at = NOW()
+			WHERE batch_id = $2 AND status = 'pending'
+		`, workerID, batchID); err != nil {
+			return err
+		}
+	}
+
 	if err := audit.Write(ctx, tx, audit.Entry{
 		ActorID: workerID.String(), ActorRole: station,
 		EntityType: "batch", EntityID: batchID.String(),

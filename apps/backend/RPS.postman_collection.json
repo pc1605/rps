@@ -13,7 +13,8 @@
     { "key": "rollId", "value": "" },
     { "key": "workerId", "value": "" },
     { "key": "badgeToken", "value": "" },
-    { "key": "workerToken", "value": "" }
+    { "key": "workerToken", "value": "" },
+    { "key": "workerBatchId", "value": "" }
   ],
   "item": [
     {
@@ -827,6 +828,233 @@
               "raw": "{{baseUrl}}/batches",
               "host": ["{{baseUrl}}"],
               "path": ["batches"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Worker Phase Flow",
+      "item": [
+        {
+          "name": "My Station Queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data;",
+                  "",
+                  "if (Array.isArray(responseData)) {",
+                  "    const pendingBatch = responseData.find(function (batch) {",
+                  "        return batch.status === 'pending';",
+                  "    });",
+                  "    if (pendingBatch) {",
+                  "        pm.collectionVariables.set('workerBatchId', pendingBatch.id);",
+                  "        console.log('✓ workerBatchId saved:', pendingBatch.id, 'code:', pendingBatch.batch_code);",
+                  "    } else {",
+                  "        console.log('⚠ No pending batch at this station — run Batches → Create Batch first');",
+                  "    }",
+                  "}",
+                  "",
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response data is an array', function () {",
+                  "    pm.expect(responseData).to.be.an('array');",
+                  "});",
+                  "pm.test('Each batch has code and status', function () {",
+                  "    responseData.forEach(function (batch) {",
+                  "        pm.expect(batch).to.have.property('batch_code');",
+                  "        pm.expect(batch).to.have.property('status');",
+                  "    });",
+                  "});",
+                  "pm.test('Claimed batches expose the active worker name', function () {",
+                  "    responseData.forEach(function (batch) {",
+                  "        if (batch.status === 'in_progress') {",
+                  "            pm.expect(batch.active_worker_name).to.be.a('string');",
+                  "        }",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches",
+              "host": ["{{baseUrl}}"],
+              "path": ["worker", "batches"]
+            }
+          }
+        },
+        {
+          "name": "Start Batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Message confirms the batch started', function () {",
+                  "    const responseData = pm.response.json().data;",
+                  "    pm.expect(responseData.message).to.eql('batch started');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{workerBatchId}}/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["worker", "batches", "{{workerBatchId}}", "start"]
+            }
+          }
+        },
+        {
+          "name": "Start Batch again (already started)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Error code is already_started', function () {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.expect(responseData.code).to.eql('already_started');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{workerBatchId}}/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["worker", "batches", "{{workerBatchId}}", "start"]
+            }
+          }
+        },
+        {
+          "name": "Complete Batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Message confirms the batch completed', function () {",
+                  "    const responseData = pm.response.json().data;",
+                  "    pm.expect(responseData.message).to.eql('batch completed');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{workerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity_completed\": 10,\n  \"notes\": \"Postman phase test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{workerBatchId}}/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["worker", "batches", "{{workerBatchId}}", "complete"]
+            }
+          }
+        },
+        {
+          "name": "Complete again (wrong phase)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Error code is wrong_phase after batch advanced', function () {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.expect(responseData.code).to.eql('wrong_phase');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{workerToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity_completed\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{workerBatchId}}/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["worker", "batches", "{{workerBatchId}}", "complete"]
+            }
+          }
+        },
+        {
+          "name": "Start with admin token (forbidden)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test('Admin tokens cannot drive worker transitions', function () {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.expect(responseData.error).to.eql('worker token required');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{workerBatchId}}/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["worker", "batches", "{{workerBatchId}}", "start"]
             }
           }
         }
