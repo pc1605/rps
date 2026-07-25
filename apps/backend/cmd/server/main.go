@@ -20,6 +20,7 @@ import (
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
 	"github.com/pc1605/rps/apps/backend/internal/reference"
 	"github.com/pc1605/rps/apps/backend/internal/worker"
+	"github.com/pc1605/rps/apps/backend/internal/stock"
 )
 
 func main() {
@@ -44,6 +45,7 @@ func main() {
 	batchSvc := batch.NewService(pool)
 	refSvc := reference.NewService(pool)
 	workerSvc := worker.NewService(pool)
+	stockSvc := stock.NewService(pool) 
 	
 	
 	// ───── HTTP app ─────
@@ -58,7 +60,7 @@ func main() {
 	batch.RegisterRoutes(api, batchSvc, authSvc)
 	reference.RegisterRoutes(api, refSvc)
 	worker.RegisterRoutes(api, workerSvc, authSvc)
-	// stock.RegisterRoutes(api, stockSvc, authSvc)   ← week 5
+	stock.RegisterRoutes(api, stockSvc, authSvc)
 
 	// ───── Lifecycle ─────
 	runServer(app, cfg)
