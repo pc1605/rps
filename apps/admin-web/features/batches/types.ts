@@ -35,10 +35,6 @@ export interface Unit {
   created_at: string;
 }
 
-export interface BatchDetail extends Batch {
-  units: Unit[];
-}
-
 export interface CreateBatchInput {
   car_model_id: number;
   roll_id?: string;
@@ -67,4 +63,21 @@ export interface BatchStats {
   in_packing: number;
   completed_today: number;
   total_active: number;
+}
+
+export interface PhaseLogEntry {
+  id: string;
+  phase: Phase;
+  worker_id: string;
+  worker_name: string;
+  started_at: string;
+  completed_at?: string;
+  duration_seconds?: number;
+  quantity_completed?: number;
+  notes?: string;
+}
+
+export interface BatchDetail extends Batch {
+  units: Unit[];
+  timeline: PhaseLogEntry[];
 }

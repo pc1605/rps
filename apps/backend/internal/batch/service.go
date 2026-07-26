@@ -221,7 +221,41 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 			detail.UnitsPacked++
 		}
 	}
-	return detail, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Production timeline
+	logRows, err := s.pool.Query(ctx, `
+		SELECT pl.id, pl.phase, pl.worker_id, w.name,
+		       pl.started_at, pl.completed_at,
+		       EXTRACT(EPOCH FROM (pl.completed_at - pl.started_at))::int,
+		       pl.quantity_completed, COALESCE(pl.notes,'')
+		FROM phase_logs pl
+		JOIN workers w ON w.id = pl.worker_id
+		WHERE pl.batch_id = $1
+		ORDER BY pl.started_at ASC
+	`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer logRows.Close()
+
+	detail.Timeline = []PhaseLogEntry{}
+	for logRows.Next() {
+		var e PhaseLogEntry
+		if err := logRows.Scan(&e.ID, &e.Phase, &e.WorkerID, &e.WorkerName,
+			&e.StartedAt, &e.CompletedAt, &e.DurationSeconds,
+			&e.QuantityCompleted, &e.Notes); err != nil {
+			return nil, err
+		}
+		detail.Timeline = append(detail.Timeline, e)
+	}
+	if err := logRows.Err(); err != nil {
+		return nil, err
+	}
+
+	return detail, nil
 }
 
 func (s *Service) GetStats(ctx context.Context) (*Stats, error) {

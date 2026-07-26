@@ -242,3 +242,41 @@ func (s *Service) ParseWorkerToken(tokenStr string) (*WorkerClaims, error) {
 	}
 	return claims, nil
 }
+
+// Refresh validates a refresh token and issues a fresh token pair.
+// Re-checks the user still exists and is active — this is the periodic
+// "is this admin still allowed in?" gate.
+func (s *Service) Refresh(ctx context.Context, refreshToken string) (*User, *TokenPair, error) {
+	claims := &jwt.RegisteredClaims{}
+	token, err := jwt.ParseWithClaims(refreshToken, claims, func(t *jwt.Token) (any, error) {
+		if t.Method != jwt.SigningMethodHS256 {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(s.refreshSecret), nil
+	})
+	if err != nil || !token.Valid {
+		return nil, nil, ErrInvalidCredentials
+	}
+
+	userID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return nil, nil, ErrInvalidCredentials
+	}
+
+	// User must still exist and be active
+	var u User
+	err = s.pool.QueryRow(ctx, `
+		SELECT id, name, email, role, last_login_at, created_at
+		FROM users
+		WHERE id = $1 AND deactivated_at IS NULL
+	`, userID).Scan(&u.ID, &u.Name, &u.Email, &u.Role, &u.LastLoginAt, &u.CreatedAt)
+	if err != nil {
+		return nil, nil, ErrInvalidCredentials
+	}
+
+tokens, err := s.issueTokens(u.ID, string(u.Role))
+		if err != nil {
+		return nil, nil, err
+	}
+	return &u, tokens, nil
+}

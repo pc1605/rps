@@ -8,6 +8,7 @@ import "github.com/gofiber/fiber/v2"
 func RegisterRoutes(api fiber.Router, svc *Service) {
 	h := NewHandler(svc)
 
-	api.Post("/auth/login", h.Login) // public via PublicPaths
 	api.Get("/me", h.Me)             // protected automatically by Guard
+	api.Post("/auth/login", h.Login) // public via PublicPaths
+	api.Post("/auth/refresh", h.Refresh)
 }

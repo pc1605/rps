@@ -7,6 +7,7 @@ import { useBatch } from "@/features/batches/hooks";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { BatchTimeline } from "@/features/batches/components/batch-timeline";
 import type { UnitStatus } from "@/features/batches/types";
 
 const unitStyle: Record<UnitStatus, string> = {
@@ -32,34 +33,43 @@ export default function BatchDetailPage({
     );
 
   return (
-    <div className="space-y-6">
-      <Link
-        href="/batches"
-        className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-3 w-3" /> Batches
-      </Link>
+    <div className="space-y-8">
+      <div className="space-y-6">
+        <Link
+          href="/batches"
+          className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3 w-3" /> Batches
+        </Link>
 
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold font-mono text-amber-600 dark:text-amber-400">
-            {batch.batch_code}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {batch.brand_name} {batch.model_name} · {batch.quantity} mats ·{" "}
-            <span className="uppercase font-mono text-xs">
-              {batch.size_class}
-            </span>
-          </p>
-          {batch.notes && (
-            <p className="text-sm text-muted-foreground mt-2">
-              ✎ {batch.notes}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold font-mono text-primary">
+              {batch.batch_code}
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              {batch.brand_name} {batch.model_name} · {batch.quantity} mats ·{" "}
+              <span className="uppercase font-mono text-xs">
+                {batch.size_class}
+              </span>
             </p>
-          )}
+            {batch.notes && (
+              <p className="text-sm text-muted-foreground mt-2">
+                ✎ {batch.notes}
+              </p>
+            )}
+          </div>
+          <Badge variant="outline" className="font-mono text-[10px] uppercase">
+            {batch.current_phase}
+          </Badge>
         </div>
-        <Badge variant="outline" className="font-mono text-[10px] uppercase">
-          {batch.current_phase}
-        </Badge>
+      </div>
+
+      <div>
+        <h2 className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-3">
+          Production timeline
+        </h2>
+        <BatchTimeline timeline={batch.timeline} />
       </div>
 
       <div>

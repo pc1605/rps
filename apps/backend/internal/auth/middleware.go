@@ -15,7 +15,7 @@ import (
 var PublicPaths = map[string]bool{
 	"POST /api/v1/auth/login":   true, // admin login
 	"POST /api/v1/worker/login": true, // worker badge + PIN login
-	// "POST /api/v1/auth/refresh": true,  ← when refresh flow added
+	"POST /api/v1/auth/refresh": true, // refresh token
 }
 
 // Guard is the global default-deny auth middleware.
@@ -105,3 +105,4 @@ func StationFromCtx(c *fiber.Ctx) string {
 	s, _ := c.Locals("station").(string)
 	return s
 }
+

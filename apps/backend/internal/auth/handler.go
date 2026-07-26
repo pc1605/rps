@@ -47,3 +47,19 @@ func (h *Handler) Me(c *fiber.Ctx) error {
 	}
 	return httpx.OK(c, user)
 }
+
+type refreshInput struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
+func (h *Handler) Refresh(c *fiber.Ctx) error {
+	var in refreshInput
+	if err := c.BodyParser(&in); err != nil || in.RefreshToken == "" {
+		return httpx.BadRequest(c, "refresh_token required")
+	}
+	user, tokens, err := h.svc.Refresh(c.Context(), in.RefreshToken)
+	if err != nil {
+		return httpx.Unauthorized(c, "invalid or expired refresh token")
+	}
+	return httpx.OK(c, fiber.Map{"user": user, "tokens": tokens})
+}

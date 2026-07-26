@@ -67,10 +67,10 @@ type Unit struct {
 	CreatedAt  time.Time  `json:"created_at"`
 }
 
-// BatchDetail is a batch plus its units.
 type BatchDetail struct {
 	Batch
-	Units []Unit `json:"units"`
+	Units    []Unit          `json:"units"`
+	Timeline []PhaseLogEntry `json:"timeline"`
 }
 
 // CreateInput is the request body for creating a batch.
@@ -86,4 +86,17 @@ var PhaseForStation = map[string]Phase{
 	"cutter":   PhaseCutting,
 	"stitcher": PhaseStitching,
 	"packer":   PhasePacking,
+}
+
+// PhaseLogEntry is one row of a batch's production history.
+type PhaseLogEntry struct {
+	ID                uuid.UUID  `json:"id"`
+	Phase             Phase      `json:"phase"`
+	WorkerID          uuid.UUID  `json:"worker_id"`
+	WorkerName        string     `json:"worker_name"`
+	StartedAt         time.Time  `json:"started_at"`
+	CompletedAt       *time.Time `json:"completed_at,omitempty"`
+	DurationSeconds   *int       `json:"duration_seconds,omitempty"`
+	QuantityCompleted *int       `json:"quantity_completed,omitempty"`
+	Notes             string     `json:"notes,omitempty"`
 }
