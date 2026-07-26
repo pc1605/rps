@@ -2,6 +2,7 @@ package batch
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -147,4 +148,37 @@ func (h *Handler) WorkerBatches(c *fiber.Ctx) error {
 		batches = []Batch{}
 	}
 	return httpx.OK(c, batches)
+}
+
+
+type scanInput struct {
+	UnitCode string `json:"unit_code"`
+}
+
+func (h *Handler) ScanUnit(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "worker" {
+		return httpx.Forbidden(c, "worker token required")
+	}
+	var in scanInput
+	if err := c.BodyParser(&in); err != nil || strings.TrimSpace(in.UnitCode) == "" {
+		return httpx.BadRequest(c, "unit_code required")
+	}
+	wid, _ := auth.WorkerID(c)
+
+	res, err := h.svc.ScanUnit(c.Context(), strings.TrimSpace(in.UnitCode), wid, auth.StationFromCtx(c), c.IP())
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrUnitNotFound):
+			return httpx.Error(c, fiber.StatusNotFound, "unit_not_found", "unknown QR — not an RPS unit label")
+		case errors.Is(err, ErrWrongPhase):
+			return httpx.Error(c, fiber.StatusConflict, "wrong_phase", "this batch is not at packing")
+		case errors.Is(err, ErrNotStarted):
+			return httpx.Error(c, fiber.StatusConflict, "not_started", "start the batch before scanning units")
+		case errors.Is(err, ErrNotYours):
+			return httpx.Forbidden(c, ErrNotYours.Error())
+		default:
+			return httpx.Internal(c, "scan failed")
+		}
+	}
+	return httpx.OK(c, res)
 }

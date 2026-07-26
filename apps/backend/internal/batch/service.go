@@ -464,16 +464,9 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 		return err
 	}
 
-	// Packing complete → mark all remaining units packed by this worker.
-	// (Coarse bulk-mark; replaced by per-unit QR scanning in the labels slice.)
+	// Packing completes via per-unit scans (ScanUnit), never manually.
 	if phase == PhasePacking {
-		if _, err := tx.Exec(ctx, `
-			UPDATE batch_units
-			SET status = 'packed', packed_by = $1, packed_at = NOW()
-			WHERE batch_id = $2 AND status = 'pending'
-		`, workerID, batchID); err != nil {
-			return err
-		}
+		return fmt.Errorf("%w: packing completes automatically when all units are scanned", ErrInvalidInput)
 	}
 
 	if err := audit.Write(ctx, tx, audit.Entry{
@@ -489,4 +482,132 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 	}
 
 	return tx.Commit(ctx)
+}
+
+var ErrUnitNotFound = errors.New("unit not found")
+
+// ScanUnit marks one unit packed (packer's per-unit scan).
+// Idempotent on re-scan. Auto-completes the batch on the last unit.
+func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.UUID, station, ip string) (*ScanResult, error) {
+	if station != "packer" {
+		return nil, ErrWrongPhase
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	// Locate unit + its batch, lock the batch row
+	var (
+		unitID      uuid.UUID
+		unitStatus  UnitStatus
+		batchID     uuid.UUID
+		batchCode   string
+		batchPhase  Phase
+		batchStatus Status
+	)
+	err = tx.QueryRow(ctx, `
+		SELECT bu.id, bu.status, b.id, b.batch_code, b.current_phase, b.status
+		FROM batch_units bu
+		JOIN batches b ON b.id = bu.batch_id
+		WHERE bu.unit_code = $1
+		FOR UPDATE OF b
+	`, unitCode).Scan(&unitID, &unitStatus, &batchID, &batchCode, &batchPhase, &batchStatus)
+	if err == pgx.ErrNoRows {
+		return nil, ErrUnitNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	res := &ScanResult{UnitCode: unitCode, BatchCode: batchCode}
+
+	// Idempotent path: already packed → report progress, no writes
+	if unitStatus == UnitPacked || unitStatus == UnitDispatched {
+		res.AlreadyPacked = true
+		if err := tx.QueryRow(ctx, `
+			SELECT COUNT(*), COUNT(*) FILTER (WHERE status IN ('packed','dispatched'))
+			FROM batch_units WHERE batch_id = $1
+		`, batchID).Scan(&res.TotalUnits, &res.PackedCount); err != nil {
+			return nil, err
+		}
+		return res, tx.Commit(ctx)
+	}
+
+	// Batch must be actively in packing
+	if batchPhase != PhasePacking {
+		return nil, ErrWrongPhase
+	}
+	if batchStatus != StatusInProgress {
+		return nil, ErrNotStarted
+	}
+
+	// The open packing claim must be THIS worker's
+	var claimOwner uuid.UUID
+	err = tx.QueryRow(ctx, `
+		SELECT worker_id FROM phase_logs
+		WHERE batch_id = $1 AND phase = 'packing' AND completed_at IS NULL
+	`, batchID).Scan(&claimOwner)
+	if err == pgx.ErrNoRows {
+		return nil, ErrNotStarted
+	}
+	if err != nil {
+		return nil, err
+	}
+	if claimOwner != workerID {
+		return nil, ErrNotYours
+	}
+
+	// Pack the unit
+	if _, err := tx.Exec(ctx, `
+		UPDATE batch_units SET status = 'packed', packed_by = $1, packed_at = NOW()
+		WHERE id = $2
+	`, workerID, unitID); err != nil {
+		return nil, err
+	}
+
+	// Progress
+	if err := tx.QueryRow(ctx, `
+		SELECT COUNT(*), COUNT(*) FILTER (WHERE status IN ('packed','dispatched'))
+		FROM batch_units WHERE batch_id = $1
+	`, batchID).Scan(&res.TotalUnits, &res.PackedCount); err != nil {
+		return nil, err
+	}
+
+	// Last unit? → close the packing log + complete the batch
+	if res.PackedCount >= res.TotalUnits {
+		if _, err := tx.Exec(ctx, `
+			UPDATE phase_logs
+			SET completed_at = NOW(), quantity_completed = $1
+			WHERE batch_id = $2 AND phase = 'packing' AND completed_at IS NULL
+		`, res.PackedCount, batchID); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE batches SET current_phase = 'completed', status = 'completed', version = version + 1
+			WHERE id = $1
+		`, batchID); err != nil {
+			return nil, err
+		}
+		res.BatchCompleted = true
+	}
+
+	// Audit every scan
+	if err := audit.Write(ctx, tx, audit.Entry{
+		ActorID: workerID.String(), ActorRole: station,
+		EntityType: "batch_unit", EntityID: unitID.String(),
+		Action: audit.ActionTransition,
+		After: map[string]any{
+			"unit_code": unitCode, "event": "packed",
+			"progress": fmt.Sprintf("%d/%d", res.PackedCount, res.TotalUnits),
+			"batch_completed": res.BatchCompleted,
+		},
+		IP: ip,
+	}); err != nil {
+		return nil, err
+	}
+
+	return res, tx.Commit(ctx)
 }

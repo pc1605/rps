@@ -100,3 +100,13 @@ type PhaseLogEntry struct {
 	QuantityCompleted *int       `json:"quantity_completed,omitempty"`
 	Notes             string     `json:"notes,omitempty"`
 }
+
+// ScanResult tells the scanner app what happened + progress.
+type ScanResult struct {
+	UnitCode       string `json:"unit_code"`
+	BatchCode      string `json:"batch_code"`
+	AlreadyPacked  bool   `json:"already_packed"`
+	PackedCount    int    `json:"packed_count"`
+	TotalUnits     int    `json:"total_units"`
+	BatchCompleted bool   `json:"batch_completed"`
+}
