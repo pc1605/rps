@@ -14,7 +14,8 @@
     { "key": "workerId", "value": "" },
     { "key": "badgeToken", "value": "" },
     { "key": "workerToken", "value": "" },
-    { "key": "workerBatchId", "value": "" }
+    { "key": "workerBatchId", "value": "" },
+    { "key": "stockRollId", "value": "" }
   ],
   "item": [
     {
@@ -1055,6 +1056,282 @@
               "raw": "{{baseUrl}}/worker/batches/{{workerBatchId}}/start",
               "host": ["{{baseUrl}}"],
               "path": ["worker", "batches", "{{workerBatchId}}", "start"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stock",
+      "item": [
+        {
+          "name": "List Rolls",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data;",
+                  "",
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response data is an array', function () {",
+                  "    pm.expect(responseData).to.be.an('array');",
+                  "});",
+                  "pm.test('Each roll has stock fields and low flag', function () {",
+                  "    responseData.forEach(function (roll) {",
+                  "        pm.expect(roll).to.have.property('roll_code');",
+                  "        pm.expect(roll).to.have.property('total_meters');",
+                  "        pm.expect(roll).to.have.property('remaining_meters');",
+                  "        pm.expect(roll).to.have.property('is_low');",
+                  "        pm.expect(roll).to.have.property('batch_count');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock/rolls",
+              "host": ["{{baseUrl}}"],
+              "path": ["stock", "rolls"]
+            }
+          }
+        },
+        {
+          "name": "Create Roll",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Unique code per run so re-runs don't collide",
+                  "pm.collectionVariables.set('newRollCode', 'R-PM-' + Date.now().toString().slice(-6));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data || pm.response.json();",
+                  "",
+                  "if (responseData.id) {",
+                  "    pm.collectionVariables.set('stockRollId', responseData.id);",
+                  "    console.log('✓ stockRollId saved:', responseData.id, responseData.roll_code);",
+                  "}",
+                  "",
+                  "pm.test('Response status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Remaining meters equals total on creation', function () {",
+                  "    pm.expect(responseData.remaining_meters).to.eql(responseData.total_meters);",
+                  "});",
+                  "pm.test('New roll is active and not low', function () {",
+                  "    pm.expect(responseData.is_active).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roll_code\": \"{{newRollCode}}\",\n  \"color\": \"Postman Grey\",\n  \"total_meters\": 45\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/stock/rolls",
+              "host": ["{{baseUrl}}"],
+              "path": ["stock", "rolls"]
+            }
+          }
+        },
+        {
+          "name": "Create Roll (duplicate code)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Error code is duplicate_code', function () {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.expect(responseData.code).to.eql('duplicate_code');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roll_code\": \"{{newRollCode}}\",\n  \"color\": \"Postman Grey\",\n  \"total_meters\": 45\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/stock/rolls",
+              "host": ["{{baseUrl}}"],
+              "path": ["stock", "rolls"]
+            }
+          }
+        },
+        {
+          "name": "Update Roll (trigger low stock)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data;",
+                  "",
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Remaining meters updated to 6', function () {",
+                  "    pm.expect(responseData.remaining_meters).to.eql(6);",
+                  "});",
+                  "pm.test('Roll is flagged low below threshold', function () {",
+                  "    pm.expect(responseData.is_low).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remaining_meters\": 6\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/stock/rolls/{{stockRollId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["stock", "rolls", "{{stockRollId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Roll (remaining exceeds total)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remaining_meters\": 9999\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/stock/rolls/{{stockRollId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["stock", "rolls", "{{stockRollId}}"]
+            }
+          }
+        },
+        {
+          "name": "Mark Roll Finished",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data;",
+                  "",
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Roll is no longer active', function () {",
+                  "    pm.expect(responseData.is_active).to.be.false;",
+                  "});",
+                  "pm.test('Inactive roll is not flagged low', function () {",
+                  "    pm.expect(responseData.is_low).to.be.false;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/stock/rolls/{{stockRollId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["stock", "rolls", "{{stockRollId}}"]
+            }
+          }
+        },
+        {
+          "name": "List Rolls (worker token forbidden)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 403', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock/rolls",
+              "host": ["{{baseUrl}}"],
+              "path": ["stock", "rolls"]
             }
           }
         }

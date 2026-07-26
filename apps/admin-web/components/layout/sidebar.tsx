@@ -21,7 +21,7 @@ interface NavItem {
 const items: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/batches", label: "Batches", icon: Package },
-  { href: "/stock", label: "Stock", icon: Boxes, disabled: true },
+  { href: "/stock", label: "Stock", icon: Boxes },
   { href: "/workers", label: "Workers", icon: Users },
 ];
 
