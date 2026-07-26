@@ -9,6 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { BatchTimeline } from "@/features/batches/components/batch-timeline";
 import type { UnitStatus } from "@/features/batches/types";
+import { Button } from "@/components/ui/button";
+import { FileDown } from "lucide-react";
+import { generateLabelPdf } from "@/features/batches/label-pdf";
 
 const unitStyle: Record<UnitStatus, string> = {
   pending: "text-muted-foreground border-border",
@@ -59,9 +62,21 @@ export default function BatchDetailPage({
               </p>
             )}
           </div>
-          <Badge variant="outline" className="font-mono text-[10px] uppercase">
-            {batch.current_phase}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => generateLabelPdf(batch)}
+            >
+              <FileDown className="h-4 w-4" /> Labels PDF
+            </Button>
+            <Badge
+              variant="outline"
+              className="font-mono text-[10px] uppercase"
+            >
+              {batch.current_phase}
+            </Badge>
+          </div>
         </div>
       </div>
 
