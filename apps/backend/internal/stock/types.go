@@ -34,3 +34,11 @@ type UpdateRollInput struct {
 	RemainingMeters *float64 `json:"remaining_meters,omitempty"`
 	IsActive        *bool    `json:"is_active,omitempty"`
 }
+
+type FinishedStock struct {
+	CarModelID int    `json:"car_model_id"`
+	BrandName  string `json:"brand_name"`
+	ModelName  string `json:"model_name"`
+	SizeClass  string `json:"size_class"`
+	PackedCount int   `json:"packed_count"`
+}

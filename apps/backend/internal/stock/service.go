@@ -180,3 +180,32 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, in UpdateRollInput, 
 	after.IsLow = after.IsActive && after.RemainingMeters < LowStockMeters
 	return &after, nil
 }
+
+// FinishedGoods returns packed (not yet dispatched) mats grouped by car model.
+// This IS the stockyard inventory: what's ready to sell.
+func (s *Service) FinishedGoods(ctx context.Context) ([]FinishedStock, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT cm.id, cb.name, cm.name, cm.size_class::text, COUNT(*)
+		FROM batch_units bu
+		JOIN batches b     ON b.id = bu.batch_id
+		JOIN car_models cm ON cm.id = b.car_model_id
+		JOIN car_brands cb ON cb.id = cm.brand_id
+		WHERE bu.status = 'packed'
+		GROUP BY cm.id, cb.name, cm.name, cm.size_class
+		ORDER BY cb.name, cm.name
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []FinishedStock{}
+	for rows.Next() {
+		var f FinishedStock
+		if err := rows.Scan(&f.CarModelID, &f.BrandName, &f.ModelName, &f.SizeClass, &f.PackedCount); err != nil {
+			return nil, err
+		}
+		out = append(out, f)
+	}
+	return out, rows.Err()
+}

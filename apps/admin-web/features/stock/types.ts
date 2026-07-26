@@ -23,3 +23,11 @@ export interface UpdateRollInput {
   remaining_meters?: number;
   is_active?: boolean;
 }
+
+export interface FinishedStock {
+  car_model_id: number;
+  brand_name: string;
+  model_name: string;
+  size_class: string;
+  packed_count: number;
+}

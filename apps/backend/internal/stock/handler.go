@@ -71,3 +71,11 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 	}
 	return httpx.OK(c, r)
 }
+
+func (h *Handler) Finished(c *fiber.Ctx) error {
+	stock, err := h.svc.FinishedGoods(c.Context())
+	if err != nil {
+		return httpx.Internal(c, "failed to load finished goods")
+	}
+	return httpx.OK(c, stock)
+}

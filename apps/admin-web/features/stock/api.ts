@@ -1,5 +1,10 @@
 import { http } from "@/lib/api-client";
-import type { Roll, CreateRollInput, UpdateRollInput } from "./types";
+import type {
+  Roll,
+  CreateRollInput,
+  UpdateRollInput,
+  FinishedStock,
+} from "./types";
 
 export const stockApi = {
   list: async (): Promise<Roll[]> => {
@@ -12,6 +17,10 @@ export const stockApi = {
   },
   update: async (id: string, input: UpdateRollInput): Promise<Roll> => {
     const res = await http.patch(`/stock/rolls/${id}`, input);
+    return res.data?.data ?? res.data;
+  },
+  finished: async (): Promise<FinishedStock[]> => {
+    const res = await http.get("/stock/finished");
     return res.data?.data ?? res.data;
   },
 };

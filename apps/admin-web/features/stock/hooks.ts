@@ -28,3 +28,7 @@ export function useUpdateRoll() {
     },
   });
 }
+
+export function useFinishedGoods() {
+  return useQuery({ queryKey: ["stock-finished"], queryFn: stockApi.finished });
+}
