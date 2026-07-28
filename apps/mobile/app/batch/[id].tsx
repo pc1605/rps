@@ -113,7 +113,23 @@ export default function BatchAction() {
           </Card>
         )}
 
-        {mine && (
+        {mine && worker?.station === "packer" && (
+          <Card style={styles.actionCard}>
+            <Text style={styles.label}>
+              PACKED {batch.units_packed} / {batch.units_total}
+            </Text>
+            <Text style={styles.actionHint}>
+              Scan each mat's QR label. The batch completes automatically on the
+              last one.
+            </Text>
+            <AppButton
+              title="Open scanner ▶"
+              onPress={() => router.push(`/scan/${batch.id}`)}
+            />
+          </Card>
+        )}
+
+        {mine && worker?.station !== "packer" && (
           <Card style={styles.actionCard}>
             <Text style={styles.label}>PIECES COMPLETED</Text>
             <TextInput

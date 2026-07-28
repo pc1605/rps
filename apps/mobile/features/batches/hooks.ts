@@ -25,3 +25,14 @@ export function useCompleteBatch() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["my-batches"] }),
   });
 }
+
+export function useScanUnit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (unitCode: string) => batchApi.scanUnit(unitCode),
+    onSuccess: (res) => {
+      if (res.batch_completed)
+        qc.invalidateQueries({ queryKey: ["my-batches"] });
+    },
+  });
+}

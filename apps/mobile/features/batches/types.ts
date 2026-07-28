@@ -19,3 +19,12 @@ export interface Batch {
   active_worker_id?: string;
   active_worker_name?: string;
 }
+
+export interface ScanResult {
+  unit_code: string;
+  batch_code: string;
+  already_packed: boolean;
+  packed_count: number;
+  total_units: number;
+  batch_completed: boolean;
+}

@@ -1,5 +1,5 @@
 import { http } from "../../lib/api-client";
-import type { Batch } from "./types";
+import type { Batch, ScanResult } from "./types";
 
 export const batchApi = {
   myBatches: async (): Promise<Batch[]> => {
@@ -18,5 +18,9 @@ export const batchApi = {
       quantity_completed: quantityCompleted,
       notes,
     });
+  },
+  scanUnit: async (unitCode: string): Promise<ScanResult> => {
+    const res = await http.post("/worker/units/scan", { unit_code: unitCode });
+    return res.data?.data ?? res.data;
   },
 };
