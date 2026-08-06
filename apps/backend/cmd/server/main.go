@@ -19,8 +19,9 @@ import (
 	"github.com/pc1605/rps/apps/backend/internal/db"
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
 	"github.com/pc1605/rps/apps/backend/internal/reference"
-	"github.com/pc1605/rps/apps/backend/internal/worker"
+	"github.com/pc1605/rps/apps/backend/internal/report"
 	"github.com/pc1605/rps/apps/backend/internal/stock"
+	"github.com/pc1605/rps/apps/backend/internal/worker"
 )
 
 func main() {
@@ -46,6 +47,7 @@ func main() {
 	refSvc := reference.NewService(pool)
 	workerSvc := worker.NewService(pool)
 	stockSvc := stock.NewService(pool) 
+	reportSvc := report.NewService(pool)
 	
 	
 	// ───── HTTP app ─────
@@ -61,6 +63,7 @@ func main() {
 	reference.RegisterRoutes(api, refSvc)
 	worker.RegisterRoutes(api, workerSvc, authSvc)
 	stock.RegisterRoutes(api, stockSvc, authSvc)
+	report.RegisterRoutes(api, reportSvc, authSvc)
 
 	// ───── Lifecycle ─────
 	runServer(app, cfg)
