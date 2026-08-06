@@ -9,6 +9,7 @@ import {
   Boxes,
   Users,
   type LucideIcon,
+  BarChart3,
 } from "lucide-react";
 
 interface NavItem {
@@ -23,6 +24,7 @@ const items: NavItem[] = [
   { href: "/batches", label: "Batches", icon: Package },
   { href: "/stock", label: "Stock", icon: Boxes },
   { href: "/workers", label: "Workers", icon: Users },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
 ];
 
 export function Sidebar() {
