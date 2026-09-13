@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { BatchList } from "@/features/batches/components/batch-list";
 import { CreateBatchDialog } from "@/features/batches/components/create-batch-dialog";
 
@@ -13,7 +14,13 @@ export default function BatchesPage() {
         </div>
         <CreateBatchDialog />
       </div>
-      <BatchList />
+      <Suspense
+        fallback={
+          <p className="font-mono text-sm text-muted-foreground">Loading…</p>
+        }
+      >
+        <BatchList />
+      </Suspense>
     </div>
   );
 }

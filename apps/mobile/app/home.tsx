@@ -24,26 +24,29 @@ const stationLabel: Record<string, string> = {
 
 function BatchCard({
   batch,
-  myWorkerId,
+  station,
   onOpen,
 }: {
   batch: Batch;
-  myWorkerId?: string;
+  station?: string;
   onOpen: (b: Batch) => void;
 }) {
-  const claimed = batch.status === "in_progress";
-  const mine = claimed && batch.active_worker_id === myWorkerId;
+  const mine = batch.joined_by_me;
+  // Only cutters are locked out of an in-progress batch;
+  // stitchers/packers can always open & join.
+  const blocked =
+    station === "cutter" && batch.status === "in_progress" && !mine;
   const daysAgo = Math.floor(
     (Date.now() - new Date(batch.created_at).getTime()) / 86_400_000,
   );
 
   return (
-    <Pressable onPress={() => onOpen(batch)} disabled={claimed && !mine}>
+    <Pressable onPress={() => onOpen(batch)} disabled={blocked}>
       <Card
         style={[
           styles.batchCard,
           mine && styles.cardMine,
-          claimed && !mine && styles.cardTaken,
+          blocked && styles.cardTaken,
         ]}
       >
         <View style={styles.batchRow}>
@@ -57,17 +60,27 @@ function BatchCard({
             · {batch.size_class.toUpperCase()}
           </Text>
         </Text>
+        {batch.assigned_to_me && (
+          <Text style={styles.assignedTag}>
+            📌{" "}
+            {batch.my_target_qty != null
+              ? `Your share: ${batch.my_done_qty} / ${batch.my_target_qty}`
+              : "Assigned to you"}
+            {batch.assigned_workers?.includes(",")
+              ? `  ·  with ${batch.assigned_workers}`
+              : ""}
+          </Text>
+        )}
         {mine && (
-          <Text style={styles.mineTag}>
-            ▶ You're working on this — tap to continue
+          <Text style={styles.mineTag}>▶ You're in — tap to continue</Text>
+        )}
+        {batch.active_workers && (
+          <Text style={styles.activeWorkers}>
+            👤 {batch.active_workers}
+            {mine ? "  ·  you're in" : ""}
           </Text>
         )}
-        {claimed && !mine && (
-          <Text style={styles.takenTag}>
-            ⏳ In progress · {batch.active_worker_name}
-          </Text>
-        )}
-        {!claimed && (
+        {batch.status === "pending" && (
           <Text style={styles.batchAge}>
             {daysAgo === 0 ? "Added today" : `Waiting ${daysAgo}d`}
           </Text>
@@ -80,7 +93,13 @@ function BatchCard({
 export default function Home() {
   const router = useRouter();
   const { worker, restore, logout } = useAuth();
-  const { data: batches, isLoading, isRefetching, refetch } = useMyBatches();
+  const {
+    data: batches,
+    isPending,
+    isError,
+    isRefetching,
+    refetch,
+  } = useMyBatches();
 
   // Cold-start: token exists but profile not loaded yet
   useEffect(() => {
@@ -111,9 +130,19 @@ export default function Home() {
       </View>
 
       {/* Queue */}
-      {isLoading ? (
+      {isPending ? (
         <View style={styles.center}>
           <ActivityIndicator />
+        </View>
+      ) : isError ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyTitle}>Couldn't load your queue</Text>
+          <Text style={styles.emptyText}>
+            Check the connection and pull to retry.
+          </Text>
+          <Pressable onPress={() => refetch()} style={{ marginTop: 12 }}>
+            <Text style={styles.retryLink}>Retry</Text>
+          </Pressable>
         </View>
       ) : (
         <FlatList
@@ -122,7 +151,7 @@ export default function Home() {
           renderItem={({ item }) => (
             <BatchCard
               batch={item}
-              myWorkerId={worker?.id}
+              station={worker?.station}
               onOpen={(b) => router.push(`/batch/${b.id}`)}
             />
           )}
@@ -209,5 +238,19 @@ const styles = StyleSheet.create((theme) => ({
     fontWeight: "700",
     marginTop: 4,
   },
-  takenTag: { color: theme.colors.textMuted, fontSize: 12, marginTop: 4 },
+  activeWorkers: {
+    ...theme.text.label,
+    color: theme.colors.textMuted,
+    marginTop: 6,
+  },
+  assignedTag: {
+    ...theme.text.label,
+    color: theme.colors.accent,
+    marginTop: 6,
+  },
+  retryLink: {
+    color: theme.colors.accent,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+  },
 }));

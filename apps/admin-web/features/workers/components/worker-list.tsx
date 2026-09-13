@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { stationConfig } from "../station-style";
 import type { Worker, Station } from "../types";
+import { EnrollmentQrDialog } from "./enrollment-qr-dialog";
 
 type Align = "left" | "center" | "right";
 const alignClass: Record<Align, string> = {
@@ -83,6 +84,13 @@ const columns: Column[] = [
         {w.last_login_at ? new Date(w.last_login_at).toLocaleDateString() : "—"}
       </span>
     ),
+  },
+  {
+    key: "enroll",
+    header: "",
+    align: "right",
+    width: "w-[60px]",
+    cell: (w) => <EnrollmentQrDialog workerId={w.id} workerName={w.name} />,
   },
 ];
 

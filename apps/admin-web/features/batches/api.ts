@@ -5,6 +5,8 @@ import type {
   CreateBatchInput,
   CarModel,
   Roll,
+  Phase,
+  AssignmentInput,
 } from "./types";
 
 export const batchApi = {
@@ -30,6 +32,21 @@ export const batchApi = {
   },
   stats: async () => {
     const res = await http.get("/batches/stats");
+    return res.data?.data ?? res.data;
+  },
+  setAssignments: async (
+    id: string,
+    phase: Phase,
+    assignments: AssignmentInput[],
+  ) => {
+    const res = await http.put(`/batches/${id}/assignments`, {
+      phase,
+      assignments,
+    });
+    return res.data?.data ?? res.data;
+  },
+  markStickersPrinted: async (id: string) => {
+    const res = await http.post(`/batches/${id}/stickers-printed`);
     return res.data?.data ?? res.data;
   },
 };

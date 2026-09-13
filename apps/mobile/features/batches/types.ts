@@ -1,5 +1,10 @@
 export type Phase = "cutting" | "stitching" | "packing" | "completed";
-export type BatchStatus = "pending" | "in_progress" | "completed" | "cancelled";
+export type BatchStatus =
+  | "pending"
+  | "in_progress"
+  | "awaiting_assignment"
+  | "completed"
+  | "cancelled";
 
 export interface Batch {
   id: string;
@@ -12,19 +17,27 @@ export interface Batch {
   status: BatchStatus;
   units_total: number;
   units_packed: number;
+  units_stitched: number;
   notes?: string;
   created_at: string;
 
-  // Open claim on the current phase (present only when in_progress)
-  active_worker_id?: string;
-  active_worker_name?: string;
+  active_workers?: string;
+  joined_by_me: boolean;
+
+  // admin assignment for the current phase
+  assigned_workers?: string; // "Mahesh, Surya"
+  assigned_to_me: boolean;
+  my_target_qty?: number;
+  my_done_qty: number;
 }
 
 export interface ScanResult {
   unit_code: string;
   batch_code: string;
-  already_packed: boolean;
-  packed_count: number;
+  phase: "stitching" | "packing";
+  already_done: boolean;
+  done_count: number;
   total_units: number;
+  phase_completed: boolean;
   batch_completed: boolean;
 }

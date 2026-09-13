@@ -15,7 +15,21 @@ const LABEL_W = (PAGE_W - MARGIN_X * 2) / COLS;
 const LABEL_H = (PAGE_H - MARGIN_Y * 2) / ROWS;
 const QR_SIZE = 22; // mm
 
-export async function generateLabelPdf(batch: BatchDetail): Promise<void> {
+export type LabelMedia = "taffeta" | "sticker";
+
+const MEDIA = {
+  taffeta: { cols: 3, rows: 8, qr: 22, suffix: "labels" },
+  sticker: { cols: 3, rows: 8, qr: 22, suffix: "stickers" },
+} as const;
+
+export async function generateLabelPdf(
+  batch: BatchDetail,
+  media: LabelMedia = "taffeta",
+): Promise<void> {
+  const cfg = MEDIA[media];
+  const COLS = cfg.cols,
+    ROWS = cfg.rows,
+    QR_SIZE = cfg.qr;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
   for (let i = 0; i < batch.units.length; i++) {
@@ -66,5 +80,5 @@ export async function generateLabelPdf(batch: BatchDetail): Promise<void> {
     doc.rect(x, y, LABEL_W, LABEL_H);
   }
 
-  doc.save(`${batch.batch_code}-labels.pdf`);
+  doc.save(`${batch.batch_code}-${cfg.suffix}.pdf`);
 }

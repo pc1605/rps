@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -20,14 +21,14 @@ var (
 type Service struct {
 	pool *pgxpool.Pool
 }
-
 type Stats struct {
-	InCutting      int `json:"in_cutting"`
-	InStitching    int `json:"in_stitching"`
-	InPacking      int `json:"in_packing"`
-	CompletedToday int `json:"completed_today"`
-	TotalActive    int `json:"total_active"`
-	UnitsToday     int `json:"units_today"`
+	InCutting          int `json:"in_cutting"`
+	InStitching        int `json:"in_stitching"`
+	InPacking          int `json:"in_packing"`
+	AwaitingAssignment int `json:"awaiting_assignment"`
+	CompletedToday     int `json:"completed_today"`
+	TotalActive        int `json:"total_active"`
+	UnitsToday         int `json:"units_today"`
 }
 
 func NewService(pool *pgxpool.Pool) *Service {
@@ -86,7 +87,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 		RETURNING id, batch_code, car_model_id, roll_id, quantity,
 		          current_phase, status, COALESCE(notes,''), rework_count,
 		          created_by, version, created_at, updated_at
-	`, batchCode, in.CarModelID, rollID, in.Quantity, in.Notes, actorID).Scan(
+		`, batchCode, in.CarModelID, rollID, in.Quantity, in.Notes, actorID).Scan(
 		&b.ID, &b.BatchCode, &b.CarModelID, &b.RollID, &b.Quantity,
 		&b.CurrentPhase, &b.Status, &b.Notes, &b.ReworkCount,
 		&b.CreatedBy, &b.Version, &b.CreatedAt, &b.UpdatedAt,
@@ -99,14 +100,14 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 	_, err = tx.Exec(ctx, `
 		INSERT INTO batch_units (batch_id, unit_code, unit_number)
 		SELECT $1, $2 || '-' || LPAD(n::TEXT, 3, '0'), n
-		FROM generate_series(1, $3) AS n
+		FROM generate_series(1, $3) AS nErrNotAssigned
 	`, b.ID, b.BatchCode, in.Quantity)
 	if err != nil {
 		return nil, fmt.Errorf("insert units: %w", err)
 	}
 
 	// 6. Audit (same tx — Hard Rule #16)
-if err := audit.Write(ctx, tx, audit.Entry{
+	if err := audit.Write(ctx, tx, audit.Entry{
 		ActorID:    actorID.String(),
 		ActorRole:  actorRole,
 		EntityType: "batch",
@@ -135,9 +136,10 @@ func (s *Service) List(ctx context.Context) ([]Batch, error) {
 		       b.roll_id, rm.roll_code,
 		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
 		       b.rework_count, b.created_by, u.name,
-		       b.version, b.created_at, b.updated_at,
-		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id) AS units_total,
-		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed') AS units_packed
+		       b.version, b.created_at, b.updated_at, b.stickers_printed_at,
+		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id),
+		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed'),
+		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.stitched_at IS NOT NULL)
 		FROM batches b
 		JOIN car_models cm ON cm.id = b.car_model_id
 		JOIN car_brands cb ON cb.id = cm.brand_id
@@ -159,8 +161,8 @@ func (s *Service) List(ctx context.Context) ([]Batch, error) {
 			&b.RollID, &b.RollCode,
 			&b.Quantity, &b.CurrentPhase, &b.Status, &b.Notes,
 			&b.ReworkCount, &b.CreatedBy, &b.CreatedByName,
-			&b.Version, &b.CreatedAt, &b.UpdatedAt,
-			&b.UnitsTotal, &b.UnitsPacked,
+			&b.Version, &b.CreatedAt, &b.UpdatedAt, &b.StickersPrintedAt,
+			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched,
 		); err != nil {
 			return nil, err
 		}
@@ -201,8 +203,12 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 	}
 
 	rows, err := s.pool.Query(ctx, `
-		SELECT id, batch_id, unit_code, unit_number, status, packed_at, created_at
-		FROM batch_units WHERE batch_id = $1 ORDER BY unit_number
+		SELECT bu.id, bu.batch_id, bu.unit_code, bu.unit_number, bu.status,
+		       bu.stitched_at, ws.name, bu.packed_at, wp.name, bu.created_at
+		FROM batch_units bu
+		LEFT JOIN workers ws ON ws.id = bu.stitched_by
+		LEFT JOIN workers wp ON wp.id = bu.packed_by
+		WHERE bu.batch_id = $1 ORDER BY bu.unit_number
 	`, id)
 	if err != nil {
 		return nil, err
@@ -212,7 +218,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 	detail := &BatchDetail{Batch: b}
 	for rows.Next() {
 		var u Unit
-		if err := rows.Scan(&u.ID, &u.BatchID, &u.UnitCode, &u.UnitNumber, &u.Status, &u.PackedAt, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.BatchID, &u.UnitCode, &u.UnitNumber, &u.Status, &u.StitchedAt, &u.StitchedByName, &u.PackedAt, &u.PackedByName, &u.CreatedAt); err != nil {
 			return nil, err
 		}
 		detail.Units = append(detail.Units, u)
@@ -254,7 +260,30 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 	if err := logRows.Err(); err != nil {
 		return nil, err
 	}
-
+	// Assignments per phase
+	aRows, err := s.pool.Query(ctx, `
+			SELECT ba.phase, ba.worker_id, w.name, ba.target_qty,
+		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = ba.batch_id
+		          AND ((ba.phase = 'stitching' AND bu.stitched_by = ba.worker_id)
+		            OR (ba.phase = 'packing'   AND bu.packed_by   = ba.worker_id)))
+		FROM batch_assignments ba JOIN workers w ON w.id = ba.worker_id
+		WHERE ba.batch_id = $1 ORDER BY ba.phase, w.name
+	`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer aRows.Close()
+	detail.Assignments = []AssignmentEntry{}
+	for aRows.Next() {
+		var a AssignmentEntry
+		if err := aRows.Scan(&a.Phase, &a.WorkerID, &a.WorkerName, &a.TargetQty, &a.DoneQty); err != nil {
+			return nil, err
+		}
+		detail.Assignments = append(detail.Assignments, a)
+	}
+	if err := aRows.Err(); err != nil {
+		return nil, err
+	}
 	return detail, nil
 }
 
@@ -262,23 +291,32 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 	var st Stats
 	err := s.pool.QueryRow(ctx, `
 		SELECT
-		  COUNT(*) FILTER (WHERE status != 'completed' AND current_phase = 'cutting'),
-		  COUNT(*) FILTER (WHERE status != 'completed' AND current_phase = 'stitching'),
-		  COUNT(*) FILTER (WHERE status != 'completed' AND current_phase = 'packing'),
+		  COUNT(*) FILTER (WHERE current_phase = 'cutting'   AND status IN ('pending','in_progress')),
+		  COUNT(*) FILTER (WHERE current_phase = 'stitching' AND status = 'awaiting_assignment'),
+		  COUNT(*) FILTER (WHERE current_phase = 'stitching' AND status IN ('pending','in_progress')),
+		  COUNT(*) FILTER (WHERE current_phase = 'packing'   AND status IN ('pending','in_progress')),
 		  COUNT(*) FILTER (WHERE status = 'completed' AND updated_at::date = CURRENT_DATE),
 		  COUNT(*) FILTER (WHERE status NOT IN ('completed','cancelled'))
 		FROM batches
-	`).Scan(&st.InCutting, &st.InStitching, &st.InPacking, &st.CompletedToday, &st.TotalActive)
+	`).Scan(
+		&st.InCutting,
+		&st.AwaitingAssignment,
+		&st.InStitching,
+		&st.InPacking,
+		&st.CompletedToday,
+		&st.TotalActive,
+	)
 	if err != nil {
 		return nil, err
 	}
 	return &st, nil
 }
 
-// ListByPhase returns active batches sitting at one phase, oldest first,
-// including the open claim (who's working on it) if any.
-// This powers the worker home screen: "what's waiting at my station."
-func (s *Service) ListByPhase(ctx context.Context, phase Phase) ([]Batch, error) {
+// ListByPhase returns batches at one phase for a worker's queue, oldest first.
+// Visibility: a phase with no assignment is an open queue; a phase with
+// assignments is visible only to its assignees. Carries who's working now,
+// whether THIS worker joined/is assigned, and their quota + done count.
+func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UUID) ([]Batch, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT b.id, b.batch_code, b.car_model_id,
 		       cb.name, cm.name, cm.size_class::text,
@@ -286,22 +324,50 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase) ([]Batch, error)
 		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
 		       b.rework_count, b.created_by, u.name,
 		       b.version, b.created_at, b.updated_at,
+		       -- unit roll-ups
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id),
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed'),
-		       pl.worker_id, wk.name
+		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.stitched_at IS NOT NULL),
+		       -- who's working right now / did I join
+		       (SELECT string_agg(wk.name, ', ' ORDER BY pl.started_at)
+		        FROM phase_logs pl JOIN workers wk ON wk.id = pl.worker_id
+		        WHERE pl.batch_id = b.id AND pl.phase = b.current_phase
+		          AND pl.completed_at IS NULL),
+		       EXISTS(SELECT 1 FROM phase_logs pl
+		        WHERE pl.batch_id = b.id AND pl.phase = b.current_phase
+		          AND pl.completed_at IS NULL AND pl.worker_id = $2),
+		       -- assignment: names / am I assigned / my quota / my done count
+		       (SELECT string_agg(wk.name, ', ' ORDER BY wk.name)
+		        FROM batch_assignments ba JOIN workers wk ON wk.id = ba.worker_id
+		        WHERE ba.batch_id = b.id AND ba.phase = b.current_phase),
+		       EXISTS(SELECT 1 FROM batch_assignments ba
+		        WHERE ba.batch_id = b.id AND ba.phase = b.current_phase
+		          AND ba.worker_id = $2),
+		       (SELECT ba.target_qty FROM batch_assignments ba
+		        WHERE ba.batch_id = b.id AND ba.phase = b.current_phase
+		          AND ba.worker_id = $2),
+		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id
+		          AND ((b.current_phase = 'stitching' AND bu.stitched_by = $2)
+		            OR (b.current_phase = 'packing'   AND bu.packed_by   = $2)))
 		FROM batches b
 		JOIN car_models cm ON cm.id = b.car_model_id
 		JOIN car_brands cb ON cb.id = cm.brand_id
 		JOIN users u       ON u.id = b.created_by
 		LEFT JOIN raw_materials rm ON rm.id = b.roll_id
-		LEFT JOIN phase_logs pl ON pl.batch_id = b.id
-		     AND pl.phase = b.current_phase
-		     AND pl.completed_at IS NULL
-		LEFT JOIN workers wk ON wk.id = pl.worker_id
 		WHERE b.current_phase = $1
 		  AND b.status IN ('pending', 'in_progress')
-		ORDER BY b.created_at ASC
-	`, phase)
+		  AND (
+		    NOT EXISTS (SELECT 1 FROM batch_assignments ba
+		                WHERE ba.batch_id = b.id AND ba.phase = b.current_phase)
+		    OR EXISTS (SELECT 1 FROM batch_assignments ba
+		               WHERE ba.batch_id = b.id AND ba.phase = b.current_phase
+		                 AND ba.worker_id = $2)
+		  )
+		ORDER BY EXISTS(SELECT 1 FROM batch_assignments ba
+		           WHERE ba.batch_id = b.id AND ba.phase = b.current_phase
+		             AND ba.worker_id = $2) DESC,
+		         b.created_at ASC
+	`, phase, workerID)
 	if err != nil {
 		return nil, err
 	}
@@ -317,8 +383,10 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase) ([]Batch, error)
 			&b.Quantity, &b.CurrentPhase, &b.Status, &b.Notes,
 			&b.ReworkCount, &b.CreatedBy, &b.CreatedByName,
 			&b.Version, &b.CreatedAt, &b.UpdatedAt,
-			&b.UnitsTotal, &b.UnitsPacked,
-			&b.ActiveWorkerID, &b.ActiveWorkerName,
+			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched,
+			&b.ActiveWorkers, &b.JoinedByMe,
+			&b.AssignedWorkers, &b.AssignedToMe,
+			&b.MyTargetQty, &b.MyDoneQty,
 		); err != nil {
 			return nil, err
 		}
@@ -328,17 +396,19 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase) ([]Batch, error)
 }
 
 var (
-	ErrWrongPhase     = errors.New("batch is not at your station")
-	ErrAlreadyStarted = errors.New("batch already started")
-	ErrNotStarted     = errors.New("batch has not been started")
-	ErrNotYours       = errors.New("batch was started by another worker")
+	ErrWrongPhase     = errors.New("this batch is not at your station right now")
+	ErrAlreadyStarted = errors.New("this batch has already been started")
+	ErrNotStarted     = errors.New("this batch is not active yet — start or join it first")
+	ErrNotYours       = errors.New("this batch was started by another worker")
+	ErrNotAssigned    = errors.New("this batch is assigned to other workers")
+	ErrQuotaReached   = errors.New("your share of this batch is complete")
 )
 
 // nextPhase defines the ONLY legal forward path through production.
 func nextPhase(p Phase) (Phase, Status) {
 	switch p {
 	case PhaseCutting:
-		return PhaseStitching, StatusPending
+		return PhaseStitching, StatusAwaitingAssignment
 	case PhaseStitching:
 		return PhasePacking, StatusPending
 	case PhasePacking:
@@ -361,9 +431,9 @@ func (s *Service) StartPhase(ctx context.Context, batchID, workerID uuid.UUID, s
 	defer tx.Rollback(ctx)
 
 	var b struct {
-		Phase   Phase
-		Status  Status
-		Code    string
+		Phase  Phase
+		Status Status
+		Code   string
 	}
 	err = tx.QueryRow(ctx,
 		`SELECT current_phase, status, batch_code FROM batches WHERE id = $1 FOR UPDATE`,
@@ -377,19 +447,50 @@ func (s *Service) StartPhase(ctx context.Context, batchID, workerID uuid.UUID, s
 	if b.Phase != phase {
 		return ErrWrongPhase
 	}
-	if b.Status != StatusPending {
-		return ErrAlreadyStarted
+
+	// Assignment gate: if this phase has assignees, only they may start/join.
+	var assigned, isMine bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM batch_assignments WHERE batch_id=$1 AND phase=$2),
+		       EXISTS(SELECT 1 FROM batch_assignments WHERE batch_id=$1 AND phase=$2 AND worker_id=$3)
+	`, batchID, phase, workerID).Scan(&assigned, &isMine); err != nil {
+		return err
+	}
+	if assigned && !isMine {
+		return ErrNotAssigned
 	}
 
-	// Atomic claim via the partial unique index.
+	if phase == PhaseCutting {
+		// Cutting: exclusive claim, unchanged
+		if b.Status != StatusPending {
+			return ErrAlreadyStarted
+		}
+	} else {
+		// Stitching/packing: joinable while pending or in_progress
+		if b.Status != StatusPending && b.Status != StatusInProgress {
+			return ErrNotStarted
+		}
+		// Idempotent join: already in? no-op success.
+		var joined bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS(SELECT 1 FROM phase_logs
+			WHERE batch_id=$1 AND phase=$2 AND worker_id=$3 AND completed_at IS NULL)
+		`, batchID, phase, workerID).Scan(&joined); err != nil {
+			return err
+		}
+		if joined {
+			return tx.Commit(ctx)
+		}
+	}
+
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO phase_logs (batch_id, phase, worker_id) VALUES ($1, $2, $3)`,
 		batchID, phase, workerID); err != nil {
-		return ErrAlreadyStarted // unique violation = raced by another worker
+		return ErrAlreadyStarted // cutting raced, or per-worker index backstop
 	}
 
 	if _, err := tx.Exec(ctx,
-		`UPDATE batches SET status = 'in_progress', version = version + 1 WHERE id = $1`,
+		`UPDATE batches SET status='in_progress', version=version+1 WHERE id=$1 AND status='pending'`,
 		batchID); err != nil {
 		return err
 	}
@@ -408,12 +509,146 @@ func (s *Service) StartPhase(ctx context.Context, batchID, workerID uuid.UUID, s
 	return tx.Commit(ctx)
 }
 
-// CompletePhase closes the worker's OWN open log and advances the batch.
+// SetAssignments replaces one phase's assignees with optional per-head quotas.
+// Rules: quotas (if any) must all be present and sum to batch quantity; a target
+// can't drop below units already done by that worker; a worker with completed
+// units can't be removed. Stitching also operates the awaiting/pending gate.
+func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase Phase, entries []AssignmentInput, adminID uuid.UUID, ip string) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var quantity int
+	err = tx.QueryRow(ctx, `SELECT quantity FROM batches WHERE id=$1 FOR UPDATE`, batchID).Scan(&quantity)
+	if err == pgx.ErrNoRows {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+
+	attrCol := map[Phase]string{PhaseStitching: "stitched_by", PhasePacking: "packed_by"}[phase]
+
+	// Validate quotas
+	withQuota, sum := 0, 0
+	for _, e := range entries {
+		if e.TargetQty != nil {
+			withQuota++
+			sum += *e.TargetQty
+		}
+	}
+	if withQuota > 0 && withQuota != len(entries) {
+		return fmt.Errorf("%w: give every assignee a quota, or none", ErrInvalidInput)
+	}
+	if withQuota > 0 && sum != quantity {
+		return fmt.Errorf("%w: quotas total %d but batch has %d mats", ErrInvalidInput, sum, quantity)
+	}
+
+	// Per-worker done counts guard reductions/removals
+	if attrCol != "" {
+		rows, err := tx.Query(ctx, `
+			SELECT w.id, w.name, COUNT(*) FROM batch_units bu JOIN workers w ON w.id = bu.`+attrCol+`
+			WHERE bu.batch_id=$1 GROUP BY w.id, w.name`, batchID)
+		if err != nil {
+			return err
+		}
+		done := map[uuid.UUID]struct {
+			name string
+			n    int
+		}{}
+		for rows.Next() {
+			var id uuid.UUID
+			var name string
+			var n int
+			if err := rows.Scan(&id, &name, &n); err != nil {
+				rows.Close()
+				return err
+			}
+			done[id] = struct {
+				name string
+				n    int
+			}{name, n}
+		}
+		rows.Close()
+
+		kept := map[uuid.UUID]bool{}
+		for _, e := range entries {
+			kept[e.WorkerID] = true
+			if d, ok := done[e.WorkerID]; ok && e.TargetQty != nil && *e.TargetQty < d.n {
+				return fmt.Errorf("%w: %s has already done %d — target can't be lower", ErrInvalidInput, d.name, d.n)
+			}
+		}
+		for id, d := range done {
+			if !kept[id] {
+				return fmt.Errorf("%w: %s has already done %d mats — reduce their target instead of removing them", ErrInvalidInput, d.name, d.n)
+			}
+		}
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM batch_assignments WHERE batch_id=$1 AND phase=$2`, batchID, phase); err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO batch_assignments (batch_id, phase, worker_id, assigned_by, target_qty)
+			VALUES ($1,$2,$3,$4,$5) ON CONFLICT (batch_id, phase, worker_id) DO UPDATE SET target_qty = EXCLUDED.target_qty
+		`, batchID, phase, e.WorkerID, adminID, e.TargetQty); err != nil {
+			return fmt.Errorf("%w: invalid worker for assignment", ErrInvalidInput)
+		}
+	}
+
+	if phase == PhaseStitching {
+		if len(entries) > 0 {
+			_, err = tx.Exec(ctx, `UPDATE batches SET status='pending', version=version+1
+				WHERE id=$1 AND current_phase='stitching' AND status='awaiting_assignment'`, batchID)
+		} else {
+			_, err = tx.Exec(ctx, `UPDATE batches SET status='awaiting_assignment', version=version+1
+				WHERE id=$1 AND current_phase='stitching' AND status='pending'`, batchID)
+		}
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := audit.Write(ctx, tx, audit.Entry{
+		ActorID: adminID.String(), ActorRole: "admin",
+		EntityType: "batch", EntityID: batchID.String(),
+		Action: audit.ActionTransition,
+		After:  map[string]any{"event": "assignments_set", "phase": phase, "workers": len(entries), "quotas": withQuota > 0},
+		IP:     ip,
+	}); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+// MarkStickersPrinted stamps the packing-sticker print time.
+func (s *Service) MarkStickersPrinted(ctx context.Context, batchID uuid.UUID) error {
+	ct, err := s.pool.Exec(ctx, `UPDATE batches SET stickers_printed_at = NOW() WHERE id = $1`, batchID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// CompletePhase closes the cutter's open log and advances the batch.
+// Cutting ONLY — stitching & packing complete via per-unit scans (ScanUnit).
 func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID, station string, quantityCompleted int, notes, ip string) error {
 	phase, ok := PhaseForStation[station]
 	if !ok {
 		return fmt.Errorf("%w: unknown station", ErrInvalidInput)
 	}
+
+	// Stitching & packing complete via per-unit scans, never manually.
+	if phase == PhaseStitching || phase == PhasePacking {
+		return fmt.Errorf("%w: %s completes automatically when all units are scanned", ErrInvalidInput, phase)
+	}
+
 	if quantityCompleted < 0 {
 		return fmt.Errorf("%w: quantity must be >= 0", ErrInvalidInput)
 	}
@@ -464,11 +699,6 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 		return err
 	}
 
-	// Packing completes via per-unit scans (ScanUnit), never manually.
-	if phase == PhasePacking {
-		return fmt.Errorf("%w: packing completes automatically when all units are scanned", ErrInvalidInput)
-	}
-
 	if err := audit.Write(ctx, tx, audit.Entry{
 		ActorID: workerID.String(), ActorRole: station,
 		EntityType: "batch", EntityID: batchID.String(),
@@ -488,9 +718,13 @@ var ErrUnitNotFound = errors.New("unit not found")
 
 // ScanUnit marks one unit packed (packer's per-unit scan).
 // Idempotent on re-scan. Auto-completes the batch on the last unit.
+// ScanUnit: stitcher scans a mat they just stitched; packer scans a mat they
+// pack. Attribution per worker per unit. Phase auto-advances on last unit,
+// closing every joined worker's log with their own scan count.
 func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.UUID, station, ip string) (*ScanResult, error) {
-	if station != "packer" {
-		return nil, ErrWrongPhase
+	phase, ok := PhaseForStation[station]
+	if !ok || phase == PhaseCutting {
+		return nil, ErrWrongPhase // cutters don't scan units
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -499,22 +733,20 @@ func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.U
 	}
 	defer tx.Rollback(ctx)
 
-	// Locate unit + its batch, lock the batch row
 	var (
 		unitID      uuid.UUID
 		unitStatus  UnitStatus
+		stitchedAt  *time.Time
 		batchID     uuid.UUID
 		batchCode   string
 		batchPhase  Phase
 		batchStatus Status
 	)
 	err = tx.QueryRow(ctx, `
-		SELECT bu.id, bu.status, b.id, b.batch_code, b.current_phase, b.status
-		FROM batch_units bu
-		JOIN batches b ON b.id = bu.batch_id
-		WHERE bu.unit_code = $1
-		FOR UPDATE OF b
-	`, unitCode).Scan(&unitID, &unitStatus, &batchID, &batchCode, &batchPhase, &batchStatus)
+		SELECT bu.id, bu.status, bu.stitched_at, b.id, b.batch_code, b.current_phase, b.status
+		FROM batch_units bu JOIN batches b ON b.id = bu.batch_id
+		WHERE bu.unit_code = $1 FOR UPDATE OF b
+	`, unitCode).Scan(&unitID, &unitStatus, &stitchedAt, &batchID, &batchCode, &batchPhase, &batchStatus)
 	if err == pgx.ErrNoRows {
 		return nil, ErrUnitNotFound
 	}
@@ -522,92 +754,127 @@ func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.U
 		return nil, err
 	}
 
-	res := &ScanResult{UnitCode: unitCode, BatchCode: batchCode}
+	res := &ScanResult{UnitCode: unitCode, BatchCode: batchCode, Phase: phase}
 
-	// Idempotent path: already packed → report progress, no writes
-	if unitStatus == UnitPacked || unitStatus == UnitDispatched {
-		res.AlreadyPacked = true
-		if err := tx.QueryRow(ctx, `
-			SELECT COUNT(*), COUNT(*) FILTER (WHERE status IN ('packed','dispatched'))
+	progress := func(doneExpr string) error {
+		return tx.QueryRow(ctx, `
+			SELECT COUNT(*), COUNT(*) FILTER (WHERE `+doneExpr+`)
 			FROM batch_units WHERE batch_id = $1
-		`, batchID).Scan(&res.TotalUnits, &res.PackedCount); err != nil {
+		`, batchID).Scan(&res.TotalUnits, &res.DoneCount)
+	}
+
+	// Idempotent paths
+	if phase == PhaseStitching && (stitchedAt != nil || unitStatus == UnitPacked || unitStatus == UnitDispatched) {
+		res.AlreadyDone = true
+		if err := progress("stitched_at IS NOT NULL"); err != nil {
+			return nil, err
+		}
+		return res, tx.Commit(ctx)
+	}
+	if phase == PhasePacking && (unitStatus == UnitPacked || unitStatus == UnitDispatched) {
+		res.AlreadyDone = true
+		if err := progress("status IN ('packed','dispatched')"); err != nil {
 			return nil, err
 		}
 		return res, tx.Commit(ctx)
 	}
 
-	// Batch must be actively in packing
-	if batchPhase != PhasePacking {
+	// Batch must be at MY phase, in progress
+	if batchPhase != phase {
 		return nil, ErrWrongPhase
 	}
 	if batchStatus != StatusInProgress {
 		return nil, ErrNotStarted
 	}
-
-	// The open packing claim must be THIS worker's
-	var claimOwner uuid.UUID
-	err = tx.QueryRow(ctx, `
-		SELECT worker_id FROM phase_logs
-		WHERE batch_id = $1 AND phase = 'packing' AND completed_at IS NULL
-	`, batchID).Scan(&claimOwner)
-	if err == pgx.ErrNoRows {
+	// I must have joined (open log of mine)
+	var joined bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM phase_logs
+		WHERE batch_id=$1 AND phase=$2 AND worker_id=$3 AND completed_at IS NULL)
+	`, batchID, phase, workerID).Scan(&joined); err != nil {
+		return nil, err
+	}
+	// Quota gate: if my assignment carries a target, I can't exceed it.
+	{
+		attrCol := "stitched_by"
+		if phase == PhasePacking {
+			attrCol = "packed_by"
+		}
+		var target *int
+		var mine int
+		err := tx.QueryRow(ctx, `
+			SELECT (SELECT target_qty FROM batch_assignments WHERE batch_id=$1 AND phase=$2 AND worker_id=$3),
+			       (SELECT COUNT(*) FROM batch_units WHERE batch_id=$1 AND `+attrCol+`=$3)
+		`, batchID, phase, workerID).Scan(&target, &mine)
+		if err != nil {
+			return nil, err
+		}
+		if target != nil && mine >= *target {
+			return nil, fmt.Errorf("%w (%d/%d)", ErrQuotaReached, mine, *target)
+		}
+	}
+	if !joined {
 		return nil, ErrNotStarted
 	}
-	if err != nil {
-		return nil, err
-	}
-	if claimOwner != workerID {
-		return nil, ErrNotYours
-	}
 
-	// Pack the unit
-	if _, err := tx.Exec(ctx, `
-		UPDATE batch_units SET status = 'packed', packed_by = $1, packed_at = NOW()
-		WHERE id = $2
-	`, workerID, unitID); err != nil {
-		return nil, err
-	}
-
-	// Progress
-	if err := tx.QueryRow(ctx, `
-		SELECT COUNT(*), COUNT(*) FILTER (WHERE status IN ('packed','dispatched'))
-		FROM batch_units WHERE batch_id = $1
-	`, batchID).Scan(&res.TotalUnits, &res.PackedCount); err != nil {
-		return nil, err
-	}
-
-	// Last unit? → close the packing log + complete the batch
-	if res.PackedCount >= res.TotalUnits {
-		if _, err := tx.Exec(ctx, `
-			UPDATE phase_logs
-			SET completed_at = NOW(), quantity_completed = $1
-			WHERE batch_id = $2 AND phase = 'packing' AND completed_at IS NULL
-		`, res.PackedCount, batchID); err != nil {
+	// Apply the scan
+	if phase == PhaseStitching {
+		if _, err := tx.Exec(ctx,
+			`UPDATE batch_units SET stitched_by=$1, stitched_at=NOW() WHERE id=$2`,
+			workerID, unitID); err != nil {
 			return nil, err
 		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE batches SET current_phase = 'completed', status = 'completed', version = version + 1
-			WHERE id = $1
-		`, batchID); err != nil {
+		if err := progress("stitched_at IS NOT NULL"); err != nil {
 			return nil, err
 		}
-		res.BatchCompleted = true
+	} else {
+		if _, err := tx.Exec(ctx,
+			`UPDATE batch_units SET status='packed', packed_by=$1, packed_at=NOW() WHERE id=$2`,
+			workerID, unitID); err != nil {
+			return nil, err
+		}
+		if err := progress("status IN ('packed','dispatched')"); err != nil {
+			return nil, err
+		}
 	}
 
-	// Audit every scan
+	// Last unit → close ALL open logs with per-worker counts, advance batch
+	if res.DoneCount >= res.TotalUnits {
+		attrCol := "stitched_by"
+		if phase == PhasePacking {
+			attrCol = "packed_by"
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE phase_logs pl
+			SET completed_at = NOW(),
+			    quantity_completed = (SELECT COUNT(*) FROM batch_units bu
+			                          WHERE bu.batch_id=$1 AND bu.`+attrCol+`=pl.worker_id)
+			WHERE pl.batch_id=$1 AND pl.phase=$2 AND pl.completed_at IS NULL
+		`, batchID, phase); err != nil {
+			return nil, err
+		}
+		next, newStatus := nextPhase(phase)
+		if _, err := tx.Exec(ctx,
+			`UPDATE batches SET current_phase=$1, status=$2, version=version+1 WHERE id=$3`,
+			next, newStatus, batchID); err != nil {
+			return nil, err
+		}
+		if phase == PhaseStitching {
+			res.PhaseCompleted = true
+		} else {
+			res.BatchCompleted = true
+		}
+	}
+
 	if err := audit.Write(ctx, tx, audit.Entry{
 		ActorID: workerID.String(), ActorRole: station,
 		EntityType: "batch_unit", EntityID: unitID.String(),
 		Action: audit.ActionTransition,
-		After: map[string]any{
-			"unit_code": unitCode, "event": "packed",
-			"progress": fmt.Sprintf("%d/%d", res.PackedCount, res.TotalUnits),
-			"batch_completed": res.BatchCompleted,
-		},
+		After: map[string]any{"unit_code": unitCode, "event": string(phase) + "_scan",
+			"progress": fmt.Sprintf("%d/%d", res.DoneCount, res.TotalUnits)},
 		IP: ip,
 	}); err != nil {
 		return nil, err
 	}
-
 	return res, tx.Commit(ctx)
 }

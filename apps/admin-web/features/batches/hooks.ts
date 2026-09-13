@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { batchApi } from "./api";
-import type { CreateBatchInput } from "./types";
+import type { AssignmentInput, CreateBatchInput, Phase } from "./types";
 
 export function useBatches() {
   return useQuery({ queryKey: ["batches"], queryFn: batchApi.list });
@@ -43,5 +43,29 @@ export function useBatchStats() {
     queryKey: ["batch-stats"],
     queryFn: batchApi.stats,
     refetchInterval: 5000, // polling — feels live
+  });
+}
+
+export function useSetAssignments(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      phase,
+      assignments,
+    }: {
+      phase: Phase;
+      assignments: AssignmentInput[];
+    }) => batchApi.setAssignments(id, phase, assignments),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["batch", id] });
+      qc.invalidateQueries({ queryKey: ["batches"] });
+    },
+  });
+}
+export function useMarkStickersPrinted() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => batchApi.markStickersPrinted(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["batches"] }),
   });
 }

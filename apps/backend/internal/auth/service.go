@@ -17,6 +17,7 @@ import (
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrUserDeactivated    = errors.New("user deactivated")
+	ErrNotFound = errors.New("worker not found")
 )
 
 type Service struct {
@@ -279,4 +280,13 @@ tokens, err := s.issueTokens(u.ID, string(u.Role))
 		return nil, nil, err
 	}
 	return &u, tokens, nil
+}
+
+func (s *Service) BadgeToken(ctx context.Context, id uuid.UUID) (string, error) {
+	var badge string
+	err := s.pool.QueryRow(ctx, `SELECT badge_token FROM workers WHERE id=$1 AND is_active`, id).Scan(&badge)
+	if err == pgx.ErrNoRows {
+		return "", ErrNotFound
+	}
+	return badge, err
 }

@@ -2,16 +2,16 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FileDown } from "lucide-react";
 import { useBatch } from "@/features/batches/hooks";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BatchTimeline } from "@/features/batches/components/batch-timeline";
-import type { UnitStatus } from "@/features/batches/types";
-import { Button } from "@/components/ui/button";
-import { FileDown } from "lucide-react";
+import { AssignStitchersCard } from "@/features/batches/components/assign-stitchers-card";
 import { generateLabelPdf } from "@/features/batches/label-pdf";
+import type { UnitStatus } from "@/features/batches/types";
 
 const unitStyle: Record<UnitStatus, string> = {
   pending: "text-muted-foreground border-border",
@@ -79,7 +79,7 @@ export default function BatchDetailPage({
           </div>
         </div>
       </div>
-
+      <AssignStitchersCard batch={batch} />
       <div>
         <h2 className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-3">
           Production timeline
@@ -98,12 +98,25 @@ export default function BatchDetailPage({
               <Badge
                 variant="outline"
                 className={cn(
-                  "mt-2 font-mono text-[9px] uppercase",
-                  unitStyle[u.status],
+                  "font-mono text-[10px] uppercase",
+                  batch.status === "awaiting_assignment" &&
+                    "text-amber-600 dark:text-amber-400 border-amber-500/30",
                 )}
               >
-                {u.status}
+                {batch.status === "awaiting_assignment"
+                  ? "ready for stitching"
+                  : batch.current_phase}
               </Badge>
+              {u.stitched_by_name && (
+                <div className="text-[10px] text-muted-foreground mt-1.5">
+                  🧵 {u.stitched_by_name}
+                </div>
+              )}
+              {u.packed_by_name && (
+                <div className="text-[10px] text-muted-foreground">
+                  📦 {u.packed_by_name}
+                </div>
+              )}
             </Card>
           ))}
         </div>

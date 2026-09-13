@@ -23,6 +23,7 @@ import {
 import { Plus, Copy, Check } from "lucide-react";
 import { useCreateWorker } from "../hooks";
 import type { Station } from "../types";
+import { QRCodeSVG } from "qrcode.react";
 
 export function CreateWorkerDialog() {
   const [open, setOpen] = useState(false);
@@ -179,6 +180,13 @@ export function CreateWorkerDialog() {
             </DialogHeader>
 
             <div className="py-4">
+              <div className="flex justify-center rounded-lg border bg-white p-4 mb-3">
+                <QRCodeSVG
+                  value={`RPS-ENROLL:${createdBadge}`}
+                  size={180}
+                  level="M"
+                />
+              </div>
               <div className="rounded-lg border bg-muted/40 p-4 flex items-center justify-between gap-3">
                 <code className="font-mono text-sm break-all">
                   {createdBadge}
@@ -197,8 +205,9 @@ export function CreateWorkerDialog() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                The worker enters this code once in the app to enroll their
-                phone. (QR generation comes later.)
+                On the worker&apos;s phone: open RPS Worker →{" "}
+                <b>Scan enrollment code</b> → point at this QR → enter PIN. Or
+                share the text code below as a fallback.
               </p>
             </div>
 

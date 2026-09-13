@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useBatches } from "../hooks";
+import { Printer } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -10,10 +10,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useBatches, useMarkStickersPrinted } from "../hooks";
+import { generateLabelPdf } from "../label-pdf";
+import { batchApi } from "../api";
 import type { Batch, Phase } from "../types";
+import { useSearchParams } from "next/navigation";
+import { batchViews } from "../views";
 
 const phaseStyle: Record<Phase, string> = {
   cutting: "text-cyan-600 dark:text-cyan-400 border-cyan-500/30",
@@ -29,7 +36,6 @@ const sizeStyle: Record<string, string> = {
 };
 
 type Align = "left" | "center" | "right";
-
 const alignClass: Record<Align, string> = {
   left: "text-left",
   center: "text-center",
@@ -44,7 +50,7 @@ interface Column {
   cell: (b: Batch) => React.ReactNode;
 }
 
-const columns: Column[] = [
+const baseColumns: Column[] = [
   {
     key: "code",
     header: "Code",
@@ -90,16 +96,18 @@ const columns: Column[] = [
     key: "phase",
     header: "Phase",
     align: "center",
-    width: "w-[130px]",
+    width: "w-[150px]",
     cell: (b) => (
       <Badge
         variant="outline"
         className={cn(
           "font-mono text-[10px] uppercase",
-          phaseStyle[b.current_phase],
+          b.status === "awaiting_assignment"
+            ? "text-amber-600 dark:text-amber-400 border-amber-500/30"
+            : phaseStyle[b.current_phase],
         )}
       >
-        {b.current_phase}
+        {b.status === "awaiting_assignment" ? "ready" : b.current_phase}
       </Badge>
     ),
   },
@@ -127,25 +135,17 @@ const columns: Column[] = [
   },
 ];
 
-export function BatchList() {
-  const { data: batches, isLoading, error } = useBatches();
-
-  if (isLoading)
+function BatchTable({
+  batches,
+  columns,
+}: {
+  batches: Batch[];
+  columns: Column[];
+}) {
+  if (!batches.length)
     return (
-      <p className="font-mono text-sm text-muted-foreground">
-        Loading batches…
-      </p>
-    );
-  if (error)
-    return (
-      <p className="font-mono text-sm text-destructive">
-        Failed to load batches.
-      </p>
-    );
-  if (!batches?.length)
-    return (
-      <Card className="p-12 text-center text-muted-foreground text-sm">
-        No batches yet. Create your first one.
+      <Card className="p-10 text-center text-muted-foreground text-sm">
+        Nothing here right now.
       </Card>
     );
 
@@ -184,5 +184,68 @@ export function BatchList() {
         </TableBody>
       </Table>
     </Card>
+  );
+}
+
+export function BatchList() {
+  const params = useSearchParams();
+  const phase = params.get("phase");
+  const view = batchViews.find((v) => v.key === phase);
+  const { data: batches, isLoading, error } = useBatches();
+  const markPrinted = useMarkStickersPrinted();
+
+  if (isLoading)
+    return (
+      <p className="font-mono text-sm text-muted-foreground">
+        Loading batches…
+      </p>
+    );
+  if (error)
+    return (
+      <p className="font-mono text-sm text-destructive">
+        Failed to load batches.
+      </p>
+    );
+  if (!batches?.length)
+    return (
+      <Card className="p-12 text-center text-muted-foreground text-sm">
+        No batches yet. Create your first one.
+      </Card>
+    );
+
+  const printStickers = async (b: Batch) => {
+    const detail = await batchApi.get(b.id);
+    await generateLabelPdf(detail, "sticker");
+    markPrinted.mutate(b.id);
+  };
+
+  // Packing tab gets an extra actions column
+  const stickerColumn: Column = {
+    key: "stickers",
+    header: "Stickers",
+    align: "right",
+    width: "w-[170px]",
+    cell: (b) => (
+      <Button variant="outline" size="sm" onClick={() => printStickers(b)}>
+        <Printer className="h-3.5 w-3.5" />
+        {b.stickers_printed_at ? "Reprint" : "Print stickers"}
+      </Button>
+    ),
+  };
+
+  const visible = view ? batches.filter(view.filter) : batches;
+  const columns =
+    view?.key === "packing" ? [...baseColumns, stickerColumn] : baseColumns;
+
+  return (
+    <div className="space-y-3">
+      {view && (
+        <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-muted-foreground">
+          <span className={cn("h-2 w-2 rounded-full", view.dot)} />
+          {view.label} · {visible.length}
+        </div>
+      )}
+      <BatchTable batches={visible} columns={columns} />
+    </div>
   );
 }

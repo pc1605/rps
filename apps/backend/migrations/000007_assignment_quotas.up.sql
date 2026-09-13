@@ -1,0 +1,1 @@
+ALTER TABLE batch_assignments ADD COLUMN target_qty INT CHECK (target_qty > 0);

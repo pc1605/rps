@@ -12,19 +12,24 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet } from "react-native-unistyles";
 import { useAuth } from "../features/auth/store";
+import { useEnrollDraft } from "../features/auth/enroll-draft";
 
 export default function Login() {
   const router = useRouter();
   const { login, error, submitting } = useAuth();
-  const [code, setCode] = useState("");
   const [pin, setPin] = useState("");
+  const code = useEnrollDraft((s) => s.badge);
+  const setCode = useEnrollDraft((s) => s.setBadge);
 
   const canSubmit =
     code.trim().length > 0 && /^\d{4}$/.test(pin) && !submitting;
 
   const handleLogin = async () => {
     const ok = await login(code, pin);
-    if (ok) router.replace("/home");
+    if (ok) {
+      useEnrollDraft.getState().clear();
+      router.replace("/home");
+    }
   };
 
   return (
@@ -37,18 +42,27 @@ export default function Login() {
         <Text style={styles.eyebrow}>AMBIKA · RIDDHI</Text>
         <Text style={styles.title}>RPS Worker</Text>
         <Text style={styles.subtitle}>
-          Enter your enrollment code and PIN to set up this phone.
+          Scan the enrollment QR from your admin, or type the code, then enter
+          your PIN to set up this phone.
         </Text>
-
         <Text style={styles.label}>ENROLLMENT CODE</Text>
+        <Pressable
+          onPress={() => router.push("/enroll-scan")}
+          style={styles.scanBtn}
+          hitSlop={8}
+        >
+          <Text style={styles.scanBtnText}>
+            {code ? "📷 Scan a different code" : "📷 Scan enrollment code"}
+          </Text>
+        </Pressable>
         <TextInput
           value={code}
           onChangeText={setCode}
-          placeholder="BADGE-…"
+          placeholder="or type the code"
           placeholderTextColor={styles.placeholder.color}
           autoCapitalize="none"
           autoCorrect={false}
-          style={styles.input}
+          style={[styles.input, !!code && styles.inputFilled]}
         />
 
         <Text style={[styles.label, styles.labelSpaced]}>4-DIGIT PIN</Text>
@@ -120,7 +134,6 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.textMuted,
     marginBottom: theme.spacing.sm,
   },
-  labelSpaced: { marginTop: theme.spacing.lg - 4 },
   input: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
@@ -157,4 +170,8 @@ const styles = StyleSheet.create((theme) => ({
     textAlign: "center",
     marginTop: theme.spacing.lg,
   },
+  inputFilled: { borderColor: theme.colors.accent },
+  scanBtn: { alignSelf: "flex-start", marginTop: 8, marginBottom: 4 },
+  scanBtnText: { color: theme.colors.accent, fontWeight: "700", fontSize: 14 },
+  labelSpaced: { marginTop: theme.spacing.lg - 4 },
 }));

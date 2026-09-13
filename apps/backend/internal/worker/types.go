@@ -15,15 +15,15 @@ const (
 )
 
 type Worker struct {
-	ID            uuid.UUID  `json:"id"`
-	Name          string     `json:"name"`
-	Phone         string     `json:"phone,omitempty"`
-	Station       Station    `json:"station"`
-	IsActive      bool       `json:"is_active"`
-	LastLoginAt   *time.Time `json:"last_login_at,omitempty"`
-	CreatedAt     time.Time  `json:"created_at"`
+	ID          uuid.UUID  `json:"id"`
+	Name        string     `json:"name"`
+	Phone       string     `json:"phone,omitempty"`
+	Station     Station    `json:"station"`
+	IsActive    bool       `json:"is_active"`
+	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
 	// BadgeToken is only returned once, at creation, for printing the badge.
-	BadgeToken    string     `json:"badge_token,omitempty"`
+	BadgeToken string `json:"badge_token,omitempty"`
 }
 
 type CreateInput struct {

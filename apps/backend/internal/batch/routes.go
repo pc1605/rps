@@ -20,4 +20,6 @@ func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 	api.Post("/worker/batches/:id/start", h.StartBatch)
 	api.Post("/worker/batches/:id/complete", h.CompleteBatch)
 	api.Post("/worker/units/scan", h.ScanUnit)
+	api.Post("/batches/:id/stickers-printed", h.MarkStickersPrinted)
+	api.Put("/batches/:id/assignments", h.SetAssignments)
 }

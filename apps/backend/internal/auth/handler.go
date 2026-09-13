@@ -63,3 +63,20 @@ func (h *Handler) Refresh(c *fiber.Ctx) error {
 	}
 	return httpx.OK(c, fiber.Map{"user": user, "tokens": tokens})
 }
+
+// EnrollmentCode — GET /workers/:id/enrollment (admin). Returns the badge for
+// re-showing the QR. TODO(§3): replace with a fresh one-time expiring code.
+func (h *Handler) EnrollmentCode(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid worker id")
+	}
+	badge, err := h.svc.BadgeToken(c.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return httpx.Error(c, fiber.StatusNotFound, "not_found", "worker not found")
+		}
+		return httpx.Internal(c, "failed to load enrollment code")
+	}
+	return httpx.OK(c, fiber.Map{"badge_token": badge})
+}

@@ -1,6 +1,23 @@
 export type Phase = "cutting" | "stitching" | "packing" | "completed";
-export type Status = "pending" | "in_progress" | "completed" | "cancelled";
-export type UnitStatus = "pending" | "packed" | "defective" | "dispatched";
+export type Status =
+  | "pending"
+  | "in_progress"
+  | "awaiting_assignment"
+  | "completed"
+  | "cancelled";
+
+export interface AssignmentEntry {
+  phase: Phase;
+  worker_id: string;
+  worker_name: string;
+  target_qty?: number;
+  done_qty: number;
+}
+
+export interface AssignmentInput {
+  worker_id: string;
+  target_qty?: number;
+}
 
 export interface Batch {
   id: string;
@@ -23,6 +40,8 @@ export interface Batch {
   updated_at: string;
   units_total: number;
   units_packed: number;
+  stickers_printed_at?: string;
+  units_stitched?: number;
 }
 
 export interface Unit {
@@ -33,6 +52,9 @@ export interface Unit {
   status: UnitStatus;
   packed_at?: string;
   created_at: string;
+  stitched_at?: string;
+  stitched_by_name?: string;
+  packed_by_name?: string;
 }
 
 export interface CreateBatchInput {
@@ -61,6 +83,7 @@ export interface BatchStats {
   in_cutting: number;
   in_stitching: number;
   in_packing: number;
+  awaiting_assignment: number;
   completed_today: number;
   total_active: number;
 }
@@ -80,4 +103,5 @@ export interface PhaseLogEntry {
 export interface BatchDetail extends Batch {
   units: Unit[];
   timeline: PhaseLogEntry[];
+  assignments: AssignmentEntry[];
 }

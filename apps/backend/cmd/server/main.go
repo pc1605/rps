@@ -87,7 +87,7 @@ func newApp(cfg *config.Config) *fiber.App {
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: joinOrigins(cfg.CORSOrigins),
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-		AllowMethods: "GET, POST, PATCH, DELETE, OPTIONS",
+		AllowMethods: "GET, POST, PATCH, DELETE, OPTIONS,PUT",
 	}))
 
 	// Health check — outside /api/v1 on purpose, so Railway can probe

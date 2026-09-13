@@ -31,7 +31,7 @@ export function useScanUnit() {
   return useMutation({
     mutationFn: (unitCode: string) => batchApi.scanUnit(unitCode),
     onSuccess: (res) => {
-      if (res.batch_completed)
+      if (res.phase_completed || res.batch_completed)
         qc.invalidateQueries({ queryKey: ["my-batches"] });
     },
   });

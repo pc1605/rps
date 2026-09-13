@@ -112,9 +112,9 @@ func (s *Service) Login(ctx context.Context, badgeToken, pin string) (*Worker, e
 	}
 
 	var (
-		w        Worker
-		pinHash  string
-		station  string
+		w       Worker
+		pinHash string
+		station string
 	)
 	err := s.pool.QueryRow(ctx, `
 		SELECT id, name, COALESCE(phone,''), station, pin_hash, is_active, created_at

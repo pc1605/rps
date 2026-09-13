@@ -9,6 +9,7 @@ import (
 
 	"github.com/pc1605/rps/apps/backend/internal/auth"
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
+	"github.com/rs/zerolog/log"
 )
 
 type Handler struct {
@@ -44,6 +45,7 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 func (h *Handler) List(c *fiber.Ctx) error {
 	batches, err := h.svc.List(c.Context())
 	if err != nil {
+		log.Error().Err(err).Msg("list batches")
 		return httpx.Internal(c, "failed to list batches")
 	}
 	if batches == nil {
@@ -122,6 +124,8 @@ func transitionResponse(c *fiber.Ctx, err error, okMsg string) error {
 		return httpx.Error(c, fiber.StatusConflict, "already_started", ErrAlreadyStarted.Error())
 	case errors.Is(err, ErrNotStarted):
 		return httpx.Error(c, fiber.StatusConflict, "not_started", ErrNotStarted.Error())
+	case errors.Is(err, ErrNotAssigned):
+		return httpx.Error(c, fiber.StatusForbidden, "not_assigned", ErrNotAssigned.Error())
 	case errors.Is(err, ErrNotYours):
 		return httpx.Forbidden(c, ErrNotYours.Error())
 	case errors.Is(err, ErrInvalidInput):
@@ -136,11 +140,12 @@ func (h *Handler) WorkerBatches(c *fiber.Ctx) error {
 	if auth.ActorType(c) != "worker" {
 		return httpx.Forbidden(c, "worker token required")
 	}
+	wid, _ := auth.WorkerID(c)
 	phase, ok := PhaseForStation[auth.StationFromCtx(c)]
 	if !ok {
 		return httpx.Forbidden(c, "unknown station")
 	}
-	batches, err := h.svc.ListByPhase(c.Context(), phase)
+	batches, err := h.svc.ListByPhase(c.Context(), phase, wid)
 	if err != nil {
 		return httpx.Internal(c, "failed to load batches")
 	}
@@ -149,7 +154,6 @@ func (h *Handler) WorkerBatches(c *fiber.Ctx) error {
 	}
 	return httpx.OK(c, batches)
 }
-
 
 type scanInput struct {
 	UnitCode string `json:"unit_code"`
@@ -171,9 +175,11 @@ func (h *Handler) ScanUnit(c *fiber.Ctx) error {
 		case errors.Is(err, ErrUnitNotFound):
 			return httpx.Error(c, fiber.StatusNotFound, "unit_not_found", "unknown QR — not an RPS unit label")
 		case errors.Is(err, ErrWrongPhase):
-			return httpx.Error(c, fiber.StatusConflict, "wrong_phase", "this batch is not at packing")
+			return httpx.Error(c, fiber.StatusConflict, "wrong_phase", "this batch is not at your station's phase")
+		case errors.Is(err, ErrQuotaReached):
+			return httpx.Error(c, fiber.StatusConflict, "quota_reached", err.Error())
 		case errors.Is(err, ErrNotStarted):
-			return httpx.Error(c, fiber.StatusConflict, "not_started", "start the batch before scanning units")
+			return httpx.Error(c, fiber.StatusConflict, "not_started", "join this batch before scanning")
 		case errors.Is(err, ErrNotYours):
 			return httpx.Forbidden(c, ErrNotYours.Error())
 		default:
@@ -181,4 +187,69 @@ func (h *Handler) ScanUnit(c *fiber.Ctx) error {
 		}
 	}
 	return httpx.OK(c, res)
+}
+
+type assignInput struct {
+	Phase       Phase `json:"phase"`
+	Assignments []struct {
+		WorkerID  string `json:"worker_id"`
+		TargetQty *int   `json:"target_qty,omitempty"`
+	} `json:"assignments"`
+}
+
+func (h *Handler) SetAssignments(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "user" {
+		return httpx.Forbidden(c, "admin token required")
+	}
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	var in assignInput
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	if in.Phase != PhaseCutting && in.Phase != PhaseStitching && in.Phase != PhasePacking {
+		return httpx.BadRequest(c, "phase must be cutting, stitching or packing")
+	}
+	entries := make([]AssignmentInput, 0, len(in.Assignments))
+	for _, a := range in.Assignments {
+		wid, err := uuid.Parse(a.WorkerID)
+		if err != nil {
+			return httpx.BadRequest(c, "invalid worker id")
+		}
+		if a.TargetQty != nil && *a.TargetQty <= 0 {
+			return httpx.BadRequest(c, "target_qty must be positive")
+		}
+		entries = append(entries, AssignmentInput{WorkerID: wid, TargetQty: a.TargetQty})
+	}
+	adminID, _ := auth.UserID(c)
+	if err := h.svc.SetAssignments(c.Context(), id, in.Phase, entries, adminID, c.IP()); err != nil {
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return httpx.Error(c, fiber.StatusNotFound, "not_found", "batch not found")
+		case errors.Is(err, ErrInvalidInput):
+			return httpx.BadRequest(c, err.Error())
+		default:
+			return httpx.Internal(c, "failed to set assignments")
+		}
+	}
+	return httpx.OK(c, fiber.Map{"message": "assignments updated"})
+}
+
+func (h *Handler) MarkStickersPrinted(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "user" {
+		return httpx.Forbidden(c, "admin token required")
+	}
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	if err := h.svc.MarkStickersPrinted(c.Context(), id); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return httpx.Error(c, fiber.StatusNotFound, "not_found", "batch not found")
+		}
+		return httpx.Internal(c, "failed to mark stickers printed")
+	}
+	return httpx.OK(c, fiber.Map{"message": "stickers marked printed"})
 }

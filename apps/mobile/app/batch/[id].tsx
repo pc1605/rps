@@ -40,9 +40,11 @@ export default function BatchAction() {
     );
   }
 
-  const mine =
-    batch.status === "in_progress" && batch.active_worker_id === worker?.id;
-  const available = batch.status === "pending";
+  const mine = batch.joined_by_me;
+  const isCutter = worker?.station === "cutter";
+  const isStitcher = worker?.station === "stitcher";
+  const scanStation = isStitcher || worker?.station === "packer";
+  const stitchDone = batch.units_stitched ?? 0;
   const quantity = qty === null ? String(batch.quantity) : qty;
   const qtyNum = parseInt(quantity, 10);
   const qtyValid =
@@ -77,7 +79,9 @@ export default function BatchAction() {
         onSuccess: () => {
           Alert.alert(
             "Done ✓",
-            `${batch.batch_code} sent to the next station.`,
+            isCutter
+              ? `${batch.batch_code} sent to admin for stitching assignment.`
+              : `${batch.batch_code} sent to the next station.`,
           );
           router.back();
         },
@@ -100,7 +104,8 @@ export default function BatchAction() {
         </Text>
         {batch.notes ? <Text style={styles.notes}>✎ {batch.notes}</Text> : null}
 
-        {available && (
+        {/* ---- CUTTER: exclusive claim + manual complete ---- */}
+        {isCutter && !mine && batch.status === "pending" && (
           <Card style={styles.actionCard}>
             <Text style={styles.actionHint}>
               Starting locks this batch to you until you complete it.
@@ -113,23 +118,16 @@ export default function BatchAction() {
           </Card>
         )}
 
-        {mine && worker?.station === "packer" && (
+        {isCutter && !mine && batch.status === "in_progress" && (
           <Card style={styles.actionCard}>
-            <Text style={styles.label}>
-              PACKED {batch.units_packed} / {batch.units_total}
+            <Text style={styles.takenText}>
+              ⏳ {batch.active_workers ?? "Another cutter"} is working on this
+              batch.
             </Text>
-            <Text style={styles.actionHint}>
-              Scan each mat's QR label. The batch completes automatically on the
-              last one.
-            </Text>
-            <AppButton
-              title="Open scanner ▶"
-              onPress={() => router.push(`/scan/${batch.id}`)}
-            />
           </Card>
         )}
 
-        {mine && worker?.station !== "packer" && (
+        {isCutter && mine && (
           <Card style={styles.actionCard}>
             <Text style={styles.label}>PIECES COMPLETED</Text>
             <TextInput
@@ -139,7 +137,7 @@ export default function BatchAction() {
               style={styles.qtyInput}
             />
             <AppButton
-              title="Complete → send to next station"
+              title="Complete → send for assignment"
               onPress={handleComplete}
               disabled={!qtyValid}
               loading={completeBatch.isPending}
@@ -147,11 +145,50 @@ export default function BatchAction() {
           </Card>
         )}
 
-        {batch.status === "in_progress" && !mine && (
+        {/* ---- STITCHER / PACKER: joinable + scan-per-mat ---- */}
+        {scanStation && !mine && (
           <Card style={styles.actionCard}>
-            <Text style={styles.takenText}>
-              ⏳ {batch.active_worker_name} is working on this batch.
+            {batch.assigned_workers && (
+              <Text style={styles.workingLine}>
+                📌 Assigned: {batch.assigned_workers}
+              </Text>
+            )}
+            {batch.active_workers && (
+              <Text style={styles.workingLine}>
+                👤 {batch.active_workers} working
+              </Text>
+            )}
+            <Text style={styles.actionHint}>
+              {isStitcher
+                ? batch.assigned_to_me
+                  ? "This batch is assigned to you. Join, then scan each mat's label as you finish stitching it."
+                  : "Join, then scan each mat's label as you finish stitching it."
+                : "Join, then scan each mat's label as you pack it. Others can join too."}
             </Text>
+            <AppButton
+              title="Join batch ▶"
+              onPress={handleStart}
+              loading={startBatch.isPending}
+            />
+          </Card>
+        )}
+
+        {scanStation && mine && (
+          <Card style={styles.actionCard}>
+            <Text style={styles.label}>
+              {isStitcher
+                ? batch.my_target_qty != null
+                  ? `YOUR SHARE ${batch.my_done_qty} / ${batch.my_target_qty}  ·  BATCH ${stitchDone} / ${batch.units_total}`
+                  : `STITCHED ${stitchDone} / ${batch.units_total}`
+                : `PACKED ${batch.units_packed} / ${batch.units_total}`}
+            </Text>
+            {batch.active_workers && (
+              <Text style={styles.workingLine}>👤 {batch.active_workers}</Text>
+            )}
+            <AppButton
+              title="Open scanner ▶"
+              onPress={() => router.push(`/scan/${batch.id}`)}
+            />
           </Card>
         )}
       </View>
@@ -197,5 +234,9 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.textMuted,
     fontSize: 14,
     textAlign: "center",
+  },
+  workingLine: {
+    ...theme.text.label,
+    color: theme.colors.textMuted,
   },
 }));
