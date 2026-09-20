@@ -2,17 +2,22 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { batchApi } from "./api";
 import type { AssignmentInput, CreateBatchInput, Phase } from "./types";
 
-export function useBatches() {
-  return useQuery({ queryKey: ["batches"], queryFn: batchApi.list });
-}
+// Live-ish data: everything the floor changes gets an interval.
+const LIVE = { refetchInterval: 10_000, refetchOnWindowFocus: true } as const;
+const LIVE_FAST = { refetchInterval: 5_000, refetchOnWindowFocus: true } as const;
 
-export function useBatch(id: string) {
-  return useQuery({
-    queryKey: ["batch", id],
-    queryFn: () => batchApi.get(id),
-    enabled: !!id,
-  });
-}
+export const useBatches = () =>
+  useQuery({ queryKey: ["batches"], queryFn: batchApi.list, ...LIVE });
+
+export const useBatch = (id: string) =>
+  useQuery({ queryKey: ["batch", id], queryFn: () => batchApi.get(id), enabled: !!id, ...LIVE });
+
+
+export const useBatchStats = () =>
+  useQuery({ queryKey: ["batch-stats"], queryFn: batchApi.stats, ...LIVE_FAST });
+
+
+
 
 export function useCarModels() {
   return useQuery({
@@ -38,13 +43,6 @@ export function useCreateBatch() {
   });
 }
 
-export function useBatchStats() {
-  return useQuery({
-    queryKey: ["batch-stats"],
-    queryFn: batchApi.stats,
-    refetchInterval: 5000, // polling — feels live
-  });
-}
 
 export function useSetAssignments(id: string) {
   const qc = useQueryClient();
@@ -62,10 +60,28 @@ export function useSetAssignments(id: string) {
     },
   });
 }
+
 export function useMarkStickersPrinted() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => batchApi.markStickersPrinted(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["batches"] }),
+  });
+}
+
+export function useResolveShort(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      action,
+      reason,
+    }: {
+      action: "split" | "reduce" | "recut";
+      reason?: string;
+    }) => batchApi.resolveShort(id, action, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["batch", id] });
+      qc.invalidateQueries({ queryKey: ["batches"] });
+    },
   });
 }

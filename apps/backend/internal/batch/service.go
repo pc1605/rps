@@ -99,8 +99,8 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 	// 5. Insert N units in one statement (Hard Rule #18)
 	_, err = tx.Exec(ctx, `
 		INSERT INTO batch_units (batch_id, unit_code, unit_number)
-		SELECT $1, $2 || '-' || LPAD(n::TEXT, 3, '0'), n
-		FROM generate_series(1, $3) AS nErrNotAssigned
+		SELECT $1, $2 || '-' || LPAD(gs.n::TEXT, 3, '0'), gs.n
+		FROM generate_series(1, $3::int) AS gs(n)
 	`, b.ID, b.BatchCode, in.Quantity)
 	if err != nil {
 		return nil, fmt.Errorf("insert units: %w", err)
@@ -132,17 +132,19 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 func (s *Service) List(ctx context.Context) ([]Batch, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT b.id, b.batch_code, b.car_model_id,
-		       cb.name, cm.name, cm.size_class::text,
+		       cb.name, cm.name, cm.size_class::text, pl.code, pl.name, cm.barcode,
 		       b.roll_id, rm.roll_code,
 		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
 		       b.rework_count, b.created_by, u.name,
-		       b.version, b.created_at, b.updated_at, b.stickers_printed_at,
+		       b.version, b.created_at, b.updated_at, b.cut_qty, b.parent_batch_id, pb.batch_code, b.short_reason, b.stickers_printed_at,
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id),
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed'),
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.stitched_at IS NOT NULL)
 		FROM batches b
 		JOIN car_models cm ON cm.id = b.car_model_id
 		JOIN car_brands cb ON cb.id = cm.brand_id
+		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
+		LEFT JOIN batches pb ON pb.id = b.parent_batch_id
 		JOIN users u       ON u.id = b.created_by
 		LEFT JOIN raw_materials rm ON rm.id = b.roll_id
 		ORDER BY b.created_at DESC
@@ -157,11 +159,12 @@ func (s *Service) List(ctx context.Context) ([]Batch, error) {
 		var b Batch
 		if err := rows.Scan(
 			&b.ID, &b.BatchCode, &b.CarModelID,
-			&b.BrandName, &b.ModelName, &b.SizeClass,
+			&b.BrandName, &b.ModelName, &b.SizeClass, &b.LineCode, &b.LineName, &b.Barcode,
 			&b.RollID, &b.RollCode,
 			&b.Quantity, &b.CurrentPhase, &b.Status, &b.Notes,
 			&b.ReworkCount, &b.CreatedBy, &b.CreatedByName,
-			&b.Version, &b.CreatedAt, &b.UpdatedAt, &b.StickersPrintedAt,
+			&b.Version, &b.CreatedAt, &b.UpdatedAt,
+			&b.CutQty, &b.ParentBatchID, &b.ParentBatchCode, &b.ShortReason, &b.StickersPrintedAt,
 			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched,
 		); err != nil {
 			return nil, err
@@ -176,24 +179,28 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 	var b Batch
 	err := s.pool.QueryRow(ctx, `
 		SELECT b.id, b.batch_code, b.car_model_id,
-		       cb.name, cm.name, cm.size_class::text,
+		       cb.name, cm.name,cm.size_class::text, pl.code, pl.name, cm.barcode,
 		       b.roll_id, rm.roll_code,
 		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
 		       b.rework_count, b.created_by, u.name,
-		       b.version, b.created_at, b.updated_at
+		       b.version, b.created_at, b.updated_at,
+		       b.cut_qty, b.parent_batch_id, pb.batch_code, b.short_reason, b.stickers_printed_at
 		FROM batches b
 		JOIN car_models cm ON cm.id = b.car_model_id
 		JOIN car_brands cb ON cb.id = cm.brand_id
+		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
+		LEFT JOIN batches pb ON pb.id = b.parent_batch_id
 		JOIN users u       ON u.id = b.created_by
 		LEFT JOIN raw_materials rm ON rm.id = b.roll_id
 		WHERE b.id = $1
 	`, id).Scan(
 		&b.ID, &b.BatchCode, &b.CarModelID,
-		&b.BrandName, &b.ModelName, &b.SizeClass,
+		&b.BrandName, &b.ModelName, &b.SizeClass, &b.LineCode, &b.LineName, &b.Barcode,
 		&b.RollID, &b.RollCode,
 		&b.Quantity, &b.CurrentPhase, &b.Status, &b.Notes,
 		&b.ReworkCount, &b.CreatedBy, &b.CreatedByName,
 		&b.Version, &b.CreatedAt, &b.UpdatedAt,
+		&b.CutQty, &b.ParentBatchID, &b.ParentBatchCode, &b.ShortReason, &b.StickersPrintedAt,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, ErrNotFound
@@ -319,11 +326,12 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UUID) ([]Batch, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT b.id, b.batch_code, b.car_model_id,
-		       cb.name, cm.name, cm.size_class::text,
+		       cb.name, cm.name, cm.size_class::text, pl.code, pl.name, cm.barcode,
 		       b.roll_id, rm.roll_code,
 		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
 		       b.rework_count, b.created_by, u.name,
 		       b.version, b.created_at, b.updated_at,
+		       b.cut_qty, b.parent_batch_id, pb.batch_code, b.short_reason,
 		       -- unit roll-ups
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id),
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed'),
@@ -352,6 +360,8 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UU
 		FROM batches b
 		JOIN car_models cm ON cm.id = b.car_model_id
 		JOIN car_brands cb ON cb.id = cm.brand_id
+		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
+		LEFT JOIN batches pb ON pb.id = b.parent_batch_id
 		JOIN users u       ON u.id = b.created_by
 		LEFT JOIN raw_materials rm ON rm.id = b.roll_id
 		WHERE b.current_phase = $1
@@ -378,11 +388,12 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UU
 		var b Batch
 		if err := rows.Scan(
 			&b.ID, &b.BatchCode, &b.CarModelID,
-			&b.BrandName, &b.ModelName, &b.SizeClass,
+			&b.BrandName, &b.ModelName, &b.SizeClass, &b.LineCode, &b.LineName, &b.Barcode,
 			&b.RollID, &b.RollCode,
 			&b.Quantity, &b.CurrentPhase, &b.Status, &b.Notes,
 			&b.ReworkCount, &b.CreatedBy, &b.CreatedByName,
 			&b.Version, &b.CreatedAt, &b.UpdatedAt,
+			&b.CutQty, &b.ParentBatchID, &b.ParentBatchCode, &b.ShortReason,
 			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched,
 			&b.ActiveWorkers, &b.JoinedByMe,
 			&b.AssignedWorkers, &b.AssignedToMe,
@@ -520,13 +531,16 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 	}
 	defer tx.Rollback(ctx)
 
-	var quantity int
-	err = tx.QueryRow(ctx, `SELECT quantity FROM batches WHERE id=$1 FOR UPDATE`, batchID).Scan(&quantity)
+	var quantity, cutQty int
+	err = tx.QueryRow(ctx, `SELECT quantity, cut_qty FROM batches WHERE id=$1 FOR UPDATE`, batchID).Scan(&quantity, &cutQty)
 	if err == pgx.ErrNoRows {
 		return ErrNotFound
 	}
 	if err != nil {
 		return err
+	}
+	if phase == PhaseStitching && cutQty < quantity && len(entries) > 0 {
+		return fmt.Errorf("%w: only %d of %d mats are cut — resolve the short cut before assigning", ErrInvalidInput, cutQty, quantity)
 	}
 
 	attrCol := map[Phase]string{PhaseStitching: "stitched_by", PhasePacking: "packed_by"}[phase]
@@ -624,6 +638,112 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 	return tx.Commit(ctx)
 }
 
+type ShortAction string
+
+const (
+	ShortSplit  ShortAction = "split"
+	ShortReduce ShortAction = "reduce"
+	ShortRecut  ShortAction = "recut"
+)
+
+// ResolveShort is the admin's decision on a batch that came out of cutting short.
+// Allowed only while parked (awaiting_assignment) with cut_qty < quantity.
+func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action ShortAction, reason string, adminID uuid.UUID, ip string) (string, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback(ctx)
+
+	var b struct {
+		Code      string
+		Phase     Phase
+		Status    Status
+		Quantity  int
+		CutQty    int
+		CarModel  int
+		RollID    *uuid.UUID
+		CreatedBy uuid.UUID
+	}
+	err = tx.QueryRow(ctx, `
+		SELECT batch_code, current_phase, status, quantity, cut_qty, car_model_id, roll_id, created_by
+		FROM batches WHERE id = $1 FOR UPDATE`, batchID).
+		Scan(&b.Code, &b.Phase, &b.Status, &b.Quantity, &b.CutQty, &b.CarModel, &b.RollID, &b.CreatedBy)
+	if err == pgx.ErrNoRows {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	if b.Phase != PhaseStitching || b.Status != StatusAwaitingAssignment {
+		return "", fmt.Errorf("%w: batch is not waiting for a short-cut decision", ErrInvalidInput)
+	}
+	if b.CutQty >= b.Quantity {
+		return "", fmt.Errorf("%w: batch is fully cut", ErrInvalidInput)
+	}
+	short := b.Quantity - b.CutQty
+	remainderCode := ""
+
+	switch action {
+	case ShortSplit, ShortReduce:
+		if _, err := tx.Exec(ctx, `DELETE FROM batch_units WHERE batch_id = $1 AND unit_number > $2`, batchID, b.CutQty); err != nil {
+			return "", err
+		}
+		note := fmt.Sprintf("Reduced from %d to %d", b.Quantity, b.CutQty)
+		if action == ShortSplit {
+			if err := tx.QueryRow(ctx, `SELECT next_batch_code()`).Scan(&remainderCode); err != nil {
+				return "", err
+			}
+			var remID uuid.UUID
+			if err := tx.QueryRow(ctx, `
+				INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, notes, created_by, parent_batch_id)
+				VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+				remainderCode, b.CarModel, b.RollID, short,
+				fmt.Sprintf("Remainder of %s (%d of %d were cut)", b.Code, b.CutQty, b.Quantity),
+				b.CreatedBy, batchID).Scan(&remID); err != nil {
+				return "", fmt.Errorf("remainder batch: %w", err)
+			}
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO batch_units (batch_id, unit_code, unit_number)
+				SELECT $1, $2 || '-' || LPAD(gs.n::TEXT, 3, '0'), gs.n FROM generate_series(1, $3::int) AS gs(n)`,
+				remID, remainderCode, short); err != nil {
+				return "", fmt.Errorf("remainder units: %w", err)
+			}
+			note = fmt.Sprintf("Short cut %d of %d — remainder → %s", b.CutQty, b.Quantity, remainderCode)
+		} else if reason != "" {
+			note += " (" + reason + ")"
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE batches SET quantity = $1, short_reason = NULLIF($2,''),
+			  notes = CONCAT_WS(E'\n', NULLIF(notes,''), $3::text), version = version + 1
+			WHERE id = $4`, b.CutQty, reason, note, batchID); err != nil {
+			return "", err
+		}
+
+	case ShortRecut:
+		// back to the open cutting queue; units untouched; cut_qty keeps accumulating
+		if _, err := tx.Exec(ctx, `
+			UPDATE batches SET current_phase = 'cutting', status = 'pending',
+			  notes = CONCAT_WS(E'\n', NULLIF(notes,''), $1::text), version = version + 1
+			WHERE id = $2`, fmt.Sprintf("Sent back to cut remaining %d", short), batchID); err != nil {
+			return "", err
+		}
+	default:
+		return "", fmt.Errorf("%w: action must be split, reduce or recut", ErrInvalidInput)
+	}
+
+	if err := audit.Write(ctx, tx, audit.Entry{
+		ActorID: adminID.String(), ActorRole: "admin",
+		EntityType: "batch", EntityID: batchID.String(),
+		Action: audit.ActionTransition,
+		After:  map[string]any{"event": "short_cut_" + string(action), "cut": b.CutQty, "quantity": b.Quantity, "remainder": remainderCode, "reason": reason},
+		IP:     ip,
+	}); err != nil {
+		return "", err
+	}
+	return remainderCode, tx.Commit(ctx)
+}
+
 // MarkStickersPrinted stamps the packing-sticker print time.
 func (s *Service) MarkStickersPrinted(ctx context.Context, batchID uuid.UUID) error {
 	ct, err := s.pool.Exec(ctx, `UPDATE batches SET stickers_printed_at = NOW() WHERE id = $1`, batchID)
@@ -649,8 +769,8 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 		return fmt.Errorf("%w: %s completes automatically when all units are scanned", ErrInvalidInput, phase)
 	}
 
-	if quantityCompleted < 0 {
-		return fmt.Errorf("%w: quantity must be >= 0", ErrInvalidInput)
+	if quantityCompleted < 1 {
+		return fmt.Errorf("%w: report at least 1 piece — or leave the batch open", ErrInvalidInput)
 	}
 
 	tx, err := s.pool.Begin(ctx)
@@ -660,12 +780,14 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 	defer tx.Rollback(ctx)
 
 	var cur struct {
-		Phase  Phase
-		Status Status
+		Phase    Phase
+		Status   Status
+		Quantity int
+		CutQty   int
 	}
 	err = tx.QueryRow(ctx,
-		`SELECT current_phase, status FROM batches WHERE id = $1 FOR UPDATE`,
-		batchID).Scan(&cur.Phase, &cur.Status)
+		`SELECT current_phase, status, quantity, cut_qty FROM batches WHERE id = $1 FOR UPDATE`,
+		batchID).Scan(&cur.Phase, &cur.Status, &cur.Quantity, &cur.CutQty)
 	if err == pgx.ErrNoRows {
 		return ErrNotFound
 	}
@@ -677,6 +799,10 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 	}
 	if cur.Status != StatusInProgress {
 		return ErrNotStarted
+	}
+	remaining := cur.Quantity - cur.CutQty
+	if quantityCompleted > remaining {
+		return fmt.Errorf("%w: only %d pieces remain to cut in this batch", ErrInvalidInput, remaining)
 	}
 
 	// Close MY open log — worker_id in the WHERE enforces the exclusive claim.
@@ -694,8 +820,8 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 
 	next, newStatus := nextPhase(phase)
 	if _, err := tx.Exec(ctx,
-		`UPDATE batches SET current_phase = $1, status = $2, version = version + 1 WHERE id = $3`,
-		next, newStatus, batchID); err != nil {
+		`UPDATE batches SET current_phase = $1, status = $2, cut_qty = cut_qty + $3, version = version + 1 WHERE id = $4`,
+		next, newStatus, quantityCompleted, batchID); err != nil {
 		return err
 	}
 

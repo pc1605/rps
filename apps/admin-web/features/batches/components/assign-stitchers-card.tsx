@@ -17,6 +17,16 @@ type Draft = Record<string, number | "">; // worker_id → target (checked = pre
 
 export function AssignStitchersCard({ batch }: { batch: BatchDetail }) {
   if (batch.current_phase !== "stitching") return null;
+  if (
+    batch.status === "awaiting_assignment" &&
+    batch.cut_qty < batch.quantity
+  ) {
+    return (
+      <Card className="p-5 text-small text-muted-foreground">
+        Stitching assignment unlocks once the short cut is resolved.
+      </Card>
+    );
+  }
   const savedKey = batch.assignments
     .filter((a) => a.phase === "stitching")
     .map((a) => `${a.worker_id}:${a.target_qty ?? ""}`)

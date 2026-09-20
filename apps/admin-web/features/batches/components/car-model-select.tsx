@@ -31,19 +31,30 @@ interface Props {
   onChange: (id: number) => void;
 }
 
+function itemLabel(m: CarModel) {
+  return `${m.brand_name} ${m.name} · ${m.size_class} · ${m.line_name ?? "no line"}`;
+}
+
 export function CarModelSelect({ value, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const { data: models } = useCarModels();
 
-  // Group models by brand for display
-  const grouped = useMemo(() => {
+  // Group by brand; within a brand keep a car's lines together
+   const grouped = useMemo(() => {
+    const sorted = (models ?? [])
+      .filter((m) => m.is_active)                                   // ← hide retired items
+      .sort(
+        (a, b) =>
+          a.brand_name.localeCompare(b.brand_name) ||
+          a.name.localeCompare(b.name) ||
+          a.size_class.localeCompare(b.size_class) ||
+          (a.line_code ?? "").localeCompare(b.line_code ?? ""),
+      );
     const map = new Map<string, CarModel[]>();
-    (models ?? []).forEach((m) => {
-      const list = map.get(m.brand_name) ?? [];
-      list.push(m);
-      map.set(m.brand_name, list);
-    });
-    return Array.from(map.entries()); // [ [brand, models[]], ... ]
+    sorted.forEach((m) =>
+      map.set(m.brand_name, [...(map.get(m.brand_name) ?? []), m]),
+    );
+    return Array.from(map.entries());
   }, [models]);
 
   const selected = models?.find((m) => m.id === value);
@@ -58,7 +69,7 @@ export function CarModelSelect({ value, onChange }: Props) {
           className="w-full justify-between font-normal"
         >
           {selected ? (
-            <span>
+            <span className="truncate">
               {selected.brand_name} {selected.name}
               <span
                 className={cn(
@@ -68,9 +79,14 @@ export function CarModelSelect({ value, onChange }: Props) {
               >
                 {selected.size_class}
               </span>
+              {selected.line_name && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {selected.line_name}
+                </span>
+              )}
             </span>
           ) : (
-            <span className="text-muted-foreground">Select car model…</span>
+            <span className="text-muted-foreground">Select item…</span>
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -80,23 +96,19 @@ export function CarModelSelect({ value, onChange }: Props) {
         align="start"
       >
         <Command
-          filter={(itemValue, search) => {
-            // itemValue is the searchable string we set on each CommandItem
-            return itemValue.toLowerCase().includes(search.toLowerCase())
-              ? 1
-              : 0;
-          }}
+          filter={(itemValue, search) =>
+            itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0
+          }
         >
-          <CommandInput placeholder="Search brand or model…" />
+          <CommandInput placeholder="Search brand, model, or line…" />
           <CommandList>
-            <CommandEmpty>No model found.</CommandEmpty>
+            <CommandEmpty>No item found.</CommandEmpty>
             {grouped.map(([brand, brandModels]) => (
               <CommandGroup key={brand} heading={brand}>
                 {brandModels.map((m) => (
                   <CommandItem
                     key={m.id}
-                    // value used by the filter — include brand + model + size so all are searchable
-                    value={`${m.brand_name} ${m.name} ${m.size_class}`}
+                    value={`${itemLabel(m)} ${m.barcode ?? ""} #${m.id}`} // unique + searchable by barcode too
                     onSelect={() => {
                       onChange(m.id);
                       setOpen(false);
@@ -109,6 +121,9 @@ export function CarModelSelect({ value, onChange }: Props) {
                       )}
                     />
                     <span className="flex-1">{m.name}</span>
+                    <span className="mr-3 text-xs text-muted-foreground">
+                      {m.line_name ?? "—"}
+                    </span>
                     <span
                       className={cn(
                         "font-mono text-[10px] uppercase",

@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Scissors, Shirt, Package, CircleDot } from "lucide-react";
 import type { PhaseLogEntry, Phase } from "../types";
+import { fmtStamp } from "./unit-card";
 
 const phaseIcon: Record<string, React.ElementType> = {
   cutting: Scissors,
@@ -27,12 +28,7 @@ function fmtDuration(s?: number) {
 }
 
 function fmtTime(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return fmtStamp(iso) ?? "";
 }
 
 export function BatchTimeline({ timeline }: { timeline: PhaseLogEntry[] }) {

@@ -55,14 +55,29 @@ const baseColumns: Column[] = [
     key: "code",
     header: "Code",
     align: "left",
-    width: "w-[130px]",
+    width: "w-[170px]",
     cell: (b) => (
-      <Link
-        href={`/batches/${b.id}`}
-        className="font-mono text-sm text-amber-600 dark:text-amber-400 hover:underline"
-      >
-        {b.batch_code}
-      </Link>
+      <div>
+        <Link
+          href={`/batches/${b.id}`}
+          className="font-mono text-sm text-brand hover:underline"
+        >
+          {b.batch_code}
+        </Link>
+        {b.status === "awaiting_assignment" && b.cut_qty < b.quantity && (
+          <span
+            className="ml-2 text-caption text-brand"
+            title={`${b.cut_qty} of ${b.quantity} cut`}
+          >
+            ⚠ short
+          </span>
+        )}
+        {b.parent_batch_code && (
+          <div className="text-caption text-muted-foreground">
+            ↩ from {b.parent_batch_code}
+          </div>
+        )}
+      </div>
     ),
   },
   {
@@ -74,13 +89,13 @@ const baseColumns: Column[] = [
         <div className="font-medium">
           {b.brand_name} {b.model_name}
         </div>
-        <div
-          className={cn(
-            "font-mono text-[10px] uppercase",
-            sizeStyle[b.size_class],
+        <div className="flex items-center gap-2 font-mono text-[10px] uppercase">
+          <span className={sizeStyle[b.size_class]}>{b.size_class}</span>
+          {b.line_name && (
+            <span className="text-muted-foreground normal-case">
+              {b.line_name}
+            </span>
           )}
-        >
-          {b.size_class}
         </div>
       </div>
     ),

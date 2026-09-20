@@ -11,6 +11,7 @@ import {
   Users,
   type LucideIcon,
   BarChart3,
+  Car,
 } from "lucide-react";
 import { BatchSubNav } from "./batch-subnav";
 
@@ -27,6 +28,7 @@ const items: NavItem[] = [
   { href: "/stock", label: "Stock", icon: Boxes },
   { href: "/workers", label: "Workers", icon: Users },
   { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/cars", label: "Cars", icon: Car }
 ];
 
 export function Sidebar() {

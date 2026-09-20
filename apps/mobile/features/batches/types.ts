@@ -29,6 +29,8 @@ export interface Batch {
   assigned_to_me: boolean;
   my_target_qty?: number;
   my_done_qty: number;
+  line_name?: string;
+  cut_qty: number;
 }
 
 export interface ScanResult {

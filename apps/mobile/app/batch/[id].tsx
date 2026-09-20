@@ -45,10 +45,10 @@ export default function BatchAction() {
   const isStitcher = worker?.station === "stitcher";
   const scanStation = isStitcher || worker?.station === "packer";
   const stitchDone = batch.units_stitched ?? 0;
-  const quantity = qty === null ? String(batch.quantity) : qty;
+  const remaining = batch.quantity - (batch.cut_qty ?? 0);
+  const quantity = qty === null ? String(remaining) : qty;
   const qtyNum = parseInt(quantity, 10);
-  const qtyValid =
-    !isNaN(qtyNum) && qtyNum >= 0 && qtyNum <= batch.quantity * 2;
+  const qtyValid = !isNaN(qtyNum) && qtyNum >= 1 && qtyNum <= remaining;
 
   const onError = (e: unknown) => {
     const msg = e instanceof ApiError ? e.message : "Something went wrong";
@@ -58,10 +58,10 @@ export default function BatchAction() {
   const handleStart = () => startBatch.mutate(batch.id, { onError });
 
   const handleComplete = () => {
-    if (qtyNum < batch.quantity) {
+    if (qtyNum < remaining) {
       Alert.alert(
         "Short count",
-        `Batch is ${batch.quantity} mats but you entered ${qtyNum}. Complete anyway?`,
+        `This batch needs ${remaining} more cut but you're reporting ${qtyNum}. The admin will decide what happens with the remaining ${remaining - qtyNum}.`,
         [
           { text: "Cancel", style: "cancel" },
           { text: "Complete", onPress: doComplete },
@@ -101,6 +101,7 @@ export default function BatchAction() {
         <Text style={styles.model}>
           {batch.brand_name} {batch.model_name} · {batch.quantity} mats ·{" "}
           {batch.size_class.toUpperCase()}
+          {batch.line_name ? ` · ${batch.line_name}` : ""}
         </Text>
         {batch.notes ? <Text style={styles.notes}>✎ {batch.notes}</Text> : null}
 

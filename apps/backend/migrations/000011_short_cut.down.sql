@@ -1,0 +1,1 @@
+ALTER TABLE batches DROP COLUMN short_reason, DROP COLUMN parent_batch_id, DROP COLUMN cut_qty;

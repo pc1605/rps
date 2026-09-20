@@ -58,6 +58,7 @@ function BatchCard({
           <Text style={styles.batchSize}>
             {" "}
             · {batch.size_class.toUpperCase()}
+            {batch.line_name ? ` · ${batch.line_name}` : ""}
           </Text>
         </Text>
         {batch.assigned_to_me && (

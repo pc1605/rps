@@ -36,6 +36,9 @@ type Batch struct {
 	BrandName     string     `json:"brand_name"`
 	ModelName     string     `json:"model_name"`
 	SizeClass     string     `json:"size_class"`
+	LineCode      *string    `json:"line_code,omitempty"`
+	LineName      *string    `json:"line_name,omitempty"`
+	Barcode       *string    `json:"barcode,omitempty"`
 	RollID        *uuid.UUID `json:"roll_id,omitempty"`
 	RollCode      *string    `json:"roll_code,omitempty"`
 	Quantity      int        `json:"quantity"`
@@ -60,8 +63,13 @@ type Batch struct {
 	AssignedToMe      bool       `json:"assigned_to_me"`
 	StickersPrintedAt *time.Time `json:"stickers_printed_at,omitempty"`
 	// Batch — add (worker-queue payload):
-	MyTargetQty *int `json:"my_target_qty,omitempty"`
-	MyDoneQty   int  `json:"my_done_qty"`
+	MyTargetQty     *int       `json:"my_target_qty,omitempty"`
+	MyDoneQty       int        `json:"my_done_qty"`
+	ModelBarcode    *string    `json:"model_barcode,omitempty"`
+	CutQty          int        `json:"cut_qty"`
+	ParentBatchID   *uuid.UUID `json:"parent_batch_id,omitempty"`
+	ParentBatchCode *string    `json:"parent_batch_code,omitempty"`
+	ShortReason     *string    `json:"short_reason,omitempty"`
 }
 
 // Unit is one physical mat.

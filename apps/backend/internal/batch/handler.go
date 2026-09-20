@@ -37,6 +37,7 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 		if errors.Is(err, ErrInvalidInput) {
 			return httpx.BadRequest(c, err.Error())
 		}
+		log.Error().Err(err).Msg("create batch")
 		return httpx.Internal(c, "failed to create batch")
 	}
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"data": b})
@@ -252,4 +253,35 @@ func (h *Handler) MarkStickersPrinted(c *fiber.Ctx) error {
 		return httpx.Internal(c, "failed to mark stickers printed")
 	}
 	return httpx.OK(c, fiber.Map{"message": "stickers marked printed"})
+}
+
+func (h *Handler) ResolveShort(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "user" {
+		return httpx.Forbidden(c, "admin token required")
+	}
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	var in struct {
+		Action string `json:"action"`
+		Reason string `json:"reason"`
+	}
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	adminID, _ := auth.UserID(c)
+	remainder, err := h.svc.ResolveShort(c.Context(), id, ShortAction(in.Action), strings.TrimSpace(in.Reason), adminID, c.IP())
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return httpx.Error(c, fiber.StatusNotFound, "not_found", "batch not found")
+		case errors.Is(err, ErrInvalidInput):
+			return httpx.BadRequest(c, err.Error())
+		default:
+			log.Error().Err(err).Msg("resolve short cut")
+			return httpx.Internal(c, "failed to resolve short cut")
+		}
+	}
+	return httpx.OK(c, fiber.Map{"message": "resolved", "remainder_batch_code": remainder})
 }

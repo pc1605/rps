@@ -1,0 +1,1 @@
+ALTER TABLE car_models ADD COLUMN barcode TEXT UNIQUE;

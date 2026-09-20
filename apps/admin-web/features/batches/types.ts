@@ -6,6 +6,8 @@ export type Status =
   | "completed"
   | "cancelled";
 
+export type UnitStatus = "pending" | "packed" | "defective" | "dispatched";
+
 export interface AssignmentEntry {
   phase: Phase;
   worker_id: string;
@@ -42,6 +44,13 @@ export interface Batch {
   units_packed: number;
   stickers_printed_at?: string;
   units_stitched?: number;
+  line_code?: string;
+  line_name?: string;
+  barcode?: string;
+  cut_qty: number;
+  parent_batch_id?: string;
+  parent_batch_code?: string;
+  short_reason?: string;
 }
 
 export interface Unit {
@@ -70,6 +79,11 @@ export interface CarModel {
   brand_name: string;
   name: string;
   size_class: string;
+  pieces_per_set: number;
+  line_code?: string;
+  line_name?: string;
+  barcode?: string;
+  is_active: boolean;
 }
 
 export interface Roll {

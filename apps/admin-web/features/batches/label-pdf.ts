@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
+import JsBarcode from "jsbarcode";
 import type { BatchDetail } from "./types";
 
 // Label grid on A4: 3 columns × 8 rows = 24 labels/page.
@@ -78,6 +79,26 @@ export async function generateLabelPdf(
     // faint cut guide
     doc.setDrawColor(210);
     doc.rect(x, y, LABEL_W, LABEL_H);
+
+    // Sticker media only: product barcode (Code128) under the text block
+    if (media === "sticker" && batch.barcode) {
+      const canvas = document.createElement("canvas");
+      JsBarcode(canvas, batch.barcode, {
+        format: "CODE128",
+        displayValue: true,
+        fontSize: 12,
+        height: 40,
+        margin: 0,
+      });
+      doc.addImage(
+        canvas.toDataURL("image/png"),
+        "PNG",
+        tx,
+        y + 22,
+        LABEL_W - QR_SIZE - 8,
+        9,
+      );
+    }
   }
 
   doc.save(`${batch.batch_code}-${cfg.suffix}.pdf`);

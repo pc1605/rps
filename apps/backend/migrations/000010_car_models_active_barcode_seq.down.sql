@@ -1,0 +1,1 @@
+DROP SEQUENCE car_barcode_seq; ALTER TABLE car_models DROP COLUMN is_active;

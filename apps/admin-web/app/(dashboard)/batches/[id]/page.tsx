@@ -11,14 +11,8 @@ import { cn } from "@/lib/utils";
 import { BatchTimeline } from "@/features/batches/components/batch-timeline";
 import { AssignStitchersCard } from "@/features/batches/components/assign-stitchers-card";
 import { generateLabelPdf } from "@/features/batches/label-pdf";
-import type { UnitStatus } from "@/features/batches/types";
-
-const unitStyle: Record<UnitStatus, string> = {
-  pending: "text-muted-foreground border-border",
-  packed: "text-lime-600 dark:text-lime-400 border-lime-500/30",
-  defective: "text-destructive border-destructive/30",
-  dispatched: "text-cyan-600 dark:text-cyan-400 border-cyan-500/30",
-};
+import { UnitCard } from "@/features/batches/components/unit-card";
+import { ShortCutPanel } from "@/features/batches/components/short-cut-panel";
 
 export default function BatchDetailPage({
   params,
@@ -55,6 +49,12 @@ export default function BatchDetailPage({
               <span className="uppercase font-mono text-xs">
                 {batch.size_class}
               </span>
+              {batch.line_name && <> · {batch.line_name}</>}
+              {batch.barcode && (
+                <span className="ml-3 font-mono text-xs text-muted-foreground">
+                  ▮ {batch.barcode}
+                </span>
+              )}
             </p>
             {batch.notes && (
               <p className="text-sm text-muted-foreground mt-2">
@@ -79,6 +79,7 @@ export default function BatchDetailPage({
           </div>
         </div>
       </div>
+      <ShortCutPanel batch={batch} />
       <AssignStitchersCard batch={batch} />
       <div>
         <h2 className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-3">
@@ -89,35 +90,13 @@ export default function BatchDetailPage({
 
       <div>
         <h2 className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-3">
-          Units · {batch.units_packed}/{batch.units_total} packed
+          Units · {batch.units.filter((u) => u.stitched_at).length}/
+          {batch.units_total} stitched · {batch.units_packed}/
+          {batch.units_total} packed
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
           {batch.units.map((u) => (
-            <Card key={u.id} className="p-3">
-              <div className="font-mono text-xs">{u.unit_code}</div>
-              <Badge
-                variant="outline"
-                className={cn(
-                  "font-mono text-[10px] uppercase",
-                  batch.status === "awaiting_assignment" &&
-                    "text-amber-600 dark:text-amber-400 border-amber-500/30",
-                )}
-              >
-                {batch.status === "awaiting_assignment"
-                  ? "ready for stitching"
-                  : batch.current_phase}
-              </Badge>
-              {u.stitched_by_name && (
-                <div className="text-[10px] text-muted-foreground mt-1.5">
-                  🧵 {u.stitched_by_name}
-                </div>
-              )}
-              {u.packed_by_name && (
-                <div className="text-[10px] text-muted-foreground">
-                  📦 {u.packed_by_name}
-                </div>
-              )}
-            </Card>
+            <UnitCard key={u.id} unit={u} />
           ))}
         </div>
       </div>

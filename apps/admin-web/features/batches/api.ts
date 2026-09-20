@@ -49,4 +49,15 @@ export const batchApi = {
     const res = await http.post(`/batches/${id}/stickers-printed`);
     return res.data?.data ?? res.data;
   },
+  resolveShort: async (
+    id: string,
+    action: "split" | "reduce" | "recut",
+    reason?: string,
+  ) => {
+    const res = await http.post(`/batches/${id}/resolve-short`, {
+      action,
+      reason,
+    });
+    return res.data?.data ?? res.data;
+  },
 };
