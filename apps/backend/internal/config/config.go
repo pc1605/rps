@@ -11,16 +11,16 @@ import (
 )
 
 type Config struct {
-	Port              string
-	Env               string
-	LogLevel          string
-	DatabaseURL       string
-	JWTAccessSecret   string
-	JWTRefreshSecret  string
-	JWTAccessTTL      time.Duration
-	JWTRefreshTTL     time.Duration
-	QRHashSecret      string
-	CORSOrigins       []string
+	Port             string
+	Env              string
+	LogLevel         string
+	DatabaseURL      string
+	JWTAccessSecret  string
+	JWTRefreshSecret string
+	JWTAccessTTL     time.Duration
+	JWTRefreshTTL    time.Duration
+	QRHashSecret     string
+	CORSOrigins      []string
 }
 
 func Load() (*Config, error) {
@@ -43,7 +43,7 @@ func Load() (*Config, error) {
 	accessMin, _ := strconv.Atoi(getEnv("JWT_ACCESS_TTL_MINUTES", "15"))
 	refreshDays, _ := strconv.Atoi(getEnv("JWT_REFRESH_TTL_DAYS", "30"))
 	c.JWTAccessTTL = time.Duration(accessMin) * time.Minute
-	c.JWTRefreshTTL = time.Duration(refreshDays) * 24 * time.Hour	
+	c.JWTRefreshTTL = time.Duration(refreshDays) * 24 * time.Hour
 
 	if len(c.JWTAccessSecret) < 32 {
 		return nil, fmt.Errorf("JWT_ACCESS_SECRET must be at least 32 chars")

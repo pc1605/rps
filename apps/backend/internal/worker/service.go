@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/pc1605/rps/apps/backend/internal/audit"
@@ -122,7 +123,7 @@ func (s *Service) Login(ctx context.Context, badgeToken, pin string) (*Worker, e
 		WHERE badge_token = $1 AND is_active = TRUE
 	`, badgeToken).Scan(&w.ID, &w.Name, &w.Phone, &station, &pinHash, &w.IsActive, &w.CreatedAt)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrInvalidLogin // don't reveal whether badge exists
 	}
 	if err != nil {
@@ -135,11 +136,14 @@ func (s *Service) Login(ctx context.Context, badgeToken, pin string) (*Worker, e
 
 	w.Station = Station(station)
 
-	// update last_login_at (fire and forget)
-	go func() {
+	// Update last_login_at in the background. Detached on purpose: the request ctx
+	// is cancelled once the response is sent. Bounded by a timeout instead.
+	go func() { //nolint:gosec // G118: intentional detached context
 		bg, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_, _ = s.pool.Exec(bg, `UPDATE workers SET last_login_at = NOW() WHERE id = $1`, w.ID)
+		if _, err := s.pool.Exec(bg, `UPDATE workers SET last_login_at = NOW() WHERE id = $1`, w.ID); err != nil {
+			log.Warn().Err(err).Str("worker_id", w.ID.String()).Msg("update last_login_at")
+		}
 	}()
 
 	return &w, nil
@@ -174,7 +178,7 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*Worker, error) {
 		SELECT id, name, COALESCE(phone,''), station, is_active, last_login_at, created_at
 		FROM workers WHERE id = $1
 	`, id).Scan(&w.ID, &w.Name, &w.Phone, &w.Station, &w.IsActive, &w.LastLoginAt, &w.CreatedAt)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	if err != nil {

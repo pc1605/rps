@@ -46,18 +46,17 @@ func main() {
 	batchSvc := batch.NewService(pool)
 	refSvc := reference.NewService(pool)
 	workerSvc := worker.NewService(pool)
-	stockSvc := stock.NewService(pool) 
+	stockSvc := stock.NewService(pool)
 	reportSvc := report.NewService(pool)
-	
-	
+
 	// ───── HTTP app ─────
 	app := newApp(cfg)
-	
+
 	// ───── Routes ─────
 	api := app.Group("/api/v1")
 	api.Use(authSvc.Guard()) // default-deny: everything under /api/v1 requires auth
 	// unless listed in auth.PublicPaths or under /public/
-	
+
 	auth.RegisterRoutes(api, authSvc)
 	batch.RegisterRoutes(api, batchSvc, authSvc)
 	reference.RegisterRoutes(api, refSvc)

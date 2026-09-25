@@ -105,4 +105,3 @@ func StationFromCtx(c *fiber.Ctx) string {
 	s, _ := c.Locals("station").(string)
 	return s
 }
-

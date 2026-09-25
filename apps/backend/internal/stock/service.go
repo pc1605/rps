@@ -120,7 +120,7 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, in UpdateRollInput, 
 		FROM raw_materials WHERE id = $1 FOR UPDATE
 	`, id).Scan(&before.ID, &before.RollCode, &before.Color, &before.TotalMeters,
 		&before.RemainingMeters, &before.IsActive, &before.ReceivedAt, &before.CreatedAt)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
@@ -181,18 +181,19 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, in UpdateRollInput, 
 	return &after, nil
 }
 
-// FinishedGoods returns packed (not yet dispatched) mats grouped by car model.
-// This IS the stockyard inventory: what's ready to sell.
+// FinishedGoods returns packed (not yet dispatched) mats grouped by item
+// (car × size × product line). This IS the stockyard inventory: what's ready to sell.
 func (s *Service) FinishedGoods(ctx context.Context) ([]FinishedStock, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT cm.id, cb.name, cm.name, cm.size_class::text, COUNT(*)
+		SELECT cm.id, cb.name, cm.name, cm.size_class::text, pln.name, cm.barcode, COUNT(*)
 		FROM batch_units bu
 		JOIN batches b     ON b.id = bu.batch_id
 		JOIN car_models cm ON cm.id = b.car_model_id
 		JOIN car_brands cb ON cb.id = cm.brand_id
+		LEFT JOIN product_lines pln ON pln.id = cm.product_line_id
 		WHERE bu.status = 'packed'
-		GROUP BY cm.id, cb.name, cm.name, cm.size_class
-		ORDER BY cb.name, cm.name
+		GROUP BY cm.id, cb.name, cm.name, cm.size_class, pln.name, cm.barcode
+		ORDER BY cb.name, cm.name, pln.name
 	`)
 	if err != nil {
 		return nil, err
@@ -202,7 +203,8 @@ func (s *Service) FinishedGoods(ctx context.Context) ([]FinishedStock, error) {
 	out := []FinishedStock{}
 	for rows.Next() {
 		var f FinishedStock
-		if err := rows.Scan(&f.CarModelID, &f.BrandName, &f.ModelName, &f.SizeClass, &f.PackedCount); err != nil {
+		if err := rows.Scan(&f.CarModelID, &f.BrandName, &f.ModelName, &f.SizeClass,
+			&f.LineName, &f.Barcode, &f.PackedCount); err != nil {
 			return nil, err
 		}
 		out = append(out, f)

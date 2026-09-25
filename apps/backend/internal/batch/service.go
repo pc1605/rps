@@ -202,7 +202,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 		&b.Version, &b.CreatedAt, &b.UpdatedAt,
 		&b.CutQty, &b.ParentBatchID, &b.ParentBatchCode, &b.ShortReason, &b.StickersPrintedAt,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	if err != nil {
@@ -449,7 +449,7 @@ func (s *Service) StartPhase(ctx context.Context, batchID, workerID uuid.UUID, s
 	err = tx.QueryRow(ctx,
 		`SELECT current_phase, status, batch_code FROM batches WHERE id = $1 FOR UPDATE`,
 		batchID).Scan(&b.Phase, &b.Status, &b.Code)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrNotFound
 	}
 	if err != nil {
@@ -533,7 +533,7 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 
 	var quantity, cutQty int
 	err = tx.QueryRow(ctx, `SELECT quantity, cut_qty FROM batches WHERE id=$1 FOR UPDATE`, batchID).Scan(&quantity, &cutQty)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrNotFound
 	}
 	if err != nil {
@@ -669,7 +669,7 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 		SELECT batch_code, current_phase, status, quantity, cut_qty, car_model_id, roll_id, created_by
 		FROM batches WHERE id = $1 FOR UPDATE`, batchID).
 		Scan(&b.Code, &b.Phase, &b.Status, &b.Quantity, &b.CutQty, &b.CarModel, &b.RollID, &b.CreatedBy)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNotFound
 	}
 	if err != nil {
@@ -788,7 +788,7 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 	err = tx.QueryRow(ctx,
 		`SELECT current_phase, status, quantity, cut_qty FROM batches WHERE id = $1 FOR UPDATE`,
 		batchID).Scan(&cur.Phase, &cur.Status, &cur.Quantity, &cur.CutQty)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrNotFound
 	}
 	if err != nil {
@@ -873,7 +873,7 @@ func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.U
 		FROM batch_units bu JOIN batches b ON b.id = bu.batch_id
 		WHERE bu.unit_code = $1 FOR UPDATE OF b
 	`, unitCode).Scan(&unitID, &unitStatus, &stitchedAt, &batchID, &batchCode, &batchPhase, &batchStatus)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrUnitNotFound
 	}
 	if err != nil {

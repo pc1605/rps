@@ -11,21 +11,22 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrUserDeactivated    = errors.New("user deactivated")
-	ErrNotFound = errors.New("worker not found")
+	ErrNotFound           = errors.New("worker not found")
 )
 
 type Service struct {
-	pool             *pgxpool.Pool
-	accessSecret     string
-	refreshSecret    string
-	accessTTL        time.Duration
-	refreshTTL       time.Duration
+	pool          *pgxpool.Pool
+	accessSecret  string
+	refreshSecret string
+	accessTTL     time.Duration
+	refreshTTL    time.Duration
 }
 
 func NewService(pool *pgxpool.Pool, accessSecret, refreshSecret string, accessTTL, refreshTTL time.Duration) *Service {
@@ -45,14 +46,14 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*LoginResponse, err
 	}
 
 	var (
-		id              uuid.UUID
-		name            string
-		storedEmail     string
-		passwordHash    string
-		role            string
-		deactivatedAt   *time.Time
-		lastLoginAt     *time.Time
-		createdAt       time.Time
+		id            uuid.UUID
+		name          string
+		storedEmail   string
+		passwordHash  string
+		role          string
+		deactivatedAt *time.Time
+		lastLoginAt   *time.Time
+		createdAt     time.Time
 	)
 
 	err := s.pool.QueryRow(ctx, `
@@ -62,7 +63,7 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*LoginResponse, err
 		WHERE email = $1::citext
 	`, email).Scan(&id, &name, &storedEmail, &passwordHash, &role, &deactivatedAt, &lastLoginAt, &createdAt)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrInvalidCredentials
 	}
 	if err != nil {
@@ -76,11 +77,14 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*LoginResponse, err
 		return nil, ErrInvalidCredentials
 	}
 
-	// Update last_login_at (fire and forget — don't block login)
-	go func() {
+	// Update last_login_at in the background. Detached on purpose: the request ctx
+	// is cancelled once the response is sent. Bounded by a timeout instead.
+	go func() { //nolint:gosec // G118: intentional detached context
 		bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		_, _ = s.pool.Exec(bgCtx, `UPDATE users SET last_login_at = NOW() WHERE id = $1`, id)
+		if _, err := s.pool.Exec(bgCtx, `UPDATE users SET last_login_at = NOW() WHERE id = $1`, id); err != nil {
+			log.Warn().Err(err).Str("user_id", id.String()).Msg("update last_login_at")
+		}
 	}()
 
 	tokens, err := s.issueTokens(id, role)
@@ -104,16 +108,16 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*LoginResponse, err
 
 func (s *Service) GetUser(ctx context.Context, id uuid.UUID) (*User, error) {
 	var (
-		u             User
-		emailStr      string
-		roleStr       string
+		u        User
+		emailStr string
+		roleStr  string
 	)
 	err := s.pool.QueryRow(ctx, `
 		SELECT id, name, email::text, role::text, deactivated_at, last_login_at, created_at
 		FROM users WHERE id = $1
 	`, id).Scan(&u.ID, &u.Name, &emailStr, &roleStr, &u.DeactivatedAt, &u.LastLoginAt, &u.CreatedAt)
 
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrInvalidCredentials
 	}
 	if err != nil {
@@ -193,7 +197,7 @@ type WorkerClaims struct {
 // IssueWorkerToken creates a worker access token.
 func (s *Service) IssueWorkerToken(workerID uuid.UUID, station string) (*TokenPair, error) {
 	now := time.Now()
-	workerTTL := 30 * 24 * time.Hour 
+	workerTTL := 30 * 24 * time.Hour
 
 	accessClaims := WorkerClaims{
 		WorkerID: workerID,
@@ -275,8 +279,8 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (*User, *Tok
 		return nil, nil, ErrInvalidCredentials
 	}
 
-tokens, err := s.issueTokens(u.ID, string(u.Role))
-		if err != nil {
+	tokens, err := s.issueTokens(u.ID, string(u.Role))
+	if err != nil {
 		return nil, nil, err
 	}
 	return &u, tokens, nil
@@ -285,7 +289,7 @@ tokens, err := s.issueTokens(u.ID, string(u.Role))
 func (s *Service) BadgeToken(ctx context.Context, id uuid.UUID) (string, error) {
 	var badge string
 	err := s.pool.QueryRow(ctx, `SELECT badge_token FROM workers WHERE id=$1 AND is_active`, id).Scan(&badge)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return "", ErrNotFound
 	}
 	return badge, err
