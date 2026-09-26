@@ -1,5 +1,6 @@
 import { http } from "@/lib/api-client";
-import type { Brand, ProductLine, CarItem, CarItemInput } from "./types";
+import type { Brand, CarItem, CarItemInput, ProductLine } from "./types";
+
 const d = (r: any) => r.data?.data ?? r.data;
 export const catalogApi = {
   items: async (): Promise<CarItem[]> => d(await http.get("/car-models")),

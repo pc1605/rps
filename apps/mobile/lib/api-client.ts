@@ -1,6 +1,6 @@
 import axios from "axios";
-import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL!;
 const TOKEN_KEY = "rps_worker_token";
@@ -8,9 +8,7 @@ const TOKEN_KEY = "rps_worker_token";
 export const tokenStore = {
   get: async (): Promise<string | null> => {
     if (Platform.OS === "web")
-      return typeof localStorage !== "undefined"
-        ? localStorage.getItem(TOKEN_KEY)
-        : null;
+      return typeof localStorage !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
     return SecureStore.getItemAsync(TOKEN_KEY);
   },
   set: async (token: string): Promise<void> => {
@@ -62,8 +60,7 @@ http.interceptors.response.use(
       new ApiError(
         status,
         body?.code ?? "network_error",
-        body?.error ??
-          (status === 0 ? "Cannot reach server" : "Request failed"),
+        body?.error ?? (status === 0 ? "Cannot reach server" : "Request failed"),
       ),
     );
   },

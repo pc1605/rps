@@ -1,21 +1,17 @@
 "use client";
 
+import { CircleDot, Clock, Package, Scissors, Shirt } from "lucide-react";
+import { EmptyState } from "@/components/rps/empty-state";
 import { Card } from "@/components/ui/card";
+import { phaseTone } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
-import { Scissors, Shirt, Package, CircleDot } from "lucide-react";
-import type { PhaseLogEntry, Phase } from "../types";
+import type { Phase, PhaseLogEntry } from "../types";
 import { fmtStamp } from "./unit-card";
 
-const phaseIcon: Record<string, React.ElementType> = {
+const phaseIcon: Partial<Record<Phase, React.ElementType>> = {
   cutting: Scissors,
   stitching: Shirt,
   packing: Package,
-};
-
-const phaseColor: Record<string, string> = {
-  cutting: "text-cyan-600 dark:text-cyan-400 border-cyan-500/40",
-  stitching: "text-pink-600 dark:text-pink-400 border-pink-500/40",
-  packing: "text-amber-600 dark:text-amber-400 border-amber-500/40",
 };
 
 function fmtDuration(s?: number) {
@@ -27,78 +23,73 @@ function fmtDuration(s?: number) {
   return `${s}s`;
 }
 
-function fmtTime(iso: string) {
-  return fmtStamp(iso) ?? "";
-}
-
 export function BatchTimeline({ timeline }: { timeline: PhaseLogEntry[] }) {
   if (!timeline.length)
     return (
-      <Card className="p-8 text-center text-muted-foreground text-sm">
-        No production activity yet — waiting for a worker to start.
-      </Card>
+      <EmptyState
+        icon={Clock}
+        title="No production activity yet"
+        body="The timeline fills in as workers start and complete each phase."
+      />
     );
 
   return (
-    <div className="relative pl-6">
-      {/* vertical rail */}
-      <div className="absolute left-[9px] top-2 bottom-2 w-px bg-border" />
+    <ol className="relative pl-6">
+      <div className="absolute bottom-2 left-[9px] top-2 w-px bg-border" aria-hidden />
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {timeline.map((e) => {
           const Icon = phaseIcon[e.phase] ?? CircleDot;
+          const tone = phaseTone[e.phase];
           const open = !e.completed_at;
           const dur = fmtDuration(e.duration_seconds);
+
           return (
-            <div key={e.id} className="relative">
-              {/* node */}
+            <li key={e.id} className="relative">
               <div
                 className={cn(
-                  "absolute -left-6 top-3 h-5 w-5 rounded-full border-2 bg-background grid place-items-center",
-                  phaseColor[e.phase] ?? "border-border",
+                  "absolute -left-6 top-3 grid h-5 w-5 place-items-center rounded-full border-2 bg-background",
+                  tone.text,
+                  tone.border,
                 )}
+                aria-hidden
               >
                 <Icon className="h-2.5 w-2.5" />
               </div>
 
               <Card className={cn("p-4", open && "border-dashed")}>
-                <div className="flex items-center justify-between">
-                  <div className="font-medium capitalize">
-                    {e.phase}
-                    <span className="text-muted-foreground font-normal">
-                      {" "}
-                      · {e.worker_name}
-                    </span>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-body font-medium">
+                    <span className={tone.text}>{tone.label}</span>
+                    <span className="font-normal text-muted-foreground"> · {e.worker_name}</span>
                   </div>
                   {open ? (
-                    <span className="font-mono text-[10px] uppercase text-amber-600 dark:text-amber-400 animate-pulse">
+                    <span className="inline-flex items-center gap-1.5 text-caption text-working">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-working" aria-hidden />
                       In progress
                     </span>
                   ) : (
-                    dur && (
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {dur}
-                      </span>
-                    )
+                    dur && <span className="tabular text-caption text-muted-foreground">{dur}</span>
                   )}
                 </div>
-                <div className="font-mono text-[11px] text-muted-foreground mt-1">
-                  {fmtTime(e.started_at)}
-                  {e.completed_at && <> → {fmtTime(e.completed_at)}</>}
-                  {e.quantity_completed != null && (
-                    <span className="ml-3">· {e.quantity_completed} pcs</span>
+
+                <div className="tabular mt-1 text-caption text-muted-foreground">
+                  <time dateTime={e.started_at}>{fmtStamp(e.started_at)}</time>
+                  {e.completed_at && (
+                    <>
+                      {" "}
+                      → <time dateTime={e.completed_at}>{fmtStamp(e.completed_at)}</time>
+                    </>
                   )}
+                  {e.quantity_completed != null && <span className="ml-3">· {e.quantity_completed} pcs</span>}
                 </div>
-                {e.notes && (
-                  <p className="text-xs text-muted-foreground mt-1.5">
-                    ✎ {e.notes}
-                  </p>
-                )}
+
+                {e.notes && <p className="mt-1.5 text-caption text-muted-foreground">✎ {e.notes}</p>}
               </Card>
-            </div>
+            </li>
           );
         })}
       </div>
-    </div>
+    </ol>
   );
 }

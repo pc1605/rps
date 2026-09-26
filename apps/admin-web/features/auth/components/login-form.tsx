@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/features/auth/store";
 
 export function LoginForm() {
@@ -9,63 +14,91 @@ export function LoginForm() {
   const { error, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async () => {
+  const canSubmit = email.trim().length > 0 && password.length > 0 && !submitting;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
     setSubmitting(true);
-    const ok = await login(email, password);
-    setSubmitting(false);
-    if (ok) router.replace("/dashboard");
+    try {
+      const ok = await login(email.trim(), password);
+      if (ok) router.replace("/dashboard");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-2xl">
-      <p className="font-mono text-xs tracking-widest text-amber-500 mb-3">
-        ◆ AMBIKA ENTERPRISE · RIDDHI
-      </p>
-      <h1 className="text-3xl font-extrabold text-zinc-50 mb-1">
-        RPS <span className="text-amber-500">Admin</span>
-      </h1>
-      <p className="text-sm text-zinc-400 mb-8">
-        Riddhi Production System — sign in to your dashboard.
-      </p>
+    <Card className="w-full max-w-md p-8">
+      <div className="mb-8">
+        <div className="text-caption font-medium text-brand">Ambika Enterprise · Riddhi</div>
+        <h1 className="mt-1 text-h1">RPS Admin</h1>
+        <p className="mt-1 text-small text-muted-foreground">Sign in to the Riddhi Production System.</p>
+      </div>
 
-      <label className="block font-mono text-xs uppercase tracking-wider text-zinc-500 mb-2">
-        Email
-      </label>
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="owner@ambika.local"
-        className="w-full mb-4 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-amber-500"
-      />
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <div className="space-y-2">
+          <Label htmlFor="login-email">Email</Label>
+          <Input
+            id="login-email"
+            type="email"
+            inputMode="email"
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="owner@ambika.local"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "login-error" : undefined}
+          />
+        </div>
 
-      <label className="block font-mono text-xs uppercase tracking-wider text-zinc-500 mb-2">
-        Password
-      </label>
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-        placeholder="••••••••"
-        className="w-full mb-6 rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-zinc-100 outline-none focus:border-amber-500"
-      />
+        <div className="space-y-2">
+          <Label htmlFor="login-password">Password</Label>
+          <div className="relative">
+            <Input
+              id="login-password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="pr-11"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "login-error" : undefined}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-0.5 top-1/2 -translate-y-1/2"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
 
-      {error && (
-        <p className="mb-4 rounded-lg bg-red-950 border border-red-900 px-4 py-2 text-sm text-red-400">
-          {error}
-        </p>
-      )}
+        {error && (
+          <p
+            id="login-error"
+            role="alert"
+            className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-small text-danger"
+          >
+            {error}
+          </p>
+        )}
 
-      <button
-        onClick={handleSubmit}
-        disabled={submitting || !email || !password}
-        className="w-full rounded-lg bg-amber-500 py-3 font-semibold text-zinc-950 transition hover:bg-amber-400 disabled:opacity-40"
-      >
-        {submitting ? "Signing in…" : "Sign in →"}
-      </button>
-    </div>
+        <Button type="submit" size="lg" className="w-full" disabled={!canSubmit}>
+          {submitting ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
+    </Card>
   );
 }

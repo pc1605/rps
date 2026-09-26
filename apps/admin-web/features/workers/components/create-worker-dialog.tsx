@@ -1,7 +1,10 @@
 "use client";
 
+import { Check, Copy, Plus } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,19 +14,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Plus, Copy, Check } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreateWorker } from "../hooks";
 import type { Station } from "../types";
-import { QRCodeSVG } from "qrcode.react";
 
 export function CreateWorkerDialog() {
   const [open, setOpen] = useState(false);
@@ -35,6 +30,7 @@ export function CreateWorkerDialog() {
   const [copied, setCopied] = useState(false);
 
   const createWorker = useCreateWorker();
+  const canSubmit = name.trim().length > 0 && !!station && /^\d{4}$/.test(pin) && !createWorker.isPending;
 
   const reset = () => {
     setName("");
@@ -45,29 +41,33 @@ export function CreateWorkerDialog() {
     setCopied(false);
   };
 
-  const submit = async () => {
-    if (!name || !station || !/^\d{4}$/.test(pin)) return;
+  const submit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!canSubmit) return;
     try {
       const worker = await createWorker.mutateAsync({
-        name,
-        phone: phone || undefined,
+        name: name.trim(),
+        phone: phone.trim() || undefined,
         station: station as Station,
         pin,
       });
       setCreatedBadge(worker.badge_token ?? null);
-      toast.success(`Worker ${worker.name} created`);
-    } catch (e) {
-      toast.error("Failed to create worker", {
-        description: (e as Error).message,
+      toast.success(`${worker.name} added`);
+    } catch (err) {
+      toast.error("Couldn't add worker", {
+        description: (err as Error).message,
       });
     }
   };
 
-  const copyBadge = () => {
-    if (createdBadge) {
-      navigator.clipboard.writeText(createdBadge);
+  const copyBadge = async () => {
+    if (!createdBadge) return;
+    try {
+      await navigator.clipboard.writeText(createdBadge);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Couldn't copy — select the code and copy it manually");
     }
   };
 
@@ -81,40 +81,35 @@ export function CreateWorkerDialog() {
     >
       <DialogTrigger asChild>
         <Button>
-          <Plus className="h-4 w-4" /> Add Worker
+          <Plus className="h-4 w-4" aria-hidden /> Add worker
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         {!createdBadge ? (
-          <>
+          <form onSubmit={submit} className="grid gap-4">
             <DialogHeader>
               <DialogTitle>Add worker</DialogTitle>
               <DialogDescription>
-                Create a worker and set their PIN.
+                Create a worker and set their PIN. You’ll get an enrollment QR next.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  Name
-                </label>
+                <Label htmlFor="worker-name">Name</Label>
                 <Input
+                  id="worker-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ramesh Kumar"
+                  autoComplete="off"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  Station
-                </label>
-                <Select
-                  value={station}
-                  onValueChange={(v) => setStation(v as Station)}
-                >
-                  <SelectTrigger>
+                <Label htmlFor="worker-station">Station</Label>
+                <Select value={station} onValueChange={(v) => setStation(v as Station)}>
+                  <SelectTrigger id="worker-station" className="w-full">
                     <SelectValue placeholder="Select station…" />
                   </SelectTrigger>
                   <SelectContent>
@@ -126,10 +121,14 @@ export function CreateWorkerDialog() {
               </div>
 
               <div className="space-y-2">
-                <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  Phone (optional)
-                </label>
+                <Label htmlFor="worker-phone">
+                  Phone <span className="font-normal text-muted-foreground">(optional)</span>
+                </Label>
                 <Input
+                  id="worker-phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="off"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+91…"
@@ -137,86 +136,72 @@ export function CreateWorkerDialog() {
               </div>
 
               <div className="space-y-2">
-                <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  4-digit PIN
-                </label>
+                <Label htmlFor="worker-pin">4-digit PIN</Label>
                 <Input
+                  id="worker-pin"
                   value={pin}
-                  onChange={(e) =>
-                    setPin(e.target.value.replace(/\D/g, "").slice(0, 4))
-                  }
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
                   placeholder="1234"
                   inputMode="numeric"
                   maxLength={4}
+                  autoComplete="off"
+                  className="tabular tracking-widest"
                 />
               </div>
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                onClick={submit}
-                disabled={
-                  !name ||
-                  !station ||
-                  !/^\d{4}$/.test(pin) ||
-                  createWorker.isPending
-                }
-              >
-                {createWorker.isPending ? "Creating…" : "Create worker"}
+              <Button type="submit" disabled={!canSubmit}>
+                {createWorker.isPending ? "Adding…" : "Add worker"}
               </Button>
             </DialogFooter>
-          </>
+          </form>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Worker created ✓</DialogTitle>
+              <DialogTitle>{name} added</DialogTitle>
               <DialogDescription>
-                Share this enrollment code with {name}. It won&apos;t be shown
-                again.
+                Enroll their phone now, or any time later from Workers → Enroll.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="py-4">
-              <div className="flex justify-center rounded-lg border bg-white p-4 mb-3">
-                <QRCodeSVG
-                  value={`RPS-ENROLL:${createdBadge}`}
-                  size={180}
-                  level="M"
-                />
+            <div className="space-y-3 py-2">
+              <div className="flex justify-center rounded-lg border bg-white p-4">
+                <QRCodeSVG value={`RPS-ENROLL:${createdBadge}`} size={180} level="M" />
               </div>
-              <div className="rounded-lg border bg-muted/40 p-4 flex items-center justify-between gap-3">
-                <code className="font-mono text-sm break-all">
-                  {createdBadge}
-                </code>
+              <ol className="list-decimal space-y-1 pl-5 text-small text-muted-foreground">
+                <li>On their phone, open RPS Worker.</li>
+                <li>
+                  Tap <span className="font-medium text-foreground">Scan enrollment code</span> and point at
+                  this QR.
+                </li>
+                <li>Enter their PIN.</li>
+              </ol>
+              <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 p-3">
+                <div className="min-w-0">
+                  <div className="text-caption text-muted-foreground">
+                    Can’t scan? Share this code instead
+                  </div>
+                  <code className="font-mono text-small break-all">{createdBadge}</code>
+                </div>
                 <Button
+                  type="button"
                   variant="outline"
                   size="icon"
                   onClick={copyBadge}
                   className="shrink-0"
+                  aria-label={copied ? "Copied" : "Copy enrollment code"}
                 >
-                  {copied ? (
-                    <Check className="h-4 w-4 text-emerald-500" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
+                  {copied ? <Check className="h-4 w-4 text-working" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                On the worker&apos;s phone: open RPS Worker →{" "}
-                <b>Scan enrollment code</b> → point at this QR → enter PIN. Or
-                share the text code below as a fallback.
-              </p>
             </div>
 
             <DialogFooter>
-              <Button
-                onClick={() => {
-                  setOpen(false);
-                }}
-              >
+              <Button type="button" onClick={() => setOpen(false)}>
                 Done
               </Button>
             </DialogFooter>

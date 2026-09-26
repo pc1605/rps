@@ -1,25 +1,14 @@
-import { useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useMemo, useState } from "react";
+import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { Screen } from "../../components/ui/Screen";
-import { Card } from "../../components/ui/Card";
-import { useAuth } from "../../features/auth/store";
-import {
-  useMyBatches,
-  useStartBatch,
-  useCompleteBatch,
-} from "../../features/batches/hooks";
-import { ApiError } from "../../lib/api-client";
 import { AppButton } from "../../components/ui/AppButton";
+import { Card } from "../../components/ui/Card";
+import { Screen } from "../../components/ui/Screen";
+import { useAuth } from "../../features/auth/store";
+import { useCompleteBatch, useMyBatches, useStartBatch } from "../../features/batches/hooks";
+import { ApiError } from "../../lib/api-client";
 
 export default function BatchAction() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -48,7 +37,7 @@ export default function BatchAction() {
   const remaining = batch.quantity - (batch.cut_qty ?? 0);
   const quantity = qty === null ? String(remaining) : qty;
   const qtyNum = parseInt(quantity, 10);
-  const qtyValid = !isNaN(qtyNum) && qtyNum >= 1 && qtyNum <= remaining;
+  const qtyValid = !Number.isNaN(qtyNum) && qtyNum >= 1 && qtyNum <= remaining;
 
   const onError = (e: unknown) => {
     const msg = e instanceof ApiError ? e.message : "Something went wrong";
@@ -99,8 +88,7 @@ export default function BatchAction() {
 
         <Text style={styles.code}>{batch.batch_code}</Text>
         <Text style={styles.model}>
-          {batch.brand_name} {batch.model_name} · {batch.quantity} mats ·{" "}
-          {batch.size_class.toUpperCase()}
+          {batch.brand_name} {batch.model_name} · {batch.quantity} mats · {batch.size_class.toUpperCase()}
           {batch.line_name ? ` · ${batch.line_name}` : ""}
         </Text>
         {batch.notes ? <Text style={styles.notes}>✎ {batch.notes}</Text> : null}
@@ -108,22 +96,15 @@ export default function BatchAction() {
         {/* ---- CUTTER: exclusive claim + manual complete ---- */}
         {isCutter && !mine && batch.status === "pending" && (
           <Card style={styles.actionCard}>
-            <Text style={styles.actionHint}>
-              Starting locks this batch to you until you complete it.
-            </Text>
-            <AppButton
-              title="Start cutting ▶"
-              onPress={handleStart}
-              loading={startBatch.isPending}
-            />
+            <Text style={styles.actionHint}>Starting locks this batch to you until you complete it.</Text>
+            <AppButton title="Start cutting ▶" onPress={handleStart} loading={startBatch.isPending} />
           </Card>
         )}
 
         {isCutter && !mine && batch.status === "in_progress" && (
           <Card style={styles.actionCard}>
             <Text style={styles.takenText}>
-              ⏳ {batch.active_workers ?? "Another cutter"} is working on this
-              batch.
+              ⏳ {batch.active_workers ?? "Another cutter"} is working on this batch.
             </Text>
           </Card>
         )}
@@ -150,14 +131,10 @@ export default function BatchAction() {
         {scanStation && !mine && (
           <Card style={styles.actionCard}>
             {batch.assigned_workers && (
-              <Text style={styles.workingLine}>
-                📌 Assigned: {batch.assigned_workers}
-              </Text>
+              <Text style={styles.workingLine}>📌 Assigned: {batch.assigned_workers}</Text>
             )}
             {batch.active_workers && (
-              <Text style={styles.workingLine}>
-                👤 {batch.active_workers} working
-              </Text>
+              <Text style={styles.workingLine}>👤 {batch.active_workers} working</Text>
             )}
             <Text style={styles.actionHint}>
               {isStitcher
@@ -166,11 +143,7 @@ export default function BatchAction() {
                   : "Join, then scan each mat's label as you finish stitching it."
                 : "Join, then scan each mat's label as you pack it. Others can join too."}
             </Text>
-            <AppButton
-              title="Join batch ▶"
-              onPress={handleStart}
-              loading={startBatch.isPending}
-            />
+            <AppButton title="Join batch ▶" onPress={handleStart} loading={startBatch.isPending} />
           </Card>
         )}
 
@@ -183,13 +156,8 @@ export default function BatchAction() {
                   : `STITCHED ${stitchDone} / ${batch.units_total}`
                 : `PACKED ${batch.units_packed} / ${batch.units_total}`}
             </Text>
-            {batch.active_workers && (
-              <Text style={styles.workingLine}>👤 {batch.active_workers}</Text>
-            )}
-            <AppButton
-              title="Open scanner ▶"
-              onPress={() => router.push(`/scan/${batch.id}`)}
-            />
+            {batch.active_workers && <Text style={styles.workingLine}>👤 {batch.active_workers}</Text>}
+            <AppButton title="Open scanner ▶" onPress={() => router.push(`/scan/${batch.id}`)} />
           </Card>
         )}
       </View>

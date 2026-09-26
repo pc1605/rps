@@ -1,30 +1,22 @@
+import { PageHeader, SectionTitle } from "@/components/rps/section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RollList } from "@/features/stock/components/roll-list";
 import { AddRollDialog } from "@/features/stock/components/add-roll-dialog";
 import { FinishedGoods } from "@/features/stock/components/finished-goods";
+import { RollList } from "@/features/stock/components/roll-list";
 
 export default function StockPage() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Stock</h1>
-          <p className="text-muted-foreground mt-1">
-            Raw material in, finished mats out.
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Stock" description="Raw material in, finished mats out." />
 
       <Tabs defaultValue="raw">
         <TabsList>
-          <TabsTrigger value="raw">Raw Material</TabsTrigger>
-          <TabsTrigger value="finished">Finished Goods</TabsTrigger>
+          <TabsTrigger value="raw">Raw material</TabsTrigger>
+          <TabsTrigger value="finished">Finished goods</TabsTrigger>
         </TabsList>
 
         <TabsContent value="raw" className="space-y-4 pt-4">
-          <div className="flex justify-end">
-            <AddRollDialog />
-          </div>
+          <SectionTitle aside={<AddRollDialog />}>Rolls</SectionTitle>
           <RollList />
         </TabsContent>
 

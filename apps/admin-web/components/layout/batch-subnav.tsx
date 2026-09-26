@@ -2,18 +2,18 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { cn } from "@/lib/utils";
 import { useBatchStats } from "@/features/batches/hooks";
 import { batchViews } from "@/features/batches/views";
+import { cn } from "@/lib/utils";
 
-export function BatchSubNav() {
+export function BatchSubNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const { data: stats } = useBatchStats();
   const active = pathname === "/batches" ? params.get("phase") : null;
 
   return (
-    <div className="ml-4 mt-1 mb-1 border-l border-border pl-3 space-y-0.5">
+    <div className="ml-4 mt-1 mb-1 space-y-0.5 border-l pl-3">
       {batchViews.map((v) => {
         const n = v.count && stats ? v.count(stats) : 0;
         const isActive = active === v.key;
@@ -21,25 +21,24 @@ export function BatchSubNav() {
           <Link
             key={v.key}
             href={`/batches?phase=${v.key}`}
+            onClick={onNavigate}
+            aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex items-center justify-between rounded-md px-2 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors",
+              "flex min-h-10 items-center justify-between rounded-md px-2 text-caption transition-colors",
               isActive
-                ? "bg-primary/10 text-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                ? "bg-brand/10 text-foreground font-medium"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
           >
             <span className="inline-flex items-center gap-2">
               <span
-                className={cn(
-                  "h-1.5 w-1.5 rounded-full",
-                  v.dot,
-                  n === 0 && !isActive && "opacity-30",
-                )}
+                className={cn("h-1.5 w-1.5 rounded-full", v.dot, n === 0 && !isActive && "opacity-30")}
+                aria-hidden
               />
               {v.label}
             </span>
             {n > 0 && (
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-foreground/80">
+              <span className="tabular rounded-full bg-muted px-1.5 py-0.5 text-caption text-foreground/80">
                 {n}
               </span>
             )}

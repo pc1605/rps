@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { batchApi } from "./api";
 
 export function useMyBatches() {
@@ -20,8 +20,7 @@ export function useStartBatch() {
 export function useCompleteBatch() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { id: string; qty: number; notes?: string }) =>
-      batchApi.complete(v.id, v.qty, v.notes),
+    mutationFn: (v: { id: string; qty: number; notes?: string }) => batchApi.complete(v.id, v.qty, v.notes),
     onSettled: () => qc.invalidateQueries({ queryKey: ["my-batches"] }),
   });
 }
@@ -31,8 +30,7 @@ export function useScanUnit() {
   return useMutation({
     mutationFn: (unitCode: string) => batchApi.scanUnit(unitCode),
     onSuccess: (res) => {
-      if (res.phase_completed || res.batch_completed)
-        qc.invalidateQueries({ queryKey: ["my-batches"] });
+      if (res.phase_completed || res.batch_completed) qc.invalidateQueries({ queryKey: ["my-batches"] });
     },
   });
 }

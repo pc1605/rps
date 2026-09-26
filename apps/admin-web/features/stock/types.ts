@@ -30,4 +30,6 @@ export interface FinishedStock {
   model_name: string;
   size_class: string;
   packed_count: number;
+  line_name?: string;
+  barcode?: string;
 }

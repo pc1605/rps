@@ -1,6 +1,6 @@
+import JsBarcode from "jsbarcode";
 import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
-import JsBarcode from "jsbarcode";
 import type { BatchDetail } from "./types";
 
 // Label grid on A4: 3 columns × 8 rows = 24 labels/page.
@@ -14,7 +14,7 @@ const MARGIN_X = 7;
 const MARGIN_Y = 12;
 const LABEL_W = (PAGE_W - MARGIN_X * 2) / COLS;
 const LABEL_H = (PAGE_H - MARGIN_Y * 2) / ROWS;
-const QR_SIZE = 22; // mm
+const _QR_SIZE = 22; // mm
 
 export type LabelMedia = "taffeta" | "sticker";
 
@@ -23,18 +23,14 @@ const MEDIA = {
   sticker: { cols: 3, rows: 8, qr: 22, suffix: "stickers" },
 } as const;
 
-export async function generateLabelPdf(
-  batch: BatchDetail,
-  media: LabelMedia = "taffeta",
-): Promise<void> {
+export async function generateLabelPdf(batch: BatchDetail, media: LabelMedia = "taffeta"): Promise<void> {
   const cfg = MEDIA[media];
   const COLS = cfg.cols,
     ROWS = cfg.rows,
     QR_SIZE = cfg.qr;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
 
-  for (let i = 0; i < batch.units.length; i++) {
-    const unit = batch.units[i];
+  for (const [i, unit] of batch.units.entries()) {
     const page = Math.floor(i / (COLS * ROWS));
     const idx = i % (COLS * ROWS);
     const col = idx % COLS;
@@ -51,14 +47,7 @@ export async function generateLabelPdf(
       margin: 1,
       width: 256,
     });
-    doc.addImage(
-      qrDataUrl,
-      "PNG",
-      x + 2,
-      y + (LABEL_H - QR_SIZE) / 2,
-      QR_SIZE,
-      QR_SIZE,
-    );
+    doc.addImage(qrDataUrl, "PNG", x + 2, y + (LABEL_H - QR_SIZE) / 2, QR_SIZE, QR_SIZE);
 
     // Text block right of the QR
     const tx = x + QR_SIZE + 5;
@@ -90,14 +79,7 @@ export async function generateLabelPdf(
         height: 40,
         margin: 0,
       });
-      doc.addImage(
-        canvas.toDataURL("image/png"),
-        "PNG",
-        tx,
-        y + 22,
-        LABEL_W - QR_SIZE - 8,
-        9,
-      );
+      doc.addImage(canvas.toDataURL("image/png"), "PNG", tx, y + 22, LABEL_W - QR_SIZE - 8, 9);
     }
   }
 

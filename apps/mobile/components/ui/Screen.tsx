@@ -1,4 +1,4 @@
-import { View, ViewProps } from "react-native";
+import { View, type ViewProps } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 
 export function Screen({ style, ...props }: ViewProps) {

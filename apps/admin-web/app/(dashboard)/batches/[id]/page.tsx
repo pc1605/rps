@@ -1,105 +1,128 @@
 "use client";
 
-import { use } from "react";
+import { FileDown } from "lucide-react";
 import Link from "next/link";
-import { ArrowLeft, FileDown } from "lucide-react";
-import { useBatch } from "@/features/batches/hooks";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { use } from "react";
+import { Chip } from "@/components/rps/chip";
+import { EmptyState } from "@/components/rps/empty-state";
+import { PageHeader, SectionTitle } from "@/components/rps/section";
+import { Stat } from "@/components/rps/stat";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { BatchTimeline } from "@/features/batches/components/batch-timeline";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AssignStitchersCard } from "@/features/batches/components/assign-stitchers-card";
-import { generateLabelPdf } from "@/features/batches/label-pdf";
-import { UnitCard } from "@/features/batches/components/unit-card";
+import { BatchTimeline } from "@/features/batches/components/batch-timeline";
 import { ShortCutPanel } from "@/features/batches/components/short-cut-panel";
+import { UnitCard } from "@/features/batches/components/unit-card";
+import { useBatch } from "@/features/batches/hooks";
+import { generateLabelPdf } from "@/features/batches/label-pdf";
+import { batchTone, sizeLabel } from "@/lib/tokens";
 
-export default function BatchDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default function BatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data: batch, isLoading, error } = useBatch(id);
+  const { data: batch, isPending, error } = useBatch(id);
 
-  if (isLoading)
-    return <p className="font-mono text-sm text-muted-foreground">Loading…</p>;
+  if (isPending)
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-9 w-56" />
+        <Skeleton className="h-4 w-80" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+
   if (error || !batch)
     return (
-      <p className="font-mono text-sm text-destructive">Batch not found.</p>
+      <EmptyState
+        title="Batch not found"
+        body="It may have been cancelled, or the link is wrong."
+        action={
+          <Button asChild variant="outline">
+            <Link href="/batches">Back to batches</Link>
+          </Button>
+        }
+      />
     );
+
+  const tone = batchTone(batch.current_phase, batch.status);
+  const stitched = batch.units.filter((u) => u.stitched_at).length;
 
   return (
     <div className="space-y-8">
-      <div className="space-y-6">
-        <Link
-          href="/batches"
-          className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-3 w-3" /> Batches
-        </Link>
-
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold font-mono text-primary">
-              {batch.batch_code}
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              {batch.brand_name} {batch.model_name} · {batch.quantity} mats ·{" "}
-              <span className="uppercase font-mono text-xs">
-                {batch.size_class}
-              </span>
-              {batch.line_name && <> · {batch.line_name}</>}
-              {batch.barcode && (
-                <span className="ml-3 font-mono text-xs text-muted-foreground">
-                  ▮ {batch.barcode}
-                </span>
-              )}
-            </p>
-            {batch.notes && (
-              <p className="text-sm text-muted-foreground mt-2">
-                ✎ {batch.notes}
-              </p>
+      <PageHeader
+        mono
+        back={{ href: "/batches", label: "Batches" }}
+        title={batch.batch_code}
+        description={
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-foreground">
+              {batch.brand_name} {batch.model_name}
+            </span>
+            <span>
+              · {sizeLabel[batch.size_class] ?? batch.size_class}
+              {batch.line_name ? ` · ${batch.line_name}` : ""} · {batch.quantity} mats
+            </span>
+            {batch.barcode && <span className="font-mono text-small">▮ {batch.barcode}</span>}
+            {batch.parent_batch_code && (
+              <Link
+                href={`/batches/${batch.parent_batch_id}`}
+                className="text-small text-brand hover:underline"
+              >
+                ↩ from {batch.parent_batch_code}
+              </Link>
             )}
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => generateLabelPdf(batch)}
-            >
+          </span>
+        }
+        actions={
+          <>
+            <Chip tone={tone} dot>
+              {tone.label}
+            </Chip>
+            <Button variant="outline" onClick={() => generateLabelPdf(batch)}>
               <FileDown className="h-4 w-4" /> Labels PDF
             </Button>
-            <Badge
-              variant="outline"
-              className="font-mono text-[10px] uppercase"
-            >
-              {batch.current_phase}
-            </Badge>
-          </div>
-        </div>
-      </div>
-      <ShortCutPanel batch={batch} />
-      <AssignStitchersCard batch={batch} />
-      <div>
-        <h2 className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-3">
-          Production timeline
-        </h2>
-        <BatchTimeline timeline={batch.timeline} />
+          </>
+        }
+      />
+
+      {batch.notes && <p className="whitespace-pre-line text-small text-muted-foreground">✎ {batch.notes}</p>}
+
+      {/* Progress at a glance */}
+      <div className="flex flex-wrap gap-x-10 gap-y-4">
+        <Stat size="sm" value={batch.cut_qty} of={batch.quantity} label="cut" tone="text-phase-cutting" />
+        <Stat
+          size="sm"
+          value={stitched}
+          of={batch.units_total}
+          label="stitched"
+          tone="text-phase-stitching"
+        />
+        <Stat
+          size="sm"
+          value={batch.units_packed}
+          of={batch.units_total}
+          label="packed"
+          tone="text-phase-completed"
+        />
       </div>
 
-      <div>
-        <h2 className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-3">
-          Units · {batch.units.filter((u) => u.stitched_at).length}/
-          {batch.units_total} stitched · {batch.units_packed}/
-          {batch.units_total} packed
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+      {/* The one thing the admin may need to do */}
+      <ShortCutPanel batch={batch} />
+      <AssignStitchersCard batch={batch} />
+
+      <section>
+        <SectionTitle aside={`${batch.units_total} mats`}>Units</SectionTitle>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {batch.units.map((u) => (
             <UnitCard key={u.id} unit={u} />
           ))}
         </div>
-      </div>
+      </section>
+
+      <section>
+        <SectionTitle>Production timeline</SectionTitle>
+        <BatchTimeline timeline={batch.timeline} />
+      </section>
     </div>
   );
 }

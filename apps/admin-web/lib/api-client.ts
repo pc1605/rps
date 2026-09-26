@@ -1,4 +1,4 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -7,10 +7,8 @@ const ACCESS_KEY = "rps_access";
 const REFRESH_KEY = "rps_refresh";
 
 export const tokenStore = {
-  access: (): string | null =>
-    typeof window === "undefined" ? null : localStorage.getItem(ACCESS_KEY),
-  refresh: (): string | null =>
-    typeof window === "undefined" ? null : localStorage.getItem(REFRESH_KEY),
+  access: (): string | null => (typeof window === "undefined" ? null : localStorage.getItem(ACCESS_KEY)),
+  refresh: (): string | null => (typeof window === "undefined" ? null : localStorage.getItem(REFRESH_KEY)),
   set: (access: string, refresh?: string) => {
     if (typeof window === "undefined") return;
     localStorage.setItem(ACCESS_KEY, access);
@@ -118,15 +116,13 @@ http.interceptors.response.use(
     }
 
     return Promise.reject(buildApiError(error));
-  }
+  },
 );
 
 function buildApiError(error: AxiosError<{ error?: string; code?: string }>): ApiError {
   const status = error.response?.status ?? 0;
   const body = error.response?.data;
   const code = body?.code ?? (error.code === "ECONNABORTED" ? "timeout" : "network_error");
-  const message =
-    body?.error ??
-    (status === 0 ? "Cannot reach server" : error.message ?? "Request failed");
+  const message = body?.error ?? (status === 0 ? "Cannot reach server" : (error.message ?? "Request failed"));
   return new ApiError(status, code, message);
 }

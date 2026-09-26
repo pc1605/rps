@@ -1,5 +1,5 @@
 import { http } from "@/lib/api-client";
-import { WorkerReport } from "./types";
+import type { WorkerReport } from "./types";
 
 export const reportApi = {
   workers: async (from?: string, to?: string): Promise<WorkerReport> => {

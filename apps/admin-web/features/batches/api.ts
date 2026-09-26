@@ -1,13 +1,5 @@
 import { http } from "@/lib/api-client";
-import type {
-  Batch,
-  BatchDetail,
-  CreateBatchInput,
-  CarModel,
-  Roll,
-  Phase,
-  AssignmentInput,
-} from "./types";
+import type { AssignmentInput, Batch, BatchDetail, CarModel, CreateBatchInput, Phase, Roll } from "./types";
 
 export const batchApi = {
   list: async (): Promise<Batch[]> => {
@@ -34,11 +26,7 @@ export const batchApi = {
     const res = await http.get("/batches/stats");
     return res.data?.data ?? res.data;
   },
-  setAssignments: async (
-    id: string,
-    phase: Phase,
-    assignments: AssignmentInput[],
-  ) => {
+  setAssignments: async (id: string, phase: Phase, assignments: AssignmentInput[]) => {
     const res = await http.put(`/batches/${id}/assignments`, {
       phase,
       assignments,
@@ -49,11 +37,7 @@ export const batchApi = {
     const res = await http.post(`/batches/${id}/stickers-printed`);
     return res.data?.data ?? res.data;
   },
-  resolveShort: async (
-    id: string,
-    action: "split" | "reduce" | "recut",
-    reason?: string,
-  ) => {
+  resolveShort: async (id: string, action: "split" | "reduce" | "recut", reason?: string) => {
     const res = await http.post(`/batches/${id}/resolve-short`, {
       action,
       reason,

@@ -1,7 +1,9 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,9 +13,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { useCreateRoll } from "../hooks";
 
 export function AddRollDialog() {
@@ -23,7 +24,9 @@ export function AddRollDialog() {
   const [meters, setMeters] = useState("");
   const createRoll = useCreateRoll();
 
-  const valid = rollCode.trim() && color.trim() && parseFloat(meters) > 0;
+  const total = Number.parseFloat(meters);
+  const canSubmit =
+    rollCode.trim().length > 0 && color.trim().length > 0 && total > 0 && !createRoll.isPending;
 
   const reset = () => {
     setRollCode("");
@@ -31,21 +34,22 @@ export function AddRollDialog() {
     setMeters("");
   };
 
-  const submit = async () => {
-    if (!valid) return;
+  const submit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!canSubmit) return;
     try {
       const roll = await createRoll.mutateAsync({
-        roll_code: rollCode.trim(),
+        roll_code: rollCode.trim().toUpperCase(),
         color: color.trim(),
-        total_meters: parseFloat(meters),
+        total_meters: total,
       });
       toast.success(`Roll ${roll.roll_code} added`, {
-        description: `${roll.total_meters}m of ${roll.color}`,
+        description: `${roll.total_meters} m of ${roll.color}`,
       });
       reset();
       setOpen(false);
-    } catch (e) {
-      toast.error("Failed to add roll", { description: (e as Error).message });
+    } catch (err) {
+      toast.error("Couldn't add roll", { description: (err as Error).message });
     }
   };
 
@@ -59,61 +63,63 @@ export function AddRollDialog() {
     >
       <DialogTrigger asChild>
         <Button>
-          <Plus className="h-4 w-4" /> Add Roll
+          <Plus className="h-4 w-4" aria-hidden /> Add roll
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add rexine roll</DialogTitle>
-          <DialogDescription>
-            Record a new roll arrival into stock.
-          </DialogDescription>
-        </DialogHeader>
+        <form onSubmit={submit} className="grid gap-4">
+          <DialogHeader>
+            <DialogTitle>Add rexine roll</DialogTitle>
+            <DialogDescription>Record a new roll arriving into stock.</DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="space-y-2">
-            <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-              Roll code
-            </label>
-            <Input
-              value={rollCode}
-              onChange={(e) => setRollCode(e.target.value)}
-              placeholder="R-005"
-            />
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="roll-code">Roll code</Label>
+              <Input
+                id="roll-code"
+                value={rollCode}
+                onChange={(e) => setRollCode(e.target.value)}
+                placeholder="R-005"
+                autoComplete="off"
+                className="font-mono uppercase"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="roll-color">Colour</Label>
+              <Input
+                id="roll-color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                placeholder="Jet Black"
+                autoComplete="off"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="roll-meters">Total metres</Label>
+              <Input
+                id="roll-meters"
+                type="number"
+                inputMode="decimal"
+                min={0.5}
+                step="0.5"
+                value={meters}
+                onChange={(e) => setMeters(e.target.value)}
+                placeholder="50"
+                className="tabular"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-              Color
-            </label>
-            <Input
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              placeholder="Jet Black"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-              Total meters
-            </label>
-            <Input
-              type="number"
-              min={1}
-              step="0.5"
-              value={meters}
-              onChange={(e) => setMeters(e.target.value)}
-              placeholder="50"
-            />
-          </div>
-        </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={!valid || createRoll.isPending}>
-            {createRoll.isPending ? "Adding…" : "Add roll"}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!canSubmit}>
+              {createRoll.isPending ? "Adding…" : "Add roll"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

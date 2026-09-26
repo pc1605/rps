@@ -3,10 +3,7 @@ import type { Worker, WorkerLoginResponse } from "./types";
 
 export const authApi = {
   // Enrollment code IS the badge_token — backend unchanged.
-  login: async (
-    enrollmentCode: string,
-    pin: string,
-  ): Promise<WorkerLoginResponse> => {
+  login: async (enrollmentCode: string, pin: string): Promise<WorkerLoginResponse> => {
     console.log("--ENROLLMENT CODE--", enrollmentCode);
     console.log("--PIN--", pin);
     const res = await http.post("/worker/login", {

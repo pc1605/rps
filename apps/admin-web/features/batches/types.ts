@@ -1,10 +1,5 @@
 export type Phase = "cutting" | "stitching" | "packing" | "completed";
-export type Status =
-  | "pending"
-  | "in_progress"
-  | "awaiting_assignment"
-  | "completed"
-  | "cancelled";
+export type Status = "pending" | "in_progress" | "awaiting_assignment" | "completed" | "cancelled";
 
 export type UnitStatus = "pending" | "packed" | "defective" | "dispatched";
 
@@ -51,6 +46,7 @@ export interface Batch {
   parent_batch_id?: string;
   parent_batch_code?: string;
   short_reason?: string;
+  active_workers?: string;
 }
 
 export interface Unit {

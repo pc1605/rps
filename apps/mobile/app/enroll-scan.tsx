@@ -1,11 +1,11 @@
-import { useRef, useState } from "react";
-import { View, Text, Pressable } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useRef, useState } from "react";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { Screen } from "../components/ui/Screen";
 import { AppButton } from "../components/ui/AppButton";
+import { Screen } from "../components/ui/Screen";
 import { useEnrollDraft } from "../features/auth/enroll-draft";
 
 const PREFIX = "RPS-ENROLL:";
@@ -66,9 +66,7 @@ export default function EnrollScan() {
       </View>
       <View pointerEvents="none" style={styles.frameWrap}>
         <View style={styles.frame} />
-        <Text style={styles.hint}>
-          Point at the enrollment QR on the admin screen
-        </Text>
+        <Text style={styles.hint}>Point at the enrollment QR on the admin screen</Text>
       </View>
       {error && (
         <View style={styles.flash}>

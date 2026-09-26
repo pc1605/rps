@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { tokenStore, ApiError } from "../../lib/api-client";
+import { ApiError, tokenStore } from "../../lib/api-client";
 import { authApi } from "./api";
 import type { Worker } from "./types";
 

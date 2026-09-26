@@ -1,18 +1,18 @@
-import { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { useAuth } from "../features/auth/store";
 import { useEnrollDraft } from "../features/auth/enroll-draft";
+import { useAuth } from "../features/auth/store";
 
 export default function Login() {
   const router = useRouter();
@@ -21,8 +21,7 @@ export default function Login() {
   const code = useEnrollDraft((s) => s.badge);
   const setCode = useEnrollDraft((s) => s.setBadge);
 
-  const canSubmit =
-    code.trim().length > 0 && /^\d{4}$/.test(pin) && !submitting;
+  const canSubmit = code.trim().length > 0 && /^\d{4}$/.test(pin) && !submitting;
 
   const handleLogin = async () => {
     const ok = await login(code, pin);
@@ -33,24 +32,16 @@ export default function Login() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.screen}
-    >
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.screen}>
       <StatusBar style="auto" />
       <View style={styles.content}>
         <Text style={styles.eyebrow}>AMBIKA · RIDDHI</Text>
         <Text style={styles.title}>RPS Worker</Text>
         <Text style={styles.subtitle}>
-          Scan the enrollment QR from your admin, or type the code, then enter
-          your PIN to set up this phone.
+          Scan the enrollment QR from your admin, or type the code, then enter your PIN to set up this phone.
         </Text>
         <Text style={styles.label}>ENROLLMENT CODE</Text>
-        <Pressable
-          onPress={() => router.push("/enroll-scan")}
-          style={styles.scanBtn}
-          hitSlop={8}
-        >
+        <Pressable onPress={() => router.push("/enroll-scan")} style={styles.scanBtn} hitSlop={8}>
           <Text style={styles.scanBtnText}>
             {code ? "📷 Scan a different code" : "📷 Scan enrollment code"}
           </Text>
@@ -95,20 +86,13 @@ export default function Login() {
           {submitting ? (
             <ActivityIndicator color={styles.buttonText.color} />
           ) : (
-            <Text
-              style={[
-                styles.buttonText,
-                !canSubmit && styles.buttonTextDisabled,
-              ]}
-            >
+            <Text style={[styles.buttonText, !canSubmit && styles.buttonTextDisabled]}>
               Set up this phone →
             </Text>
           )}
         </Pressable>
 
-        <Text style={styles.footnote}>
-          One-time setup. You'll stay signed in on this phone.
-        </Text>
+        <Text style={styles.footnote}>One-time setup. You'll stay signed in on this phone.</Text>
       </View>
     </KeyboardAvoidingView>
   );

@@ -1,16 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { AppShell } from "@/components/layout/app-shell";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/features/auth/store";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Topbar } from "@/components/layout/topbar";
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, loading, restore } = useAuth();
 
@@ -23,21 +19,15 @@ export default function DashboardLayout({
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen grid place-items-center text-muted-foreground font-mono text-sm">
-        Loading…
+      <div className="min-h-screen p-6 lg:p-10">
+        <div className="mx-auto max-w-6xl space-y-4">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-4 w-72" />
+          <Skeleton className="h-40 w-full" />
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Topbar />
-        <main className="flex-1 overflow-auto">
-          <div className="max-w-7xl mx-auto p-8">{children}</div>
-        </main>
-      </div>
-    </div>
-  );
+  return <AppShell>{children}</AppShell>;
 }

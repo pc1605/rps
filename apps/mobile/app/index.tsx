@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { View, ActivityIndicator } from "react-native";
 import { Redirect } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { tokenStore } from "../lib/api-client";
 
 export default function Index() {

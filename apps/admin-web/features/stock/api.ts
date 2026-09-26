@@ -1,10 +1,5 @@
 import { http } from "@/lib/api-client";
-import type {
-  Roll,
-  CreateRollInput,
-  UpdateRollInput,
-  FinishedStock,
-} from "./types";
+import type { CreateRollInput, FinishedStock, Roll, UpdateRollInput } from "./types";
 
 export const stockApi = {
   list: async (): Promise<Roll[]> => {

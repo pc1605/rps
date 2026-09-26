@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native-unistyles";
-import { darkTheme, lightTheme, AppTheme } from "./theme";
+import { type AppTheme, darkTheme, lightTheme } from "./theme";
 
 type AppThemes = { light: AppTheme; dark: AppTheme };
 

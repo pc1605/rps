@@ -1,5 +1,5 @@
 import { http } from "@/lib/api-client";
-import type { Worker, CreateWorkerInput } from "./types";
+import type { CreateWorkerInput, Worker } from "./types";
 
 export const workerApi = {
   list: async (): Promise<Worker[]> => {

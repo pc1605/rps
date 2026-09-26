@@ -1,70 +1,73 @@
 "use client";
 
-import { useFinishedGoods } from "../hooks";
+import { PackageCheck } from "lucide-react";
+import { EmptyState } from "@/components/rps/empty-state";
+import { SectionTitle } from "@/components/rps/section";
+import { Stat } from "@/components/rps/stat";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-
-const sizeStyle: Record<string, string> = {
-  small: "text-cyan-600 dark:text-cyan-400",
-  medium: "text-amber-600 dark:text-amber-400",
-  large: "text-pink-600 dark:text-pink-400",
-};
+import { Skeleton } from "@/components/ui/skeleton";
+import { sizeLabel } from "@/lib/tokens";
+import { useFinishedGoods } from "../hooks";
 
 export function FinishedGoods() {
-  const { data: stock, isLoading, error } = useFinishedGoods();
+  const { data: stock, isPending, isError } = useFinishedGoods();
 
-  if (isLoading)
+  if (isPending)
     return (
-      <p className="font-mono text-sm text-muted-foreground">
-        Loading stockyard…
-      </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton key={i} className="h-20 w-full" />
+        ))}
+      </div>
     );
-  if (error)
+
+  if (isError)
     return (
-      <p className="font-mono text-sm text-destructive">
-        Failed to load finished goods.
-      </p>
+      <EmptyState title="Couldn't load finished goods" body="Check the backend is running, then reload." />
     );
+
   if (!stock?.length)
     return (
-      <Card className="p-12 text-center text-muted-foreground text-sm">
-        Stockyard is empty — no packed mats yet.
-      </Card>
+      <EmptyState
+        icon={PackageCheck}
+        title="Stockyard is empty"
+        body="Mats land here automatically when the packer scans the last one in a batch."
+      />
     );
 
   const total = stock.reduce((sum, s) => sum + s.packed_count, 0);
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        <span className="font-semibold text-foreground">{total} mats</span>{" "}
-        ready in the stockyard.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <SectionTitle
+        aside={
+          <span>
+            <span className="tabular font-medium text-foreground">{total}</span> mats ready
+          </span>
+        }
+      >
+        In the stockyard
+      </SectionTitle>
+
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {stock.map((s) => (
-          <Card
-            key={s.car_model_id}
-            className="p-4 flex items-center justify-between"
-          >
-            <div>
-              <div className="font-medium">
-                {s.brand_name} {s.model_name}
+          <li key={s.car_model_id}>
+            <Card className="flex items-center justify-between gap-4 p-4">
+              <div className="min-w-0">
+                <div className="truncate font-medium">
+                  {s.brand_name} {s.model_name}
+                </div>
+                <div className="text-caption text-muted-foreground">
+                  {sizeLabel[s.size_class] ?? s.size_class}
+                  {s.line_name ? ` · ${s.line_name}` : ""}
+                </div>
+                {s.barcode && <div className="font-mono text-caption text-muted-foreground">{s.barcode}</div>}
               </div>
-              <div
-                className={cn(
-                  "font-mono text-[10px] uppercase mt-0.5",
-                  sizeStyle[s.size_class],
-                )}
-              >
-                {s.size_class}
-              </div>
-            </div>
-            <div className="text-3xl font-bold tabular-nums">
-              {s.packed_count}
-            </div>
-          </Card>
+              <Stat size="sm" value={s.packed_count} className="shrink-0 items-end" />
+            </Card>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

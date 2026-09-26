@@ -1,14 +1,14 @@
-import { useRef, useState } from "react";
-import { View, Text, Pressable } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useRef, useState } from "react";
+import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { Screen } from "../../components/ui/Screen";
 import { AppButton } from "../../components/ui/AppButton";
+import { Screen } from "../../components/ui/Screen";
+import { useAuth } from "../../features/auth/store";
 import { useMyBatches, useScanUnit } from "../../features/batches/hooks";
 import { ApiError } from "../../lib/api-client";
-import { useAuth } from "../../features/auth/store";
 
 type Feedback =
   | { kind: "ok"; code: string }
@@ -48,9 +48,7 @@ export default function ScanScreen() {
       <Screen style={styles.center}>
         <StatusBar style="auto" />
         <Text style={styles.permTitle}>Camera needed</Text>
-        <Text style={styles.permText}>
-          RPS uses the camera to scan unit QR labels.
-        </Text>
+        <Text style={styles.permText}>RPS uses the camera to scan unit QR labels.</Text>
         <View style={{ width: "70%", marginTop: 24 }}>
           <AppButton title="Allow camera" onPress={requestPermission} />
         </View>
@@ -67,19 +65,14 @@ export default function ScanScreen() {
       <Screen style={styles.center}>
         <StatusBar style="auto" />
         <Text style={styles.doneEmoji}>✓</Text>
-        <Text style={styles.doneTitle}>
-          {isStitcher ? "Stitching complete" : `${batchCode} complete`}
-        </Text>
+        <Text style={styles.doneTitle}>{isStitcher ? "Stitching complete" : `${batchCode} complete`}</Text>
         <Text style={styles.doneText}>
           {isStitcher
             ? `All ${progress.total} mats stitched — batch sent to packing.`
             : `All ${progress.total} mats packed and sent to the stockyard.`}
         </Text>
         <View style={{ width: "70%", marginTop: 32 }}>
-          <AppButton
-            title="Back to my queue"
-            onPress={() => router.replace("/home")}
-          />
+          <AppButton title="Back to my queue" onPress={() => router.replace("/home")} />
         </View>
       </Screen>
     );
@@ -104,7 +97,7 @@ export default function ScanScreen() {
       flashAndUnlock({ kind: "err", msg: "Not an RPS unit label" });
       return;
     }
-    if (batch && !code.startsWith(batch.batch_code + "-")) {
+    if (batch && !code.startsWith(`${batch.batch_code}-`)) {
       const otherBatch = code.split("-").slice(0, 3).join("-");
       flashAndUnlock({
         kind: "err",
@@ -126,9 +119,7 @@ export default function ScanScreen() {
           return;
         }
         flashAndUnlock(
-          res.already_done
-            ? { kind: "dup", code: res.unit_code }
-            : { kind: "ok", code: res.unit_code },
+          res.already_done ? { kind: "dup", code: res.unit_code } : { kind: "ok", code: res.unit_code },
         );
       },
       onError: (e) => {
@@ -201,13 +192,10 @@ export default function ScanScreen() {
             {feedback.kind === "quota" && "Your share is complete ✓"}
             {feedback.kind === "err" && `✗ ${feedback.msg}`}
           </Text>
-          {feedback.kind === "dup" && (
-            <Text style={styles.flashSub}>{feedback.code}</Text>
-          )}
+          {feedback.kind === "dup" && <Text style={styles.flashSub}>{feedback.code}</Text>}
           {feedback.kind === "quota" && (
             <Text style={styles.flashSub}>
-              {feedback.mine} / {feedback.target} mats — leave the rest for your
-              co-workers
+              {feedback.mine} / {feedback.target} mats — leave the rest for your co-workers
             </Text>
           )}
         </View>

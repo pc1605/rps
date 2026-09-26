@@ -1,14 +1,14 @@
 "use client";
 
+import { Printer, Scale, UserCheck } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Printer, UserCheck, Scale } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { useWorkers } from "@/features/workers/hooks";
+import { cn } from "@/lib/utils";
 import { useSetAssignments } from "../hooks";
 import { generateLabelPdf } from "../label-pdf";
 import type { BatchDetail } from "../types";
@@ -17,10 +17,7 @@ type Draft = Record<string, number | "">; // worker_id → target (checked = pre
 
 export function AssignStitchersCard({ batch }: { batch: BatchDetail }) {
   if (batch.current_phase !== "stitching") return null;
-  if (
-    batch.status === "awaiting_assignment" &&
-    batch.cut_qty < batch.quantity
-  ) {
+  if (batch.status === "awaiting_assignment" && batch.cut_qty < batch.quantity) {
     return (
       <Card className="p-5 text-small text-muted-foreground">
         Stitching assignment unlocks once the short cut is resolved.
@@ -38,13 +35,9 @@ export function AssignStitchersCard({ batch }: { batch: BatchDetail }) {
 function Inner({ batch }: { batch: BatchDetail }) {
   const { data: workers } = useWorkers();
   const setAssignments = useSetAssignments(batch.id);
-  const stitchers = (workers ?? []).filter(
-    (w) => w.station === "stitcher" && w.is_active,
-  );
+  const stitchers = (workers ?? []).filter((w) => w.station === "stitcher" && w.is_active);
   const saved = batch.assignments.filter((a) => a.phase === "stitching");
-  const doneBy = Object.fromEntries(
-    saved.map((a) => [a.worker_id, a.done_qty]),
-  );
+  const doneBy = Object.fromEntries(saved.map((a) => [a.worker_id, a.done_qty]));
 
   const [draft, setDraft] = useState<Draft>(() =>
     Object.fromEntries(saved.map((a) => [a.worker_id, a.target_qty ?? ""])),
@@ -59,9 +52,7 @@ function Inner({ batch }: { batch: BatchDetail }) {
     setDraft((d) => {
       if (id in d) {
         if ((doneBy[id] ?? 0) > 0) {
-          toast.error(
-            `Can't remove — already stitched ${doneBy[id]}. Lower their target instead.`,
-          );
+          toast.error(`Can't remove — already stitched ${doneBy[id]}. Lower their target instead.`);
           return d;
         }
         const { [id]: _, ...rest } = d;
@@ -81,9 +72,7 @@ function Inner({ batch }: { batch: BatchDetail }) {
     if (!ids.length) return;
     const base = Math.floor(batch.quantity / ids.length);
     const rem = batch.quantity - base * ids.length;
-    setDraft(
-      Object.fromEntries(ids.map((id, i) => [id, base + (i < rem ? 1 : 0)])),
-    );
+    setDraft(Object.fromEntries(ids.map((id, i) => [id, base + (i < rem ? 1 : 0)])));
   };
 
   const save = async (print: boolean) => {
@@ -133,18 +122,11 @@ function Inner({ batch }: { batch: BatchDetail }) {
                 checked && "border-primary/40 bg-primary/5",
               )}
             >
-              <Checkbox
-                checked={checked}
-                onCheckedChange={() => toggle(w.id)}
-              />
+              <Checkbox checked={checked} onCheckedChange={() => toggle(w.id)} />
               <span className="flex-1 text-sm">{w.name}</span>
               {checked && (
                 <>
-                  {done > 0 && (
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {done} done ·
-                    </span>
-                  )}
+                  {done > 0 && <span className="font-mono text-xs text-muted-foreground">{done} done ·</span>}
                   <Input
                     type="number"
                     min={done || 1}
@@ -158,30 +140,21 @@ function Inner({ batch }: { batch: BatchDetail }) {
             </div>
           );
         })}
-        {!stitchers.length && (
-          <p className="text-sm text-muted-foreground">No active stitchers.</p>
-        )}
+        {!stitchers.length && <p className="text-sm text-muted-foreground">No active stitchers.</p>}
       </div>
 
       <div className="flex items-center justify-between">
         <div
           className={cn(
             "font-mono text-xs tabular-nums",
-            balanced
-              ? "text-emerald-600 dark:text-emerald-400"
-              : "text-amber-600 dark:text-amber-400",
+            balanced ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400",
           )}
         >
           {ids.length
             ? `${total} / ${batch.quantity} mats assigned ${balanced ? "✓" : `· ${batch.quantity - total} left`}`
             : "Nobody assigned"}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={autoSplit}
-          disabled={!ids.length}
-        >
+        <Button variant="ghost" size="sm" onClick={autoSplit} disabled={!ids.length}>
           <Scale className="h-3.5 w-3.5" /> Split evenly
         </Button>
       </div>
@@ -195,11 +168,7 @@ function Inner({ batch }: { batch: BatchDetail }) {
         >
           <UserCheck className="h-4 w-4" /> Save
         </Button>
-        <Button
-          size="sm"
-          onClick={() => save(true)}
-          disabled={setAssignments.isPending || !balanced}
-        >
+        <Button size="sm" onClick={() => save(true)} disabled={setAssignments.isPending || !balanced}>
           <Printer className="h-4 w-4" /> Assign & print labels
         </Button>
       </div>

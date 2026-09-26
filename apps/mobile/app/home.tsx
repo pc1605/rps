@@ -1,19 +1,12 @@
-import { useEffect } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  ActivityIndicator,
-} from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
+import { Card } from "../components/ui/Card";
+import { Screen } from "../components/ui/Screen";
 import { useAuth } from "../features/auth/store";
 import { useMyBatches } from "../features/batches/hooks";
-import { Screen } from "../components/ui/Screen";
-import { Card } from "../components/ui/Card";
 import type { Batch } from "../features/batches/types";
 
 const stationLabel: Record<string, string> = {
@@ -34,21 +27,12 @@ function BatchCard({
   const mine = batch.joined_by_me;
   // Only cutters are locked out of an in-progress batch;
   // stitchers/packers can always open & join.
-  const blocked =
-    station === "cutter" && batch.status === "in_progress" && !mine;
-  const daysAgo = Math.floor(
-    (Date.now() - new Date(batch.created_at).getTime()) / 86_400_000,
-  );
+  const blocked = station === "cutter" && batch.status === "in_progress" && !mine;
+  const daysAgo = Math.floor((Date.now() - new Date(batch.created_at).getTime()) / 86_400_000);
 
   return (
     <Pressable onPress={() => onOpen(batch)} disabled={blocked}>
-      <Card
-        style={[
-          styles.batchCard,
-          mine && styles.cardMine,
-          blocked && styles.cardTaken,
-        ]}
-      >
+      <Card style={[styles.batchCard, mine && styles.cardMine, blocked && styles.cardTaken]}>
         <View style={styles.batchRow}>
           <Text style={styles.batchCode}>{batch.batch_code}</Text>
           <Text style={styles.batchQty}>{batch.quantity} mats</Text>
@@ -67,14 +51,10 @@ function BatchCard({
             {batch.my_target_qty != null
               ? `Your share: ${batch.my_done_qty} / ${batch.my_target_qty}`
               : "Assigned to you"}
-            {batch.assigned_workers?.includes(",")
-              ? `  ·  with ${batch.assigned_workers}`
-              : ""}
+            {batch.assigned_workers?.includes(",") ? `  ·  with ${batch.assigned_workers}` : ""}
           </Text>
         )}
-        {mine && (
-          <Text style={styles.mineTag}>▶ You're in — tap to continue</Text>
-        )}
+        {mine && <Text style={styles.mineTag}>▶ You're in — tap to continue</Text>}
         {batch.active_workers && (
           <Text style={styles.activeWorkers}>
             👤 {batch.active_workers}
@@ -82,9 +62,7 @@ function BatchCard({
           </Text>
         )}
         {batch.status === "pending" && (
-          <Text style={styles.batchAge}>
-            {daysAgo === 0 ? "Added today" : `Waiting ${daysAgo}d`}
-          </Text>
+          <Text style={styles.batchAge}>{daysAgo === 0 ? "Added today" : `Waiting ${daysAgo}d`}</Text>
         )}
       </Card>
     </Pressable>
@@ -94,13 +72,7 @@ function BatchCard({
 export default function Home() {
   const router = useRouter();
   const { worker, restore, logout } = useAuth();
-  const {
-    data: batches,
-    isPending,
-    isError,
-    isRefetching,
-    refetch,
-  } = useMyBatches();
+  const { data: batches, isPending, isError, isRefetching, refetch } = useMyBatches();
 
   // Cold-start: token exists but profile not loaded yet
   useEffect(() => {
@@ -138,9 +110,7 @@ export default function Home() {
       ) : isError ? (
         <View style={styles.center}>
           <Text style={styles.emptyTitle}>Couldn't load your queue</Text>
-          <Text style={styles.emptyText}>
-            Check the connection and pull to retry.
-          </Text>
+          <Text style={styles.emptyText}>Check the connection and pull to retry.</Text>
           <Pressable onPress={() => refetch()} style={{ marginTop: 12 }}>
             <Text style={styles.retryLink}>Retry</Text>
           </Pressable>
@@ -150,22 +120,14 @@ export default function Home() {
           data={batches ?? []}
           keyExtractor={(b) => b.id}
           renderItem={({ item }) => (
-            <BatchCard
-              batch={item}
-              station={worker?.station}
-              onOpen={(b) => router.push(`/batch/${b.id}`)}
-            />
+            <BatchCard batch={item} station={worker?.station} onOpen={(b) => router.push(`/batch/${b.id}`)} />
           )}
           contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
-          }
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
           ListEmptyComponent={
             <View style={styles.center}>
               <Text style={styles.emptyTitle}>All clear ✓</Text>
-              <Text style={styles.emptyText}>
-                No batches waiting at your station right now.
-              </Text>
+              <Text style={styles.emptyText}>No batches waiting at your station right now.</Text>
             </View>
           }
         />

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { batchApi } from "./api";
 import type { AssignmentInput, CreateBatchInput, Phase } from "./types";
 
@@ -6,18 +6,13 @@ import type { AssignmentInput, CreateBatchInput, Phase } from "./types";
 const LIVE = { refetchInterval: 10_000, refetchOnWindowFocus: true } as const;
 const LIVE_FAST = { refetchInterval: 5_000, refetchOnWindowFocus: true } as const;
 
-export const useBatches = () =>
-  useQuery({ queryKey: ["batches"], queryFn: batchApi.list, ...LIVE });
+export const useBatches = () => useQuery({ queryKey: ["batches"], queryFn: batchApi.list, ...LIVE });
 
 export const useBatch = (id: string) =>
   useQuery({ queryKey: ["batch", id], queryFn: () => batchApi.get(id), enabled: !!id, ...LIVE });
 
-
 export const useBatchStats = () =>
   useQuery({ queryKey: ["batch-stats"], queryFn: batchApi.stats, ...LIVE_FAST });
-
-
-
 
 export function useCarModels() {
   return useQuery({
@@ -43,17 +38,11 @@ export function useCreateBatch() {
   });
 }
 
-
 export function useSetAssignments(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      phase,
-      assignments,
-    }: {
-      phase: Phase;
-      assignments: AssignmentInput[];
-    }) => batchApi.setAssignments(id, phase, assignments),
+    mutationFn: ({ phase, assignments }: { phase: Phase; assignments: AssignmentInput[] }) =>
+      batchApi.setAssignments(id, phase, assignments),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["batch", id] });
       qc.invalidateQueries({ queryKey: ["batches"] });
@@ -72,13 +61,8 @@ export function useMarkStickersPrinted() {
 export function useResolveShort(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({
-      action,
-      reason,
-    }: {
-      action: "split" | "reduce" | "recut";
-      reason?: string;
-    }) => batchApi.resolveShort(id, action, reason),
+    mutationFn: ({ action, reason }: { action: "split" | "reduce" | "recut"; reason?: string }) =>
+      batchApi.resolveShort(id, action, reason),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["batch", id] });
       qc.invalidateQueries({ queryKey: ["batches"] });

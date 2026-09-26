@@ -1,10 +1,5 @@
 export type Phase = "cutting" | "stitching" | "packing" | "completed";
-export type BatchStatus =
-  | "pending"
-  | "in_progress"
-  | "awaiting_assignment"
-  | "completed"
-  | "cancelled";
+export type BatchStatus = "pending" | "in_progress" | "awaiting_assignment" | "completed" | "cancelled";
 
 export interface Batch {
   id: string;

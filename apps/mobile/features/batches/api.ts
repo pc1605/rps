@@ -9,11 +9,7 @@ export const batchApi = {
   start: async (batchId: string): Promise<void> => {
     await http.post(`/worker/batches/${batchId}/start`);
   },
-  complete: async (
-    batchId: string,
-    quantityCompleted: number,
-    notes?: string,
-  ): Promise<void> => {
+  complete: async (batchId: string, quantityCompleted: number, notes?: string): Promise<void> => {
     await http.post(`/worker/batches/${batchId}/complete`, {
       quantity_completed: quantityCompleted,
       notes,

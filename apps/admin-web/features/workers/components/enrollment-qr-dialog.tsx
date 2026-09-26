@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Check, Copy, QrCode } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { QrCode, Copy, Check } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,16 +12,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { http } from "@/lib/api-client";
 
-export function EnrollmentQrDialog({
-  workerId,
-  workerName,
-}: {
-  workerId: string;
-  workerName: string;
-}) {
+export function EnrollmentQrDialog({ workerId, workerName }: { workerId: string; workerName: string }) {
   const [badge, setBadge] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -33,7 +27,12 @@ export function EnrollmentQrDialog({
   return (
     <Dialog onOpenChange={load}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" title="Show enrollment QR">
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Show enrollment QR"
+          aria-label={`Show enrollment QR for ${workerName}`}
+        >
           <QrCode className="h-4 w-4" />
         </Button>
       </DialogTrigger>
@@ -61,11 +60,7 @@ export function EnrollmentQrDialog({
                   setTimeout(() => setCopied(false), 1500);
                 }}
               >
-                {copied ? (
-                  <Check className="h-4 w-4 text-emerald-500" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
+                {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
           </>

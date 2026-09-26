@@ -1,59 +1,42 @@
 "use client";
 
-import { useWorkers } from "../hooks";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Users } from "lucide-react";
+import { Chip } from "@/components/rps/chip";
+import { type Column, DataTable } from "@/components/rps/data-table";
+import { EmptyState } from "@/components/rps/empty-state";
+import { stationTone } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
-import { stationConfig } from "../station-style";
-import type { Worker, Station } from "../types";
+import { useWorkers } from "../hooks";
+import type { Worker } from "../types";
+import { CreateWorkerDialog } from "./create-worker-dialog";
 import { EnrollmentQrDialog } from "./enrollment-qr-dialog";
 
-type Align = "left" | "center" | "right";
-const alignClass: Record<Align, string> = {
-  left: "text-left",
-  center: "text-center",
-  right: "text-right",
+const stationLabel: Record<string, string> = {
+  cutter: "Cutter",
+  stitcher: "Stitcher",
+  packer: "Packer",
 };
 
-function StationBadge({ station }: { station: Station }) {
-  const cfg = stationConfig[station];
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-medium text-foreground/80">
-      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-      {cfg.label}
-    </span>
-  );
-}
-
-interface Column {
-  key: string;
-  header: string;
-  align: Align;
-  width?: string;
-  cell: (w: Worker) => React.ReactNode;
-}
-
-const columns: Column[] = [
+const columns: Column<Worker>[] = [
   {
     key: "name",
     header: "Name",
-    align: "left",
-    cell: (w) => <span className="font-medium">{w.name}</span>,
+    card: "title",
+    cell: (w) => (
+      <span className={cn("font-medium", !w.is_active && "text-muted-foreground line-through")}>
+        {w.name}
+      </span>
+    ),
   },
   {
     key: "station",
     header: "Station",
-    align: "left",
     width: "w-[140px]",
-    cell: (w) => <StationBadge station={w.station} />,
+    cell: (w) => (
+      <Chip tone={stationTone[w.station as keyof typeof stationTone]} dot>
+        {stationLabel[w.station] ?? w.station}
+      </Chip>
+    ),
   },
   {
     key: "status",
@@ -61,17 +44,20 @@ const columns: Column[] = [
     align: "center",
     width: "w-[110px]",
     cell: (w) => (
-      <Badge
-        variant="outline"
-        className={cn(
-          "font-mono text-[10px] uppercase",
+      <Chip
+        tone={
           w.is_active
-            ? "text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-            : "text-muted-foreground",
-        )}
+            ? {
+                text: "text-working",
+                border: "border-working/30",
+                dot: "bg-working",
+              }
+            : { text: "text-muted-foreground", border: "border-border" }
+        }
+        dot={w.is_active}
       >
         {w.is_active ? "Active" : "Inactive"}
-      </Badge>
+      </Chip>
     ),
   },
   {
@@ -79,77 +65,44 @@ const columns: Column[] = [
     header: "Last login",
     align: "right",
     width: "w-[140px]",
-    cell: (w) => (
-      <span className="font-mono text-[11px] text-muted-foreground">
-        {w.last_login_at ? new Date(w.last_login_at).toLocaleDateString() : "—"}
-      </span>
-    ),
+    cell: (w) =>
+      w.last_login_at ? (
+        <time dateTime={w.last_login_at} className="tabular text-caption text-muted-foreground">
+          {new Date(w.last_login_at).toLocaleDateString()}
+        </time>
+      ) : (
+        <span className="text-caption text-muted-foreground">Not enrolled yet</span>
+      ),
   },
   {
     key: "enroll",
-    header: "",
+    header: "Enroll",
     align: "right",
-    width: "w-[60px]",
+    width: "w-[70px]",
     cell: (w) => <EnrollmentQrDialog workerId={w.id} workerName={w.name} />,
   },
 ];
 
 export function WorkerList() {
-  const { data: workers, isLoading, error } = useWorkers();
+  const { data: workers, isPending, isError } = useWorkers();
 
-  if (isLoading)
-    return (
-      <p className="font-mono text-sm text-muted-foreground">
-        Loading workers…
-      </p>
-    );
-  if (error)
-    return (
-      <p className="font-mono text-sm text-destructive">
-        Failed to load workers.
-      </p>
-    );
-  if (!workers?.length)
-    return (
-      <Card className="p-12 text-center text-muted-foreground text-sm">
-        No workers yet. Add your first one.
-      </Card>
-    );
+  if (isError)
+    return <EmptyState title="Couldn't load workers" body="Check the backend is running, then reload." />;
 
   return (
-    <Card className="overflow-hidden p-0">
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            {columns.map((col) => (
-              <TableHead
-                key={col.key}
-                className={cn(
-                  "h-11 px-4 font-mono text-[10px] uppercase tracking-wider",
-                  alignClass[col.align],
-                  col.width,
-                )}
-              >
-                {col.header}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {workers.map((w) => (
-            <TableRow key={w.id}>
-              {columns.map((col) => (
-                <TableCell
-                  key={col.key}
-                  className={cn("px-4 py-4", alignClass[col.align])}
-                >
-                  {col.cell(w)}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
+    <DataTable
+      rows={workers ?? []}
+      columns={columns}
+      rowKey={(w) => w.id}
+      loading={isPending}
+      empty={
+        <EmptyState
+          icon={Users}
+          title="No workers yet"
+          body="Add a worker, then scan their enrollment QR with their phone."
+          action={<CreateWorkerDialog />}
+        />
+      }
+    />
   );
 }

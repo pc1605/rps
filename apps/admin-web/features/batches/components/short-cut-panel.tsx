@@ -1,26 +1,15 @@
 "use client";
 
+import { Minus, RotateCcw, Scissors, Split } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Scissors, Split, Minus, RotateCcw } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useResolveShort } from "../hooks";
 import type { BatchDetail } from "../types";
 
-const REASONS = [
-  "Material ran out",
-  "Order changed",
-  "Defective material",
-  "Other",
-];
+const REASONS = ["Material ran out", "Order changed", "Defective material", "Other"];
 
 export function ShortCutPanel({ batch }: { batch: BatchDetail }) {
   const resolve = useResolveShort(batch.id);
@@ -56,8 +45,8 @@ export function ShortCutPanel({ batch }: { batch: BatchDetail }) {
         </h2>
       </div>
       <p className="text-small text-muted-foreground">
-        The cutter reported {batch.cut_qty} mats cut. Decide what happens to the
-        remaining {short} before assigning stitchers.
+        The cutter reported {batch.cut_qty} mats cut. Decide what happens to the remaining {short} before
+        assigning stitchers.
       </p>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -71,8 +60,7 @@ export function ShortCutPanel({ batch }: { batch: BatchDetail }) {
             <Split className="h-4 w-4" /> Split
           </span>
           <span className="text-caption text-muted-foreground">
-            Continue with {batch.cut_qty}; a new batch of {short} goes back to
-            cutting.
+            Continue with {batch.cut_qty}; a new batch of {short} goes back to cutting.
           </span>
         </Button>
         <Button

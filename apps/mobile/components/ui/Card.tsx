@@ -1,5 +1,5 @@
 // components/ui/Card.tsx
-import { View, ViewProps } from "react-native";
+import { View, type ViewProps } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 
 export function Card({ style, ...props }: ViewProps) {

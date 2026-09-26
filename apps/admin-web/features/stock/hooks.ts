@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { stockApi } from "./api";
 import type { CreateRollInput, UpdateRollInput } from "./types";
 
@@ -20,8 +20,7 @@ export function useCreateRoll() {
 export function useUpdateRoll() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { id: string; input: UpdateRollInput }) =>
-      stockApi.update(v.id, v.input),
+    mutationFn: (v: { id: string; input: UpdateRollInput }) => stockApi.update(v.id, v.input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stock-rolls"] });
       qc.invalidateQueries({ queryKey: ["rolls"] });

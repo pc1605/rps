@@ -1,81 +1,39 @@
 "use client";
 
+import { Package, Printer } from "lucide-react";
 import Link from "next/link";
-import { Printer } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
+import { Chip } from "@/components/rps/chip";
+import { type Column, DataTable } from "@/components/rps/data-table";
+import { EmptyState } from "@/components/rps/empty-state";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { batchTone, sizeLabel } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
+import { batchApi } from "../api";
 import { useBatches, useMarkStickersPrinted } from "../hooks";
 import { generateLabelPdf } from "../label-pdf";
-import { batchApi } from "../api";
-import type { Batch, Phase } from "../types";
-import { useSearchParams } from "next/navigation";
+import type { Batch } from "../types";
 import { batchViews } from "../views";
 
-const phaseStyle: Record<Phase, string> = {
-  cutting: "text-cyan-600 dark:text-cyan-400 border-cyan-500/30",
-  stitching: "text-pink-600 dark:text-pink-400 border-pink-500/30",
-  packing: "text-amber-600 dark:text-amber-400 border-amber-500/30",
-  completed: "text-lime-600 dark:text-lime-400 border-lime-500/30",
-};
-
-const sizeStyle: Record<string, string> = {
-  small: "text-cyan-600 dark:text-cyan-400",
-  medium: "text-amber-600 dark:text-amber-400",
-  large: "text-pink-600 dark:text-pink-400",
-};
-
-type Align = "left" | "center" | "right";
-const alignClass: Record<Align, string> = {
-  left: "text-left",
-  center: "text-center",
-  right: "text-right",
-};
-
-interface Column {
-  key: string;
-  header: string;
-  align: Align;
-  width?: string;
-  cell: (b: Batch) => React.ReactNode;
-}
-
-const baseColumns: Column[] = [
+const baseColumns: Column<Batch>[] = [
   {
     key: "code",
     header: "Code",
-    align: "left",
-    width: "w-[170px]",
+    width: "w-[180px]",
+    card: "title",
     cell: (b) => (
       <div>
-        <Link
-          href={`/batches/${b.id}`}
-          className="font-mono text-sm text-brand hover:underline"
-        >
+        <Link href={`/batches/${b.id}`} className="font-mono text-small text-brand hover:underline">
           {b.batch_code}
         </Link>
         {b.status === "awaiting_assignment" && b.cut_qty < b.quantity && (
-          <span
-            className="ml-2 text-caption text-brand"
-            title={`${b.cut_qty} of ${b.quantity} cut`}
-          >
+          <span className="ml-2 text-caption text-brand" title={`${b.cut_qty} of ${b.quantity} cut`}>
             ⚠ short
           </span>
         )}
         {b.parent_batch_code && (
-          <div className="text-caption text-muted-foreground">
-            ↩ from {b.parent_batch_code}
-          </div>
+          <div className="text-caption text-muted-foreground">↩ from {b.parent_batch_code}</div>
         )}
       </div>
     ),
@@ -83,19 +41,14 @@ const baseColumns: Column[] = [
   {
     key: "model",
     header: "Model",
-    align: "left",
     cell: (b) => (
       <div>
         <div className="font-medium">
           {b.brand_name} {b.model_name}
         </div>
-        <div className="flex items-center gap-2 font-mono text-[10px] uppercase">
-          <span className={sizeStyle[b.size_class]}>{b.size_class}</span>
-          {b.line_name && (
-            <span className="text-muted-foreground normal-case">
-              {b.line_name}
-            </span>
-          )}
+        <div className="text-caption text-muted-foreground">
+          {sizeLabel[b.size_class] ?? b.size_class}
+          {b.line_name ? ` · ${b.line_name}` : ""}
         </div>
       </div>
     ),
@@ -104,36 +57,37 @@ const baseColumns: Column[] = [
     key: "qty",
     header: "Qty",
     align: "center",
-    width: "w-[80px]",
-    cell: (b) => <span className="font-mono tabular-nums">{b.quantity}</span>,
+    width: "w-[70px]",
+    cell: (b) => <span className="tabular">{b.quantity}</span>,
   },
   {
     key: "phase",
     header: "Phase",
     align: "center",
-    width: "w-[150px]",
-    cell: (b) => (
-      <Badge
-        variant="outline"
-        className={cn(
-          "font-mono text-[10px] uppercase",
-          b.status === "awaiting_assignment"
-            ? "text-amber-600 dark:text-amber-400 border-amber-500/30"
-            : phaseStyle[b.current_phase],
-        )}
-      >
-        {b.status === "awaiting_assignment" ? "ready" : b.current_phase}
-      </Badge>
-    ),
+    width: "w-[170px]",
+    cell: (b) => {
+      const tone = batchTone(b.current_phase, b.status);
+      return (
+        <div className="flex flex-col items-center gap-1 md:items-center">
+          <Chip tone={tone} dot>
+            {tone.label}
+          </Chip>
+          {b.active_workers && (
+            <span className="text-caption text-muted-foreground">👤 {b.active_workers}</span>
+          )}
+        </div>
+      );
+    },
   },
   {
-    key: "packed",
-    header: "Packed",
+    key: "progress",
+    header: "Stitched / Packed",
     align: "center",
-    width: "w-[100px]",
+    width: "w-[140px]",
     cell: (b) => (
-      <span className="font-mono tabular-nums text-muted-foreground">
-        {b.units_packed}/{b.units_total}
+      <span className="tabular text-muted-foreground">
+        {b.units_stitched ?? 0} · {b.units_packed}
+        <span className="text-muted-foreground/60"> / {b.units_total}</span>
       </span>
     ),
   },
@@ -141,126 +95,88 @@ const baseColumns: Column[] = [
     key: "created",
     header: "Created",
     align: "right",
-    width: "w-[120px]",
+    width: "w-[110px]",
+    card: "hide",
     cell: (b) => (
-      <span className="font-mono text-[11px] text-muted-foreground">
+      <time dateTime={b.created_at} className="tabular text-caption text-muted-foreground">
         {new Date(b.created_at).toLocaleDateString()}
-      </span>
+      </time>
     ),
   },
 ];
-
-function BatchTable({
-  batches,
-  columns,
-}: {
-  batches: Batch[];
-  columns: Column[];
-}) {
-  if (!batches.length)
-    return (
-      <Card className="p-10 text-center text-muted-foreground text-sm">
-        Nothing here right now.
-      </Card>
-    );
-
-  return (
-    <Card className="overflow-hidden p-0">
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            {columns.map((col) => (
-              <TableHead
-                key={col.key}
-                className={cn(
-                  "h-11 px-4 font-mono text-[10px] uppercase tracking-wider",
-                  alignClass[col.align],
-                  col.width,
-                )}
-              >
-                {col.header}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {batches.map((b) => (
-            <TableRow key={b.id}>
-              {columns.map((col) => (
-                <TableCell
-                  key={col.key}
-                  className={cn("px-4 py-4", alignClass[col.align])}
-                >
-                  {col.cell(b)}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
-  );
-}
 
 export function BatchList() {
   const params = useSearchParams();
   const phase = params.get("phase");
   const view = batchViews.find((v) => v.key === phase);
-  const { data: batches, isLoading, error } = useBatches();
+  const { data: batches, isPending, isError } = useBatches();
   const markPrinted = useMarkStickersPrinted();
 
-  if (isLoading)
-    return (
-      <p className="font-mono text-sm text-muted-foreground">
-        Loading batches…
-      </p>
-    );
-  if (error)
-    return (
-      <p className="font-mono text-sm text-destructive">
-        Failed to load batches.
-      </p>
-    );
-  if (!batches?.length)
-    return (
-      <Card className="p-12 text-center text-muted-foreground text-sm">
-        No batches yet. Create your first one.
-      </Card>
-    );
-
   const printStickers = async (b: Batch) => {
-    const detail = await batchApi.get(b.id);
-    await generateLabelPdf(detail, "sticker");
-    markPrinted.mutate(b.id);
+    try {
+      const detail = await batchApi.get(b.id);
+      await generateLabelPdf(detail, "sticker");
+      markPrinted.mutate(b.id);
+      toast.success(`Stickers for ${b.batch_code} ready to print`);
+    } catch (e) {
+      toast.error("Couldn't generate stickers", {
+        description: (e as Error).message,
+      });
+    }
   };
 
-  // Packing tab gets an extra actions column
-  const stickerColumn: Column = {
+  const stickerColumn: Column<Batch> = {
     key: "stickers",
     header: "Stickers",
     align: "right",
-    width: "w-[170px]",
+    width: "w-[160px]",
     cell: (b) => (
-      <Button variant="outline" size="sm" onClick={() => printStickers(b)}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          printStickers(b);
+        }}
+      >
         <Printer className="h-3.5 w-3.5" />
         {b.stickers_printed_at ? "Reprint" : "Print stickers"}
       </Button>
     ),
   };
 
-  const visible = view ? batches.filter(view.filter) : batches;
-  const columns =
-    view?.key === "packing" ? [...baseColumns, stickerColumn] : baseColumns;
+  if (isError)
+    return <EmptyState title="Couldn't load batches" body="Check the backend is running, then reload." />;
+
+  const all = batches ?? [];
+  const visible = view ? all.filter(view.filter) : all;
+  const columns = view?.key === "packing" ? [...baseColumns, stickerColumn] : baseColumns;
 
   return (
     <div className="space-y-3">
       {view && (
-        <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-          <span className={cn("h-2 w-2 rounded-full", view.dot)} />
-          {view.label} · {visible.length}
+        <div className="flex items-center gap-2 text-small text-muted-foreground">
+          <span className={cn("h-2 w-2 rounded-full", view.dot)} aria-hidden />
+          {view.label} · <span className="tabular">{visible.length}</span>
         </div>
       )}
-      <BatchTable batches={visible} columns={columns} />
+      <DataTable
+        rows={visible}
+        columns={columns}
+        rowKey={(b) => b.id}
+        loading={isPending}
+        empty={
+          <EmptyState
+            icon={Package}
+            title={view ? `Nothing in ${view.label.toLowerCase()}` : "No batches yet"}
+            body={
+              view
+                ? "Batches show up here as they reach this stage."
+                : "Create the first order and it appears here and on the dashboard pipeline."
+            }
+          />
+        }
+      />
     </div>
   );
 }
