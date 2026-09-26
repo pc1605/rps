@@ -1,16 +1,7 @@
 import { cn } from "@/lib/utils";
 
-export function StockBar({
-  total,
-  remaining,
-  low,
-}: {
-  total: number;
-  remaining: number;
-  low: boolean;
-}) {
-  const pct =
-    total > 0 ? Math.max(0, Math.min(100, (remaining / total) * 100)) : 0;
+export function StockBar({ total, remaining, low }: { total: number; remaining: number; low: boolean }) {
+  const pct = total > 0 ? Math.max(0, Math.min(100, (remaining / total) * 100)) : 0;
 
   return (
     <div className="flex w-full min-w-0 items-center gap-3">
