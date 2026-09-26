@@ -2,7 +2,8 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL!;
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+if (!API_URL) throw new Error("EXPO_PUBLIC_API_URL is not set — check apps/mobile/.env and rebuild the app");
 const TOKEN_KEY = "rps_worker_token";
 
 export const tokenStore = {

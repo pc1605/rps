@@ -1,10 +1,20 @@
 import { cn } from "@/lib/utils";
 
-export function StockBar({ total, remaining, low }: { total: number; remaining: number; low: boolean }) {
-  const pct = total > 0 ? Math.max(0, Math.min(100, (remaining / total) * 100)) : 0;
+export function StockBar({
+  total,
+  remaining,
+  low,
+}: {
+  total: number;
+  remaining: number;
+  low: boolean;
+}) {
+  const pct =
+    total > 0 ? Math.max(0, Math.min(100, (remaining / total) * 100)) : 0;
 
   return (
     <div className="flex w-full min-w-0 items-center gap-3">
+      {/* biome-ignore lint/a11y/useSemanticElements: styled meter; native <meter> can't be styled consistently across browsers */}
       <div
         className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
         role="meter"

@@ -1,7 +1,7 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
-
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL is not set — check apps/admin-web/.env.local");
 // ───────────────────────── Token storage ─────────────────────────
 const ACCESS_KEY = "rps_access";
 const REFRESH_KEY = "rps_refresh";
@@ -54,7 +54,7 @@ let isRefreshing = false;
 let waiters: Array<(token: string | null) => void> = [];
 
 function onRefreshed(token: string | null) {
-  waiters.forEach((cb) => cb(token));
+  for (const cb of waiters) cb(token);
   waiters = [];
 }
 

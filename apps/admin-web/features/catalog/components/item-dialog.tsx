@@ -14,11 +14,29 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useBrands, useCreateBrand, useCreateItem, useProductLines, useUpdateItem } from "../hooks";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  useBrands,
+  useCreateBrand,
+  useCreateItem,
+  useProductLines,
+  useUpdateItem,
+} from "../hooks";
 import type { CarItem } from "../types";
 
-export function ItemDialog({ item, trigger }: { item?: CarItem; trigger?: React.ReactNode }) {
+export function ItemDialog({
+  item,
+  trigger,
+}: {
+  item?: CarItem;
+  trigger?: React.ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -42,7 +60,9 @@ function ItemForm({ item, onDone }: { item?: CarItem; onDone: () => void }) {
   const updateItem = useUpdateItem();
 
   const [brandId, setBrandId] = useState<string>(
-    item ? String(brands?.find((b) => b.name === item.brand_name)?.id ?? "") : "",
+    item
+      ? String(brands?.find((b) => b.name === item.brand_name)?.id ?? "")
+      : "",
   );
   const [newBrand, setNewBrand] = useState("");
   const [name, setName] = useState(item?.name ?? "");
@@ -53,7 +73,8 @@ function ItemForm({ item, onDone }: { item?: CarItem; onDone: () => void }) {
   );
   const [barcode, setBarcode] = useState(item?.barcode ?? "");
 
-  const busy = createBrand.isPending || createItem.isPending || updateItem.isPending;
+  const busy =
+    createBrand.isPending || createItem.isPending || updateItem.isPending;
   const canSave = name.trim() && (brandId || newBrand.trim()) && lineId;
 
   const save = async () => {
@@ -79,8 +100,10 @@ function ItemForm({ item, onDone }: { item?: CarItem; onDone: () => void }) {
         toast.success(`Item added · barcode ${res.barcode}`);
       }
       onDone();
-    } catch (e: any) {
-      toast.error("Couldn't save item", { description: e?.message });
+    } catch (e) {
+      toast.error("Couldn't save item", {
+        description: e instanceof Error ? e.message : undefined,
+      });
     }
   };
 
@@ -121,12 +144,19 @@ function ItemForm({ item, onDone }: { item?: CarItem; onDone: () => void }) {
         </div>
         <div className="grid gap-1.5">
           <Label>Car model</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Baleno" />
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Baleno"
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="grid gap-1.5">
             <Label>Size</Label>
-            <Select value={size} onValueChange={(v) => setSize(v as CarItem["size_class"])}>
+            <Select
+              value={size}
+              onValueChange={(v) => setSize(v as CarItem["size_class"])}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -139,7 +169,12 @@ function ItemForm({ item, onDone }: { item?: CarItem; onDone: () => void }) {
           </div>
           <div className="grid gap-1.5">
             <Label>Pieces per set</Label>
-            <Input type="number" min={1} value={pieces} onChange={(e) => setPieces(e.target.value)} />
+            <Input
+              type="number"
+              min={1}
+              value={pieces}
+              onChange={(e) => setPieces(e.target.value)}
+            />
           </div>
         </div>
         <div className="grid gap-1.5">
@@ -178,7 +213,9 @@ function ItemForm({ item, onDone }: { item?: CarItem; onDone: () => void }) {
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">Blank = RPS generates a 12-digit code on save.</p>
+          <p className="text-xs text-muted-foreground">
+            Blank = RPS generates a 12-digit code on save.
+          </p>
         </div>
       </div>
       <DialogFooter>
