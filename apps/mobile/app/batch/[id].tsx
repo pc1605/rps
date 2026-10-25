@@ -1,12 +1,17 @@
+import { PHASE_LABEL, SIZE_LABEL } from "@rps/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../components/ui/AppButton";
 import { Banner } from "../../components/ui/Banner";
 import { Card } from "../../components/ui/Card";
+import { Chip } from "../../components/ui/Chip";
 import { Screen } from "../../components/ui/Screen";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { Stat } from "../../components/ui/Stat";
 import { useAuth } from "../../features/auth/store";
 import { useCompleteBatch, useMyBatches, useStartBatch } from "../../features/batches/hooks";
 import { ApiError } from "../../lib/api-client";
@@ -15,8 +20,9 @@ import { useOnline } from "../../lib/use-online";
 export default function BatchAction() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { worker } = useAuth();
-  const { data: batches } = useMyBatches();
+  const { data: batches, isPending } = useMyBatches();
   const startBatch = useStartBatch();
   const completeBatch = useCompleteBatch();
   const isOnline = useOnline();
@@ -24,10 +30,30 @@ export default function BatchAction() {
   const batch = useMemo(() => batches?.find((b) => b.id === id), [batches, id]);
   const [qty, setQty] = useState<string | null>(null); // null = untouched → prefill
 
+  if (isPending) {
+    return (
+      <Screen style={styles.centerLoading}>
+        <View style={styles.skeletonContainer}>
+          <Skeleton width="30%" height={36} />
+          <Skeleton width="60%" height={28} />
+          <Skeleton width="40%" height={20} />
+          <Skeleton width="50%" height={56} />
+          <Skeleton width="100%" height={90} />
+        </View>
+      </Screen>
+    );
+  }
+
   if (!batch) {
     return (
-      <Screen style={styles.center}>
-        <ActivityIndicator />
+      <Screen style={styles.centerLoading}>
+        <View style={styles.notFoundWrap}>
+          <Text style={styles.notFoundTitle}>Batch not found</Text>
+          <Text style={styles.notFoundText}>
+            This batch might have been completed, cancelled, or is no longer assigned to your station.
+          </Text>
+          <AppButton title="Back to queue" variant="secondary" size="md" onPress={() => router.back()} />
+        </View>
       </Screen>
     );
   }
@@ -41,6 +67,7 @@ export default function BatchAction() {
   const quantity = qty === null ? String(remaining) : qty;
   const qtyNum = parseInt(quantity, 10);
   const qtyValid = !Number.isNaN(qtyNum) && qtyNum >= 1 && qtyNum <= remaining;
+  const sizeText = SIZE_LABEL[batch.size_class as keyof typeof SIZE_LABEL] ?? batch.size_class;
 
   const onError = (e: unknown) => {
     const msg = e instanceof ApiError ? e.message : "Something went wrong";
@@ -81,143 +108,344 @@ export default function BatchAction() {
       },
     );
 
-  return (
-    <Screen>
-      <StatusBar style="auto" />
-      <View style={styles.content}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Text style={styles.back}>← Queue</Text>
-        </Pressable>
+  const stepDecrement = () => {
+    const current = Number.isNaN(qtyNum) ? 1 : qtyNum;
+    setQty(String(Math.max(1, current - 1)));
+  };
 
+  const stepIncrement = () => {
+    const current = Number.isNaN(qtyNum) ? 0 : qtyNum;
+    setQty(String(Math.min(remaining, current + 1)));
+  };
+
+  return (
+    <Screen style={styles.screen}>
+      <StatusBar style="auto" />
+
+      {/* Top Header */}
+      <View style={[styles.topHeader, { paddingTop: Math.max(insets.top + 8, 48) }]}>
+        <AppButton
+          title="← Queue"
+          variant="ghost"
+          size="md"
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Back to queue"
+        />
+      </View>
+
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: themeSpacing.xl }]}
+        keyboardShouldPersistTaps="handled"
+      >
         {!isOnline && (
           <View style={styles.bannerWrap}>
             <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
           </View>
         )}
 
-        <Text style={styles.code}>{batch.batch_code}</Text>
-        <Text style={styles.model}>
-          {batch.brand_name} {batch.model_name} · {batch.quantity} mats · {batch.size_class.toUpperCase()}
-          {batch.line_name ? ` · ${batch.line_name}` : ""}
-        </Text>
-        {batch.notes ? <Text style={styles.notes}>✎ {batch.notes}</Text> : null}
+        {/* Top: Batch Code + Phase */}
+        <View style={styles.codeRow}>
+          <Text style={styles.batchCode}>{batch.batch_code}</Text>
+          <Chip
+            label={PHASE_LABEL[batch.current_phase] ?? batch.current_phase}
+            color={styles.phaseColor(batch.current_phase).color}
+            dot
+          />
+        </View>
 
-        {/* ---- CUTTER: exclusive claim + manual complete ---- */}
-        {isCutter && !mine && batch.status === "pending" && (
-          <Card style={styles.actionCard}>
-            <Text style={styles.actionHint}>Starting locks this batch to you until you complete it.</Text>
-            <AppButton title="Start cutting ▶" onPress={handleStart} loading={startBatch.isPending} />
+        <Text style={styles.modelLine}>
+          {batch.brand_name} {batch.model_name}
+          <Text style={styles.modelMeta}>
+            {" · "}
+            {sizeText}
+            {batch.line_name ? ` · ${batch.line_name}` : ""}
+          </Text>
+        </Text>
+
+        {/* Middle: Relevant Big Stat */}
+        <Card style={styles.statCard}>
+          {isCutter ? (
+            <Stat value={batch.quantity} label="mats to cut" big />
+          ) : batch.my_target_qty != null ? (
+            <Stat value={batch.my_done_qty ?? 0} of={batch.my_target_qty} label="your share" big />
+          ) : (
+            <Stat
+              value={isStitcher ? stitchDone : batch.units_packed}
+              of={batch.units_total}
+              label={isStitcher ? "mats stitched" : "mats packed"}
+              big
+            />
+          )}
+        </Card>
+
+        {/* Info Rows */}
+        <View style={styles.infoSection}>
+          {batch.assigned_workers ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Assigned workers</Text>
+              <Text style={styles.infoValue}>📌 {batch.assigned_workers}</Text>
+            </View>
+          ) : null}
+
+          {batch.active_workers ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Active workers</Text>
+              <Text style={styles.infoValue}>👤 {batch.active_workers}</Text>
+            </View>
+          ) : null}
+
+          {batch.notes ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Notes</Text>
+              <Text style={styles.notesText}>✎ {batch.notes}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {/* Cutter mine stepper inside content */}
+        {isCutter && mine && (
+          <Card style={styles.stepperCard}>
+            <Text style={styles.stepperCaption}>Pieces completed</Text>
+            <View style={styles.stepperRow}>
+              <Pressable
+                onPress={stepDecrement}
+                disabled={qtyNum <= 1}
+                accessibilityRole="button"
+                accessibilityLabel="Decrease quantity"
+                style={({ pressed }) => [
+                  styles.stepBtn,
+                  qtyNum <= 1 && styles.stepBtnDisabled,
+                  pressed && qtyNum > 1 && styles.stepBtnPressed,
+                ]}
+              >
+                <Text style={[styles.stepBtnText, qtyNum <= 1 && styles.stepBtnTextDisabled]}>−</Text>
+              </Pressable>
+
+              <TextInput
+                value={quantity}
+                onChangeText={(t) => setQty(t.replace(/\D/g, ""))}
+                keyboardType="number-pad"
+                style={styles.stepperInput}
+                accessibilityLabel="Quantity completed"
+              />
+
+              <Pressable
+                onPress={stepIncrement}
+                disabled={qtyNum >= remaining}
+                accessibilityRole="button"
+                accessibilityLabel="Increase quantity"
+                style={({ pressed }) => [
+                  styles.stepBtn,
+                  qtyNum >= remaining && styles.stepBtnDisabled,
+                  pressed && qtyNum < remaining && styles.stepBtnPressed,
+                ]}
+              >
+                <Text style={[styles.stepBtnText, qtyNum >= remaining && styles.stepBtnTextDisabled]}>+</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.stepperSubtext}>
+              {remaining} remaining of {batch.quantity}
+            </Text>
           </Card>
+        )}
+      </ScrollView>
+
+      {/* Bottom-anchored action area */}
+      <View style={[styles.actionArea, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        {isCutter && !mine && batch.status === "pending" && (
+          <AppButton title="Start cutting" size="lg" onPress={handleStart} loading={startBatch.isPending} />
         )}
 
         {isCutter && !mine && batch.status === "in_progress" && (
-          <Card style={styles.actionCard}>
+          <View style={styles.takenNotice}>
             <Text style={styles.takenText}>
-              ⏳ {batch.active_workers ?? "Another cutter"} is working on this batch.
+              ⏳ {batch.active_workers ?? "Another cutter"} is cutting this batch
             </Text>
-          </Card>
+          </View>
         )}
 
         {isCutter && mine && (
-          <Card style={styles.actionCard}>
-            <Text style={styles.label}>PIECES COMPLETED</Text>
-            <TextInput
-              value={quantity}
-              onChangeText={setQty}
-              keyboardType="number-pad"
-              style={styles.qtyInput}
-            />
-            <AppButton
-              title="Complete → send for assignment"
-              onPress={handleComplete}
-              disabled={!qtyValid}
-              loading={completeBatch.isPending}
-            />
-          </Card>
+          <AppButton
+            title="Report cut"
+            size="lg"
+            onPress={handleComplete}
+            disabled={!qtyValid}
+            loading={completeBatch.isPending}
+          />
         )}
 
-        {/* ---- STITCHER / PACKER: joinable + scan-per-mat ---- */}
         {scanStation && !mine && (
-          <Card style={styles.actionCard}>
-            {batch.assigned_workers && (
-              <Text style={styles.workingLine}>📌 Assigned: {batch.assigned_workers}</Text>
-            )}
-            {batch.active_workers && (
-              <Text style={styles.workingLine}>👤 {batch.active_workers} working</Text>
-            )}
-            <Text style={styles.actionHint}>
-              {isStitcher
-                ? batch.assigned_to_me
-                  ? "This batch is assigned to you. Join, then scan each mat's label as you finish stitching it."
-                  : "Join, then scan each mat's label as you finish stitching it."
-                : "Join, then scan each mat's label as you pack it. Others can join too."}
-            </Text>
-            <AppButton title="Join batch ▶" onPress={handleStart} loading={startBatch.isPending} />
-          </Card>
+          <AppButton title="Join batch" size="lg" onPress={handleStart} loading={startBatch.isPending} />
         )}
 
         {scanStation && mine && (
-          <Card style={styles.actionCard}>
-            <Text style={styles.label}>
-              {isStitcher
-                ? batch.my_target_qty != null
-                  ? `YOUR SHARE ${batch.my_done_qty ?? 0} / ${batch.my_target_qty}  ·  BATCH ${stitchDone} / ${batch.units_total}`
-                  : `STITCHED ${stitchDone} / ${batch.units_total}`
-                : `PACKED ${batch.units_packed} / ${batch.units_total}`}
-            </Text>
-            {batch.active_workers && <Text style={styles.workingLine}>👤 {batch.active_workers}</Text>}
-            <AppButton title="Open scanner ▶" onPress={() => router.push(`/scan/${batch.id}`)} />
-          </Card>
+          <AppButton title="Open scanner" size="lg" onPress={() => router.push(`/scan/${batch.id}`)} />
         )}
       </View>
     </Screen>
   );
 }
 
+const themeSpacing = {
+  sm: 12,
+  md: 16,
+  lg: 24,
+  xl: 32,
+};
+
 const styles = StyleSheet.create((theme) => ({
-  center: { justifyContent: "center", alignItems: "center" },
-  content: { flex: 1, padding: theme.spacing.lg, paddingTop: 64 },
-  back: {
+  screen: {
+    flex: 1,
+  },
+  centerLoading: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+  },
+  skeletonContainer: {
+    width: "100%",
+    gap: theme.spacing.md,
+  },
+  notFoundWrap: {
+    alignItems: "center",
+    gap: theme.spacing.md,
+    maxWidth: 400,
+  },
+  notFoundTitle: {
+    ...theme.text.title,
+    color: theme.colors.text,
+    textAlign: "center",
+  },
+  notFoundText: {
+    ...theme.text.body,
     color: theme.colors.textMuted,
-    fontSize: 14,
-    marginBottom: theme.spacing.lg,
+    textAlign: "center",
+  },
+  topHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.xs,
+  },
+  scrollContent: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.xs,
+    gap: theme.spacing.md,
   },
   bannerWrap: {
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.xs,
   },
-  code: {
+  codeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  batchCode: {
+    ...theme.text.codeLarge,
     color: theme.colors.accent,
-    fontSize: 28,
-    fontWeight: "800",
-    letterSpacing: 0.5,
   },
-  model: { color: theme.colors.text, fontSize: 15, marginTop: 6 },
-  notes: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
-    marginTop: theme.spacing.sm,
-  },
-  actionCard: { marginTop: theme.spacing.xl, gap: theme.spacing.md },
-  actionHint: { color: theme.colors.textMuted, fontSize: 13 },
-  label: { ...theme.text.label, color: theme.colors.textMuted },
-  qtyInput: {
-    backgroundColor: theme.colors.bg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    padding: theme.spacing.md,
+  modelLine: {
+    ...theme.text.bodyMed,
     color: theme.colors.text,
-    fontSize: 28,
-    fontWeight: "700",
+  },
+  modelMeta: {
+    ...theme.text.small,
+    color: theme.colors.textMuted,
+  },
+  statCard: {
+    marginTop: theme.spacing.xs,
+    padding: theme.spacing.lg,
+  },
+  infoSection: {
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+  },
+  infoRow: {
+    gap: theme.spacing.xxs,
+  },
+  infoLabel: {
+    ...theme.text.caption,
+    color: theme.colors.textFaint,
+  },
+  infoValue: {
+    ...theme.text.small,
+    color: theme.colors.textMuted,
+  },
+  notesText: {
+    ...theme.text.small,
+    color: theme.colors.textMuted,
+  },
+  stepperCard: {
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.lg,
+  },
+  stepperCaption: {
+    ...theme.text.caption,
+    color: theme.colors.textMuted,
+  },
+  stepperRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.md,
+  },
+  stepBtn: {
+    width: theme.touch.primary,
+    height: theme.touch.primary,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.surface2,
+    borderWidth: 1,
+    borderColor: theme.colors.borderStrong,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  stepBtnDisabled: {
+    backgroundColor: theme.colors.disabledBg,
+    borderColor: theme.colors.border,
+  },
+  stepBtnPressed: {
+    opacity: 0.8,
+  },
+  stepBtnText: {
+    ...theme.text.title,
+    color: theme.colors.text,
+  },
+  stepBtnTextDisabled: {
+    color: theme.colors.disabledFg,
+  },
+  stepperInput: {
+    ...theme.text.display,
+    fontVariant: ["tabular-nums"],
+    color: theme.colors.text,
+    minWidth: 100,
     textAlign: "center",
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xxs,
+  },
+  stepperSubtext: {
+    ...theme.text.caption,
+    color: theme.colors.textFaint,
+  },
+  actionArea: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.bg,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+  },
+  takenNotice: {
+    minHeight: theme.touch.primary,
+    justifyContent: "center",
+    alignItems: "center",
   },
   takenText: {
+    ...theme.text.small,
     color: theme.colors.textMuted,
-    fontSize: 14,
     textAlign: "center",
   },
-  workingLine: {
-    ...theme.text.label,
-    color: theme.colors.textMuted,
-  },
+  phaseColor: (phase: string) => ({
+    color: theme.colors.phase[phase as keyof typeof theme.colors.phase] ?? theme.colors.textMuted,
+  }),
 }));

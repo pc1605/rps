@@ -9,6 +9,8 @@ type Props = {
   loading?: boolean;
   disabled?: boolean;
   icon?: React.ReactNode;
+  accessibilityRole?: "button" | "link";
+  accessibilityLabel?: string;
 };
 
 export function AppButton({
@@ -19,13 +21,16 @@ export function AppButton({
   loading,
   disabled,
   icon,
+  accessibilityRole = "button",
+  accessibilityLabel,
 }: Props) {
   const off = disabled || loading;
   return (
     <Pressable
       onPress={onPress}
       disabled={off}
-      accessibilityRole="button"
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel ?? title}
       accessibilityState={{ disabled: off, busy: loading }}
       style={({ pressed }) => [
         styles.base,

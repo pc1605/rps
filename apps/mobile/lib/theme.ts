@@ -26,6 +26,7 @@ const text = {
   small: { fontSize: 14, lineHeight: 20, fontFamily: fonts.regular },
   caption: { fontSize: 12, lineHeight: 16, fontFamily: fonts.medium },
   code: { fontSize: 14, lineHeight: 20, fontFamily: fonts.mono },
+  codeLarge: { fontSize: 24, lineHeight: 30, fontFamily: fonts.mono },
   button: { fontSize: 16, lineHeight: 20, fontFamily: fonts.semibold },
   // legacy — kept so current screens render unchanged; P4 migrates them off these
   eyebrow: { fontSize: 12, lineHeight: 16, letterSpacing: 2, fontFamily: fonts.medium },
