@@ -1,11 +1,14 @@
 "use client";
 
-import * as React from "react";
-import { Dialog as DialogPrimitive } from "radix-ui";
-
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
+import { Dialog as DialogPrimitive } from "radix-ui";
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+// Any open nested menu: Select, Popover, DropdownMenu, Combobox.
+const NESTED_MENU =
+  '[role="listbox"],[role="menu"],[data-radix-popper-content-wrapper],[data-slot="select-content"],[data-slot="popover-content"],[data-slot="dropdown-menu-content"]';
 
 function Dialog({
   ...props
@@ -51,10 +54,25 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
 }) {
+  // Radix + React 19 race: a nested menu removes itself from the layer stack (flushSync)
+  // before this dialog's outside-click handler runs, so the dialog would think the click
+  // was meant for it and close. Snapshot "was a menu open?" in the capture phase,
+  // which runs before Radix sees the event. See KB 06-operations/gotchas.md.
+  const menuOpenAtPointerDown = React.useRef(false);
+  React.useEffect(() => {
+    const onPointerDown = () => {
+      menuOpenAtPointerDown.current =
+        document.querySelector(NESTED_MENU) !== null;
+    };
+    window.addEventListener("pointerdown", onPointerDown, true);
+    return () => window.removeEventListener("pointerdown", onPointerDown, true);
+  }, []);
+
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -62,10 +80,25 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          // < 640px: bottom sheet
           "max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:translate-x-0 max-sm:translate-y-0 max-sm:w-full max-sm:max-w-none max-sm:rounded-b-none max-sm:rounded-t-lg max-sm:max-h-[90dvh] max-sm:overflow-y-auto max-sm:pb-[max(1.5rem,env(safe-area-inset-bottom))]",
           className,
         )}
         {...props}
+        onInteractOutside={(e) => {
+          // Focus drifting to <body> when a nested menu closes isn't a reason to close.
+          if (e.type === "dismissableLayer.focusOutside") {
+            e.preventDefault();
+            return;
+          }
+          // This click was meant to close a nested menu, not the dialog.
+          if (menuOpenAtPointerDown.current) {
+            menuOpenAtPointerDown.current = false;
+            e.preventDefault();
+            return;
+          }
+          onInteractOutside?.(e);
+        }}
       >
         {children}
         {showCloseButton && (
@@ -100,14 +133,12 @@ function DialogFooter({
   showCloseButton = false,
   children,
   ...props
-}: React.ComponentProps<"div"> & {
-  showCloseButton?: boolean;
-}) {
+}: React.ComponentProps<"div"> & { showCloseButton?: boolean }) {
   return (
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        "-mx-6 -mb-6 flex flex-col-reverse gap-2 rounded-b-lg border-t bg-muted/50 px-6 py-4 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}
@@ -129,10 +160,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn(
-        "font-heading text-base leading-none font-medium",
-        className,
-      )}
+      className={cn("text-h2 leading-tight", className)}
       {...props}
     />
   );
@@ -146,7 +174,7 @@ function DialogDescription({
     <DialogPrimitive.Description
       data-slot="dialog-description"
       className={cn(
-        "text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
+        "text-small text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
         className,
       )}
       {...props}

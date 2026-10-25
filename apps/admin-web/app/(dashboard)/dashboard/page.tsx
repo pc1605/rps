@@ -30,7 +30,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Today at Riddhi" description={today} actions={<CreateBatchDialog />} />
+      <PageHeader title="Today at RPS" description={today} actions={<CreateBatchDialog />} />
       <Pipeline />
 
       {/* Attention — only renders when something needs the admin */}
