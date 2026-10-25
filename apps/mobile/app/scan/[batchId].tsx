@@ -1,13 +1,16 @@
 import { batchCodeOf, UNIT_CODE_RE } from "@rps/shared";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { AccessibilityInfo, Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../components/ui/AppButton";
 import { Banner } from "../../components/ui/Banner";
 import { Screen } from "../../components/ui/Screen";
+import { Skeleton } from "../../components/ui/Skeleton";
 import { useAuth } from "../../features/auth/store";
 import { useMyBatches, useScanUnit } from "../../features/batches/hooks";
 import { ApiError } from "../../lib/api-client";
@@ -22,6 +25,7 @@ type Feedback =
 export default function ScanScreen() {
   const { batchId } = useLocalSearchParams<{ batchId: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const { data: batches } = useMyBatches();
   const scanUnit = useScanUnit();
@@ -44,19 +48,26 @@ export default function ScanScreen() {
   const lock = useRef(false);
 
   // --- permission states ---
-  if (!permission) return <Screen style={styles.center} />;
+  if (!permission) {
+    return (
+      <Screen style={styles.centerLoading}>
+        <Skeleton width="60%" height={24} />
+      </Screen>
+    );
+  }
+
   if (!permission.granted) {
     return (
-      <Screen style={styles.center}>
+      <Screen style={styles.permScreen}>
         <StatusBar style="auto" />
-        <Text style={styles.permTitle}>Camera needed</Text>
-        <Text style={styles.permText}>RPS uses the camera to scan unit QR labels.</Text>
-        <View style={{ width: "70%", marginTop: 24 }}>
-          <AppButton title="Allow camera" onPress={requestPermission} />
+        <View style={styles.permContent}>
+          <Text style={styles.permTitle}>Camera needed</Text>
+          <Text style={styles.permText}>RPS uses the camera to scan unit QR labels.</Text>
+          <View style={styles.permBtnWrap}>
+            <AppButton title="Allow camera" size="lg" onPress={requestPermission} />
+          </View>
+          <AppButton title="← Back" variant="ghost" size="md" onPress={() => router.back()} />
         </View>
-        <Pressable onPress={() => router.back()} style={{ marginTop: 20 }}>
-          <Text style={styles.backLink}>← Back</Text>
-        </Pressable>
       </Screen>
     );
   }
@@ -64,17 +75,19 @@ export default function ScanScreen() {
   // --- batch completed state ---
   if (done) {
     return (
-      <Screen style={styles.center}>
+      <Screen style={styles.doneScreen}>
         <StatusBar style="auto" />
-        <Text style={styles.doneEmoji}>✓</Text>
-        <Text style={styles.doneTitle}>{isStitcher ? "Stitching complete" : `${batchCode} complete`}</Text>
-        <Text style={styles.doneText}>
-          {isStitcher
-            ? `All ${progress.total} mats stitched — batch sent to packing.`
-            : `All ${progress.total} mats packed and sent to the stockyard.`}
-        </Text>
-        <View style={{ width: "70%", marginTop: 32 }}>
-          <AppButton title="Back to my queue" onPress={() => router.replace("/home")} />
+        <View style={styles.doneContent}>
+          <Text style={styles.doneEmoji}>✓</Text>
+          <Text style={styles.doneTitle}>{isStitcher ? "Stitching complete" : `${batchCode} complete`}</Text>
+          <Text style={styles.doneText}>
+            {isStitcher
+              ? `All ${progress.total} mats stitched — batch sent to packing.`
+              : `All ${progress.total} mats packed and sent to the stockyard.`}
+          </Text>
+        </View>
+        <View style={[styles.doneBottom, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          <AppButton title="Back to my queue" size="lg" onPress={() => router.replace("/home")} />
         </View>
       </Screen>
     );
@@ -82,6 +95,26 @@ export default function ScanScreen() {
 
   const flashAndUnlock = (fb: Feedback) => {
     setFeedback(fb);
+
+    // Haptics & a11y announcements
+    try {
+      if (fb.kind === "ok") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        AccessibilityInfo.announceForAccessibility(`Scanned ${fb.code}`);
+      } else if (fb.kind === "dup") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        AccessibilityInfo.announceForAccessibility(`Already scanned ${fb.code}`);
+      } else if (fb.kind === "quota") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        AccessibilityInfo.announceForAccessibility("Your share is complete");
+      } else if (fb.kind === "err") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        AccessibilityInfo.announceForAccessibility(`Error: ${fb.msg}`);
+      }
+    } catch {
+      // Haptics can silently fail on unsupported devices
+    }
+
     setTimeout(() => {
       setFeedback(null);
       lock.current = false;
@@ -122,6 +155,14 @@ export default function ScanScreen() {
           mine: res.already_done ? p.mine : p.mine + 1,
         }));
         if (res.phase_completed || res.batch_completed) {
+          try {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            AccessibilityInfo.announceForAccessibility(
+              isStitcher ? "Stitching complete" : `${batchCode} complete`,
+            );
+          } catch {
+            // Ignore haptic failure
+          }
           setDone(true);
           return;
         }
@@ -150,31 +191,42 @@ export default function ScanScreen() {
     <View style={styles.cameraScreen}>
       <StatusBar style="light" />
       <CameraView
-        style={{ flex: 1 }}
+        style={styles.cameraView}
         facing="back"
         enableTorch={torch}
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         onBarcodeScanned={handleScanned}
       />
 
-      {/* top bar */}
-      <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Text style={styles.topBarText}>← {batch?.batch_code ?? "Scan"}</Text>
+      {/* Top Bar */}
+      <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 8, 48) }]}>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Back to queue"
+          style={styles.topBarBtn}
+        >
+          <Text style={styles.topBarText}>← {batch?.batch_code ?? "Back"}</Text>
         </Pressable>
-        <Pressable onPress={() => setTorch((t) => !t)} hitSlop={12}>
-          <Text style={styles.topBarText}>{torch ? "🔦 On" : "🔦 Off"}</Text>
+        <Pressable
+          onPress={() => setTorch((t) => !t)}
+          accessibilityRole="button"
+          accessibilityLabel={torch ? "Turn torch off" : "Turn torch on"}
+          style={styles.topBarBtn}
+        >
+          <Text style={styles.topBarText}>{torch ? "🔦 Torch on" : "🔦 Torch off"}</Text>
         </Pressable>
       </View>
 
+      {/* Offline banner */}
       {!isOnline && (
-        <View style={styles.offlineBannerWrap}>
+        <View style={[styles.offlineBannerWrap, { top: Math.max(insets.top + 64, 104) }]}>
           <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
         </View>
       )}
 
-      {/* progress */}
-      <View style={styles.progressWrap}>
+      {/* Progress pill */}
+      <View style={[styles.progressWrap, { top: Math.max(insets.top + 116, 156) }]}>
         <Text style={styles.progressText}>
           {progress.target != null
             ? `${progress.mine}/${progress.target} yours · ${progress.done}/${progress.total} batch`
@@ -182,13 +234,13 @@ export default function ScanScreen() {
         </Text>
       </View>
 
-      {/* scan frame */}
+      {/* Scan Frame */}
       <View pointerEvents="none" style={styles.frameWrap}>
         <View style={styles.frame} />
         <Text style={styles.frameHint}>Point at a unit QR label</Text>
       </View>
 
-      {/* feedback flash */}
+      {/* Feedback Flash */}
       {feedback && (
         <View
           style={[
@@ -218,74 +270,115 @@ export default function ScanScreen() {
 }
 
 const styles = StyleSheet.create((theme) => ({
-  center: {
+  cameraScreen: {
+    flex: 1,
+    backgroundColor: theme.colors.cameraBg,
+  },
+  cameraView: {
+    flex: 1,
+  },
+  centerLoading: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: theme.spacing.lg,
   },
-  cameraScreen: { flex: 1, backgroundColor: "#000" },
-
-  permTitle: { fontSize: 22, fontWeight: "800", color: theme.colors.text },
+  permScreen: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+  },
+  permContent: {
+    width: "100%",
+    maxWidth: 360,
+    alignItems: "center",
+    gap: theme.spacing.md,
+  },
+  permTitle: {
+    ...theme.text.title,
+    color: theme.colors.text,
+    textAlign: "center",
+  },
   permText: {
     ...theme.text.body,
     color: theme.colors.textMuted,
     textAlign: "center",
-    marginTop: 8,
   },
-  backLink: { color: theme.colors.textFaint, textDecorationLine: "underline" },
-
-  doneEmoji: { fontSize: 64, color: theme.colors.success, fontWeight: "800" },
+  permBtnWrap: {
+    width: "100%",
+    marginTop: theme.spacing.sm,
+  },
+  doneScreen: {
+    flex: 1,
+    justifyContent: "space-between",
+    paddingHorizontal: theme.spacing.lg,
+  },
+  doneContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  doneEmoji: {
+    ...theme.text.display,
+    color: theme.colors.success,
+  },
   doneTitle: {
-    fontSize: 24,
-    fontWeight: "800",
+    ...theme.text.title,
     color: theme.colors.text,
-    marginTop: 12,
+    marginTop: theme.spacing.md,
+    textAlign: "center",
   },
   doneText: {
     ...theme.text.body,
     color: theme.colors.textMuted,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: theme.spacing.sm,
   },
-
+  doneBottom: {
+    paddingTop: theme.spacing.md,
+  },
   topBar: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    paddingTop: 56,
-    paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.xs,
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: theme.colors.overlay,
   },
-  topBarText: { color: "#fff", fontSize: 15, fontWeight: "700" },
-
+  topBarBtn: {
+    minHeight: theme.touch.min,
+    minWidth: theme.touch.min,
+    justifyContent: "center",
+    paddingHorizontal: theme.spacing.sm,
+  },
+  topBarText: {
+    ...theme.text.bodyMed,
+    color: theme.colors.overlayText,
+  },
   offlineBannerWrap: {
     position: "absolute",
-    top: 96,
-    left: 20,
-    right: 20,
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
     zIndex: 10,
   },
-
   progressWrap: {
     position: "absolute",
-    top: 110,
     alignSelf: "center",
-    backgroundColor: "rgba(0,0,0,0.6)",
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
+    backgroundColor: theme.colors.overlaySurface,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.xs,
+    zIndex: 5,
   },
   progressText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    ...theme.text.stat,
+    fontVariant: ["tabular-nums"],
+    color: theme.colors.overlayText,
   },
-
   frameWrap: {
     position: "absolute",
     top: 0,
@@ -298,25 +391,47 @@ const styles = StyleSheet.create((theme) => ({
   frame: {
     width: 240,
     height: 240,
-    borderRadius: 24,
+    borderRadius: theme.radius.lg,
     borderWidth: 3,
-    borderColor: "rgba(255,255,255,0.85)",
+    borderColor: theme.colors.overlayBorder,
   },
-  frameHint: { color: "rgba(255,255,255,0.8)", marginTop: 16, fontSize: 13 },
-
+  frameHint: {
+    ...theme.text.small,
+    color: theme.colors.overlayTextMuted,
+    marginTop: theme.spacing.md,
+    textAlign: "center",
+  },
   flash: {
     position: "absolute",
     bottom: 60,
-    left: 24,
-    right: 24,
-    borderRadius: 16,
-    padding: 18,
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
     alignItems: "center",
+    zIndex: 20,
   },
-  flashOk: { backgroundColor: "rgba(22,163,74,0.95)" },
-  flashDup: { backgroundColor: "rgba(217,119,6,0.95)" },
-  flashErr: { backgroundColor: "rgba(220,38,38,0.95)" },
-  flashTitle: { color: "#fff", fontSize: 17, fontWeight: "800" },
-  flashQuota: { backgroundColor: "rgba(37,99,235,0.95)" },
-  flashSub: { color: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: 4 },
+  flashOk: {
+    backgroundColor: theme.colors.flash.ok,
+  },
+  flashDup: {
+    backgroundColor: theme.colors.flash.dup,
+  },
+  flashQuota: {
+    backgroundColor: theme.colors.flash.quota,
+  },
+  flashErr: {
+    backgroundColor: theme.colors.flash.err,
+  },
+  flashTitle: {
+    ...theme.text.heading,
+    color: theme.colors.overlayText,
+    textAlign: "center",
+  },
+  flashSub: {
+    ...theme.text.small,
+    color: theme.colors.overlayTextMuted,
+    marginTop: theme.spacing.xxs,
+    textAlign: "center",
+  },
 }));
