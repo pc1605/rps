@@ -23,8 +23,8 @@ export function Stat({
   );
 }
 const styles = StyleSheet.create((theme) => ({
-  display: { ...theme.text.display, color: theme.colors.text },
-  stat: { ...theme.text.stat, color: theme.colors.text },
+  display: { ...theme.text.display, color: theme.colors.text, fontVariant: ["tabular-nums"] },
+  stat: { ...theme.text.stat, color: theme.colors.text, fontVariant: ["tabular-nums"] },
   of: { color: theme.colors.textMuted, fontFamily: theme.fonts.regular },
   label: { ...theme.text.small, color: theme.colors.textMuted, marginTop: 4 },
 }));

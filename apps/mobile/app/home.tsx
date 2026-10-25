@@ -1,21 +1,21 @@
+import { PHASE_LABEL, SIZE_LABEL, STATION_LABEL } from "@rps/shared";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
+import { AppButton } from "../components/ui/AppButton";
 import { Banner } from "../components/ui/Banner";
 import { Card } from "../components/ui/Card";
+import { Chip } from "../components/ui/Chip";
 import { Screen } from "../components/ui/Screen";
+import { Skeleton } from "../components/ui/Skeleton";
+import { Stat } from "../components/ui/Stat";
 import { useAuth } from "../features/auth/store";
 import { useMyBatches } from "../features/batches/hooks";
 import type { Batch } from "../features/batches/types";
 import { useOnline } from "../lib/use-online";
-
-const stationLabel: Record<string, string> = {
-  cutter: "Cutting queue",
-  stitcher: "Stitching queue",
-  packer: "Packing queue",
-};
 
 function BatchCard({
   batch,
@@ -30,49 +30,102 @@ function BatchCard({
   // Only cutters are locked out of an in-progress batch;
   // stitchers/packers can always open & join.
   const blocked = station === "cutter" && batch.status === "in_progress" && !mine;
-  const daysAgo = Math.floor((Date.now() - new Date(batch.created_at).getTime()) / 86_400_000);
+  const sizeText = SIZE_LABEL[batch.size_class as keyof typeof SIZE_LABEL] ?? batch.size_class;
 
   return (
-    <Pressable onPress={() => onOpen(batch)} disabled={blocked}>
-      <Card style={[styles.batchCard, mine && styles.cardMine, blocked && styles.cardTaken]}>
-        <View style={styles.batchRow}>
+    <Pressable
+      onPress={() => onOpen(batch)}
+      disabled={blocked}
+      accessibilityRole="button"
+      accessibilityLabel={`Batch ${batch.batch_code}, ${batch.brand_name} ${batch.model_name}`}
+    >
+      <Card style={[styles.batchCard, mine && styles.cardMine, blocked && styles.cardBlocked]}>
+        <View style={styles.cardHeader}>
           <Text style={styles.batchCode}>{batch.batch_code}</Text>
-          <Text style={styles.batchQty}>{batch.quantity} mats</Text>
+          <Chip
+            label={PHASE_LABEL[batch.current_phase] ?? batch.current_phase}
+            color={styles.phaseColor(batch.current_phase).color}
+            dot
+          />
         </View>
-        <Text style={styles.batchModel}>
-          {batch.brand_name} {batch.model_name}
-          <Text style={styles.batchSize}>
-            {" "}
-            · {batch.size_class.toUpperCase()}
+
+        <View style={styles.modelLine}>
+          <Text style={styles.modelName}>
+            {batch.brand_name} {batch.model_name}
+          </Text>
+          <Text style={styles.modelMeta}>
+            {sizeText}
             {batch.line_name ? ` · ${batch.line_name}` : ""}
           </Text>
-        </Text>
-        {batch.assigned_to_me && (
-          <Text style={styles.assignedTag}>
-            📌{" "}
-            {batch.my_target_qty != null
-              ? `Your share: ${batch.my_done_qty ?? 0} / ${batch.my_target_qty}`
-              : "Assigned to you"}
-            {batch.assigned_workers?.includes(",") ? `  ·  with ${batch.assigned_workers}` : ""}
-          </Text>
-        )}
-        {mine && <Text style={styles.mineTag}>▶ You're in — tap to continue</Text>}
-        {batch.active_workers && (
-          <Text style={styles.activeWorkers}>
-            👤 {batch.active_workers}
-            {mine ? "  ·  you're in" : ""}
-          </Text>
-        )}
-        {batch.status === "pending" && (
-          <Text style={styles.batchAge}>{daysAgo === 0 ? "Added today" : `Waiting ${daysAgo}d`}</Text>
+        </View>
+
+        <View style={styles.statWrap}>
+          {station === "cutter" ? (
+            <Stat value={batch.quantity} label="mats" />
+          ) : batch.my_target_qty != null ? (
+            <Stat value={batch.my_done_qty ?? 0} of={batch.my_target_qty} label="your share" />
+          ) : (
+            <Stat
+              value={station === "stitcher" ? (batch.units_stitched ?? 0) : batch.units_packed}
+              of={batch.units_total}
+              label={station === "stitcher" ? "stitched" : "packed"}
+            />
+          )}
+        </View>
+
+        {blocked ? (
+          <View style={styles.footerRow}>
+            <Chip
+              label={`⏳ ${batch.active_workers ?? "Another cutter"} is cutting`}
+              color={styles.textMuted.color}
+            />
+          </View>
+        ) : (
+          (batch.assigned_to_me || batch.active_workers || mine) && (
+            <View style={styles.footerRow}>
+              {batch.assigned_to_me && (
+                <Chip
+                  label={
+                    batch.assigned_workers?.includes(",")
+                      ? `📌 Assigned to you (with ${batch.assigned_workers})`
+                      : "📌 Assigned to you"
+                  }
+                  color={styles.accentColor.color}
+                />
+              )}
+              {batch.active_workers && !mine && (
+                <Chip label={`👤 ${batch.active_workers}`} color={styles.textMuted.color} />
+              )}
+              {mine && <Chip label="You're in" color={styles.successColor.color} dot />}
+            </View>
+          )
         )}
       </Card>
     </Pressable>
   );
 }
 
+function QueueSkeleton() {
+  return (
+    <View style={styles.listContent}>
+      {[0, 1, 2].map((key) => (
+        <Card key={key} style={styles.skeletonCard}>
+          <View style={styles.cardHeader}>
+            <Skeleton width="40%" height={20} />
+            <Skeleton width="25%" height={20} radius={6} />
+          </View>
+          <Skeleton width="55%" height={16} />
+          <Skeleton width="35%" height={32} />
+          <Skeleton width="45%" height={14} />
+        </Card>
+      ))}
+    </View>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { worker, restore, logout } = useAuth();
   const { data: batches, isPending, isError, isRefetching, refetch } = useMyBatches();
   const isOnline = useOnline();
@@ -82,27 +135,29 @@ export default function Home() {
     if (!worker) restore();
   }, [worker, restore]);
 
+  const stationTitle = worker
+    ? `${STATION_LABEL[worker.station as keyof typeof STATION_LABEL] ?? worker.station} queue`
+    : "My queue";
+
   return (
     <Screen>
       <StatusBar style="auto" />
 
       {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.eyebrow}>
-            {worker ? (stationLabel[worker.station] ?? "My queue") : "My queue"}
-          </Text>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top + 16, 56) }]}>
+        <View style={styles.headerInfo}>
+          <Text style={styles.stationLabel}>{stationTitle}</Text>
           <Text style={styles.name}>{worker?.name ?? "…"}</Text>
         </View>
-        <Pressable
+        <AppButton
+          title="Sign out"
+          variant="ghost"
+          size="md"
           onPress={async () => {
             await logout();
             router.replace("/login");
           }}
-          hitSlop={12}
-        >
-          <Text style={styles.signOut}>Sign out</Text>
-        </Pressable>
+        />
       </View>
 
       {!isOnline && (
@@ -113,16 +168,15 @@ export default function Home() {
 
       {/* Queue */}
       {isPending ? (
-        <View style={styles.center}>
-          <ActivityIndicator />
-        </View>
+        <QueueSkeleton />
       ) : isError ? (
         <View style={styles.center}>
-          <Text style={styles.emptyTitle}>Couldn't load your queue</Text>
-          <Text style={styles.emptyText}>Check the connection and pull to retry.</Text>
-          <Pressable onPress={() => refetch()} style={{ marginTop: 12 }}>
-            <Text style={styles.retryLink}>Retry</Text>
-          </Pressable>
+          <Banner
+            kind="danger"
+            text="Couldn't load your queue. Check connection and retry."
+            actionLabel="Retry"
+            onAction={() => refetch()}
+          />
         </View>
       ) : (
         <FlatList
@@ -135,8 +189,8 @@ export default function Home() {
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
           ListEmptyComponent={
             <View style={styles.center}>
-              <Text style={styles.emptyTitle}>All clear ✓</Text>
-              <Text style={styles.emptyText}>No batches waiting at your station right now.</Text>
+              <Text style={styles.emptyTitle}>All clear</Text>
+              <Text style={styles.emptyText}>Nothing waiting at your station.</Text>
             </View>
           }
         />
@@ -151,82 +205,104 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: "space-between",
     alignItems: "flex-end",
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: 64,
     paddingBottom: theme.spacing.md,
   },
-  eyebrow: { ...theme.text.eyebrow, color: theme.colors.accent },
-  name: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: theme.colors.text,
-    marginTop: 2,
+  headerInfo: {
+    flex: 1,
+    marginRight: theme.spacing.sm,
   },
-  signOut: {
-    color: theme.colors.textFaint,
-    textDecorationLine: "underline",
-    fontSize: 13,
+  stationLabel: {
+    ...theme.text.small,
+    color: theme.colors.textMuted,
+  },
+  name: {
+    ...theme.text.title,
+    color: theme.colors.text,
+    marginTop: theme.spacing.xxs,
+  },
+  bannerWrap: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
   },
   listContent: {
     padding: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
+    paddingTop: theme.spacing.xs,
     gap: theme.spacing.sm,
     flexGrow: 1,
   },
-  batchCard: { gap: 4 },
-  batchRow: {
+  batchCard: {
+    gap: theme.spacing.sm,
+  },
+  cardMine: {
+    borderColor: theme.colors.accent,
+    borderWidth: 1.5,
+  },
+  cardBlocked: {
+    opacity: 0.5,
+  },
+  cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   batchCode: {
+    ...theme.text.code,
     color: theme.colors.accent,
-    fontWeight: "700",
-    fontSize: 16,
-    letterSpacing: 0.5,
   },
-  batchQty: { color: theme.colors.textMuted, fontSize: 13, fontWeight: "600" },
-  batchModel: { color: theme.colors.text, fontSize: 15, fontWeight: "600" },
-  batchSize: { color: theme.colors.textFaint, fontSize: 11, fontWeight: "700" },
-  batchNotes: { color: theme.colors.textMuted, fontSize: 12 },
-  batchAge: { color: theme.colors.textFaint, fontSize: 11, marginTop: 2 },
+  modelLine: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    gap: theme.spacing.xs,
+  },
+  modelName: {
+    ...theme.text.bodyMed,
+    color: theme.colors.text,
+  },
+  modelMeta: {
+    ...theme.text.caption,
+    color: theme.colors.textMuted,
+  },
+  statWrap: {
+    paddingVertical: theme.spacing.xxs,
+  },
+  footerRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.xs,
+    paddingTop: theme.spacing.xxs,
+  },
+  skeletonCard: {
+    gap: theme.spacing.sm,
+  },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    gap: 6,
-    paddingTop: 80,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.xxl,
   },
-  emptyTitle: { color: theme.colors.text, fontSize: 18, fontWeight: "700" },
-  emptyText: {
-    color: theme.colors.textMuted,
-    fontSize: 13,
+  emptyTitle: {
+    ...theme.text.heading,
+    color: theme.colors.text,
     textAlign: "center",
   },
-  cardMine: { borderColor: theme.colors.accent, borderWidth: 1.5 },
-  cardTaken: { opacity: 0.45 },
-  mineTag: {
-    color: theme.colors.accent,
-    fontSize: 12,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  activeWorkers: {
-    ...theme.text.label,
+  emptyText: {
+    ...theme.text.small,
     color: theme.colors.textMuted,
-    marginTop: 6,
+    marginTop: theme.spacing.xs,
+    textAlign: "center",
   },
-  assignedTag: {
-    ...theme.text.label,
+  phaseColor: (phase: string) => ({
+    color: theme.colors.phase[phase as keyof typeof theme.colors.phase] ?? theme.colors.textMuted,
+  }),
+  accentColor: {
     color: theme.colors.accent,
-    marginTop: 6,
   },
-  retryLink: {
-    color: theme.colors.accent,
-    fontWeight: "700",
-    textDecorationLine: "underline",
+  textMuted: {
+    color: theme.colors.textMuted,
   },
-  bannerWrap: {
-    paddingHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.sm,
+  successColor: {
+    color: theme.colors.success,
   },
 }));
