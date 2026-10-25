@@ -1,6 +1,8 @@
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { StyleSheet } from "react-native-unistyles";
+import { Screen } from "../components/ui/Screen";
+import { Skeleton } from "../components/ui/Skeleton";
 import { tokenStore } from "../lib/api-client";
 
 export default function Index() {
@@ -14,12 +16,22 @@ export default function Index() {
     });
   }, []);
 
-  if (!checked)
+  if (!checked) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator />
-      </View>
+      <Screen style={styles.centerLoading}>
+        <Skeleton width="40%" height={24} />
+      </Screen>
     );
+  }
 
   return <Redirect href={hasToken ? "/home" : "/login"} />;
 }
+
+const styles = StyleSheet.create((theme) => ({
+  centerLoading: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+  },
+}));

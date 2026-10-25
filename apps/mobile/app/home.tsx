@@ -201,6 +201,9 @@ export default function Home() {
 
 const styles = StyleSheet.create((theme) => ({
   header: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 560,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
@@ -221,10 +224,16 @@ const styles = StyleSheet.create((theme) => ({
     marginTop: theme.spacing.xxs,
   },
   bannerWrap: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 560,
     paddingHorizontal: theme.spacing.lg,
     marginBottom: theme.spacing.sm,
   },
   listContent: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 560,
     padding: theme.spacing.lg,
     paddingTop: theme.spacing.xs,
     gap: theme.spacing.sm,

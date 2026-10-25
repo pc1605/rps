@@ -97,14 +97,16 @@ export default function Login() {
 
         {/* Bottom-anchored action area */}
         <View style={[styles.bottomAction, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <AppButton
-            title="Set up this phone →"
-            size="lg"
-            onPress={handleLogin}
-            disabled={!canSubmit}
-            loading={submitting}
-          />
-          <Text style={styles.footnote}>One-time setup. You'll stay signed in on this phone.</Text>
+          <View style={styles.bottomActionInner}>
+            <AppButton
+              title="Set up this phone →"
+              size="lg"
+              onPress={handleLogin}
+              disabled={!canSubmit}
+              loading={submitting}
+            />
+            <Text style={styles.footnote}>One-time setup. You'll stay signed in on this phone.</Text>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Screen>
@@ -119,6 +121,9 @@ const styles = StyleSheet.create((theme) => ({
     flex: 1,
   },
   scrollContent: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 560,
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
     gap: theme.spacing.md,
@@ -188,6 +193,11 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.bg,
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
+  },
+  bottomActionInner: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 560,
     gap: theme.spacing.xs,
   },
   footnote: {

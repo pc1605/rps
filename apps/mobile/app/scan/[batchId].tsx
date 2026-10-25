@@ -4,7 +4,7 @@ import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
-import { AccessibilityInfo, Pressable, Text, View } from "react-native";
+import { AccessibilityInfo, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../components/ui/AppButton";
@@ -60,14 +60,16 @@ export default function ScanScreen() {
     return (
       <Screen style={styles.permScreen}>
         <StatusBar style="auto" />
-        <View style={styles.permContent}>
-          <Text style={styles.permTitle}>Camera needed</Text>
-          <Text style={styles.permText}>RPS uses the camera to scan unit QR labels.</Text>
-          <View style={styles.permBtnWrap}>
-            <AppButton title="Allow camera" size="lg" onPress={requestPermission} />
+        <ScrollView contentContainerStyle={styles.permScroll} keyboardShouldPersistTaps="handled">
+          <View style={styles.permContent}>
+            <Text style={styles.permTitle}>Camera needed</Text>
+            <Text style={styles.permText}>RPS uses the camera to scan unit QR labels.</Text>
+            <View style={styles.permBtnWrap}>
+              <AppButton title="Allow camera" size="lg" onPress={requestPermission} />
+            </View>
+            <AppButton title="← Back" variant="ghost" size="md" onPress={() => router.back()} />
           </View>
-          <AppButton title="← Back" variant="ghost" size="md" onPress={() => router.back()} />
-        </View>
+        </ScrollView>
       </Screen>
     );
   }
@@ -77,18 +79,25 @@ export default function ScanScreen() {
     return (
       <Screen style={styles.doneScreen}>
         <StatusBar style="auto" />
-        <View style={styles.doneContent}>
-          <Text style={styles.doneEmoji}>✓</Text>
-          <Text style={styles.doneTitle}>{isStitcher ? "Stitching complete" : `${batchCode} complete`}</Text>
-          <Text style={styles.doneText}>
-            {isStitcher
-              ? `All ${progress.total} mats stitched — batch sent to packing.`
-              : `All ${progress.total} mats packed and sent to the stockyard.`}
-          </Text>
-        </View>
-        <View style={[styles.doneBottom, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <AppButton title="Back to my queue" size="lg" onPress={() => router.replace("/home")} />
-        </View>
+        <ScrollView
+          contentContainerStyle={[styles.doneScroll, { paddingBottom: Math.max(insets.bottom + 16, 24) }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.doneContent}>
+            <Text style={styles.doneEmoji}>✓</Text>
+            <Text style={styles.doneTitle}>
+              {isStitcher ? "Stitching complete" : `${batchCode} complete`}
+            </Text>
+            <Text style={styles.doneText}>
+              {isStitcher
+                ? `All ${progress.total} mats stitched — batch sent to packing.`
+                : `All ${progress.total} mats packed and sent to the stockyard.`}
+            </Text>
+          </View>
+          <View style={styles.doneBottom}>
+            <AppButton title="Back to my queue" size="lg" onPress={() => router.replace("/home")} />
+          </View>
+        </ScrollView>
       </Screen>
     );
   }
@@ -198,73 +207,83 @@ export default function ScanScreen() {
         onBarcodeScanned={handleScanned}
       />
 
-      {/* Top Bar */}
-      <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 8, 48) }]}>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Back to queue"
-          style={styles.topBarBtn}
-        >
-          <Text style={styles.topBarText}>← {batch?.batch_code ?? "Back"}</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setTorch((t) => !t)}
-          accessibilityRole="button"
-          accessibilityLabel={torch ? "Turn torch off" : "Turn torch on"}
-          style={styles.topBarBtn}
-        >
-          <Text style={styles.topBarText}>{torch ? "🔦 Torch on" : "🔦 Torch off"}</Text>
-        </Pressable>
-      </View>
+      {/* Overlay container with flex positioning */}
+      <View style={styles.overlayContainer} pointerEvents="box-none">
+        <View style={styles.topArea} pointerEvents="box-none">
+          <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 8, 36) }]}>
+            <Pressable
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Back to queue"
+              style={styles.topBarBtn}
+            >
+              <Text style={styles.topBarText}>← {batch?.batch_code ?? "Back"}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setTorch((t) => !t)}
+              accessibilityRole="button"
+              accessibilityLabel={torch ? "Turn torch off" : "Turn torch on"}
+              style={styles.topBarBtn}
+            >
+              <Text style={styles.topBarText}>{torch ? "🔦 Torch on" : "🔦 Torch off"}</Text>
+            </Pressable>
+          </View>
 
-      {/* Offline banner */}
-      {!isOnline && (
-        <View style={[styles.offlineBannerWrap, { top: Math.max(insets.top + 64, 104) }]}>
-          <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
+          {/* Top badges / notices */}
+          <View style={styles.topNotices} pointerEvents="box-none">
+            {!isOnline && (
+              <View style={styles.offlineBannerWrap}>
+                <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
+              </View>
+            )}
+
+            <View style={styles.progressWrap}>
+              <Text style={styles.progressText}>
+                {progress.target != null
+                  ? `${progress.mine}/${progress.target} yours · ${progress.done}/${progress.total} batch`
+                  : `${progress.done} / ${progress.total} ${isStitcher ? "stitched" : "packed"}`}
+              </Text>
+            </View>
+          </View>
         </View>
-      )}
 
-      {/* Progress pill */}
-      <View style={[styles.progressWrap, { top: Math.max(insets.top + 116, 156) }]}>
-        <Text style={styles.progressText}>
-          {progress.target != null
-            ? `${progress.mine}/${progress.target} yours · ${progress.done}/${progress.total} batch`
-            : `${progress.done} / ${progress.total} ${isStitcher ? "stitched" : "packed"}`}
-        </Text>
-      </View>
+        {/* Scan Frame */}
+        <View pointerEvents="none" style={styles.frameWrap}>
+          <View style={styles.frame} />
+          <Text style={styles.frameHint}>Point at a unit QR label</Text>
+        </View>
 
-      {/* Scan Frame */}
-      <View pointerEvents="none" style={styles.frameWrap}>
-        <View style={styles.frame} />
-        <Text style={styles.frameHint}>Point at a unit QR label</Text>
-      </View>
-
-      {/* Feedback Flash */}
-      {feedback && (
+        {/* Bottom feedback flash */}
         <View
-          style={[
-            styles.flash,
-            feedback.kind === "ok" && styles.flashOk,
-            feedback.kind === "dup" && styles.flashDup,
-            feedback.kind === "quota" && styles.flashQuota,
-            feedback.kind === "err" && styles.flashErr,
-          ]}
+          style={[styles.bottomFlashWrap, { paddingBottom: Math.max(insets.bottom + 16, 24) }]}
+          pointerEvents="box-none"
         >
-          <Text style={styles.flashTitle}>
-            {feedback.kind === "ok" && `✓ ${feedback.code}`}
-            {feedback.kind === "dup" && "Already scanned"}
-            {feedback.kind === "quota" && "Your share is complete ✓"}
-            {feedback.kind === "err" && `✗ ${feedback.msg}`}
-          </Text>
-          {feedback.kind === "dup" && <Text style={styles.flashSub}>{feedback.code}</Text>}
-          {feedback.kind === "quota" && (
-            <Text style={styles.flashSub}>
-              {feedback.mine} / {feedback.target} mats — leave the rest for your co-workers
-            </Text>
+          {feedback && (
+            <View
+              style={[
+                styles.flash,
+                feedback.kind === "ok" && styles.flashOk,
+                feedback.kind === "dup" && styles.flashDup,
+                feedback.kind === "quota" && styles.flashQuota,
+                feedback.kind === "err" && styles.flashErr,
+              ]}
+            >
+              <Text style={styles.flashTitle}>
+                {feedback.kind === "ok" && `✓ ${feedback.code}`}
+                {feedback.kind === "dup" && "Already scanned"}
+                {feedback.kind === "quota" && "Your share is complete ✓"}
+                {feedback.kind === "err" && `✗ ${feedback.msg}`}
+              </Text>
+              {feedback.kind === "dup" && <Text style={styles.flashSub}>{feedback.code}</Text>}
+              {feedback.kind === "quota" && (
+                <Text style={styles.flashSub}>
+                  {feedback.mine} / {feedback.target} mats — leave the rest for your co-workers
+                </Text>
+              )}
+            </View>
           )}
         </View>
-      )}
+      </View>
     </View>
   );
 }
@@ -285,13 +304,19 @@ const styles = StyleSheet.create((theme) => ({
   },
   permScreen: {
     flex: 1,
+  },
+  permScroll: {
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: theme.spacing.lg,
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 560,
   },
   permContent: {
     width: "100%",
-    maxWidth: 360,
+    maxWidth: 400,
     alignItems: "center",
     gap: theme.spacing.md,
   },
@@ -311,8 +336,15 @@ const styles = StyleSheet.create((theme) => ({
   },
   doneScreen: {
     flex: 1,
+  },
+  doneScroll: {
+    flexGrow: 1,
     justifyContent: "space-between",
     paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.xl,
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 560,
   },
   doneContent: {
     flex: 1,
@@ -338,11 +370,14 @@ const styles = StyleSheet.create((theme) => ({
   doneBottom: {
     paddingTop: theme.spacing.md,
   },
+  overlayContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "space-between",
+  },
+  topArea: {
+    width: "100%",
+  },
   topBar: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.xs,
     flexDirection: "row",
@@ -359,20 +394,21 @@ const styles = StyleSheet.create((theme) => ({
     ...theme.text.bodyMed,
     color: theme.colors.overlayText,
   },
+  topNotices: {
+    paddingTop: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.lg,
+    alignItems: "center",
+    gap: theme.spacing.xs,
+  },
   offlineBannerWrap: {
-    position: "absolute",
-    left: theme.spacing.lg,
-    right: theme.spacing.lg,
-    zIndex: 10,
+    width: "100%",
+    maxWidth: 480,
   },
   progressWrap: {
-    position: "absolute",
-    alignSelf: "center",
     backgroundColor: theme.colors.overlaySurface,
     borderRadius: theme.radius.pill,
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.xs,
-    zIndex: 5,
   },
   progressText: {
     ...theme.text.stat,
@@ -380,13 +416,8 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.overlayText,
   },
   frameWrap: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
   },
   frame: {
     width: 240,
@@ -401,15 +432,16 @@ const styles = StyleSheet.create((theme) => ({
     marginTop: theme.spacing.md,
     textAlign: "center",
   },
+  bottomFlashWrap: {
+    paddingHorizontal: theme.spacing.lg,
+    alignItems: "center",
+  },
   flash: {
-    position: "absolute",
-    bottom: 60,
-    left: theme.spacing.lg,
-    right: theme.spacing.lg,
+    width: "100%",
+    maxWidth: 480,
     borderRadius: theme.radius.lg,
     padding: theme.spacing.md,
     alignItems: "center",
-    zIndex: 20,
   },
   flashOk: {
     backgroundColor: theme.colors.flash.ok,

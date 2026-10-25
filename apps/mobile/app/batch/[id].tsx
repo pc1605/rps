@@ -253,35 +253,37 @@ export default function BatchAction() {
 
       {/* Bottom-anchored action area */}
       <View style={[styles.actionArea, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {isCutter && !mine && batch.status === "pending" && (
-          <AppButton title="Start cutting" size="lg" onPress={handleStart} loading={startBatch.isPending} />
-        )}
+        <View style={styles.actionAreaInner}>
+          {isCutter && !mine && batch.status === "pending" && (
+            <AppButton title="Start cutting" size="lg" onPress={handleStart} loading={startBatch.isPending} />
+          )}
 
-        {isCutter && !mine && batch.status === "in_progress" && (
-          <View style={styles.takenNotice}>
-            <Text style={styles.takenText}>
-              ⏳ {batch.active_workers ?? "Another cutter"} is cutting this batch
-            </Text>
-          </View>
-        )}
+          {isCutter && !mine && batch.status === "in_progress" && (
+            <View style={styles.takenNotice}>
+              <Text style={styles.takenText}>
+                ⏳ {batch.active_workers ?? "Another cutter"} is cutting this batch
+              </Text>
+            </View>
+          )}
 
-        {isCutter && mine && (
-          <AppButton
-            title="Report cut"
-            size="lg"
-            onPress={handleComplete}
-            disabled={!qtyValid}
-            loading={completeBatch.isPending}
-          />
-        )}
+          {isCutter && mine && (
+            <AppButton
+              title="Report cut"
+              size="lg"
+              onPress={handleComplete}
+              disabled={!qtyValid}
+              loading={completeBatch.isPending}
+            />
+          )}
 
-        {scanStation && !mine && (
-          <AppButton title="Join batch" size="lg" onPress={handleStart} loading={startBatch.isPending} />
-        )}
+          {scanStation && !mine && (
+            <AppButton title="Join batch" size="lg" onPress={handleStart} loading={startBatch.isPending} />
+          )}
 
-        {scanStation && mine && (
-          <AppButton title="Open scanner" size="lg" onPress={() => router.push(`/scan/${batch.id}`)} />
-        )}
+          {scanStation && mine && (
+            <AppButton title="Open scanner" size="lg" onPress={() => router.push(`/scan/${batch.id}`)} />
+          )}
+        </View>
       </View>
     </Screen>
   );
@@ -305,7 +307,9 @@ const styles = StyleSheet.create((theme) => ({
     padding: theme.spacing.lg,
   },
   skeletonContainer: {
+    alignSelf: "center",
     width: "100%",
+    maxWidth: 560,
     gap: theme.spacing.md,
   },
   notFoundWrap: {
@@ -324,12 +328,18 @@ const styles = StyleSheet.create((theme) => ({
     textAlign: "center",
   },
   topHeader: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 560,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.xs,
   },
   scrollContent: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 560,
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.xs,
     gap: theme.spacing.md,
@@ -434,6 +444,11 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.bg,
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
+  },
+  actionAreaInner: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 560,
   },
   takenNotice: {
     minHeight: theme.touch.primary,
