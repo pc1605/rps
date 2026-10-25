@@ -3,11 +3,13 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
+import { Banner } from "../components/ui/Banner";
 import { Card } from "../components/ui/Card";
 import { Screen } from "../components/ui/Screen";
 import { useAuth } from "../features/auth/store";
 import { useMyBatches } from "../features/batches/hooks";
 import type { Batch } from "../features/batches/types";
+import { useOnline } from "../lib/use-online";
 
 const stationLabel: Record<string, string> = {
   cutter: "Cutting queue",
@@ -73,6 +75,7 @@ export default function Home() {
   const router = useRouter();
   const { worker, restore, logout } = useAuth();
   const { data: batches, isPending, isError, isRefetching, refetch } = useMyBatches();
+  const isOnline = useOnline();
 
   // Cold-start: token exists but profile not loaded yet
   useEffect(() => {
@@ -101,6 +104,12 @@ export default function Home() {
           <Text style={styles.signOut}>Sign out</Text>
         </Pressable>
       </View>
+
+      {!isOnline && (
+        <View style={styles.bannerWrap}>
+          <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
+        </View>
+      )}
 
       {/* Queue */}
       {isPending ? (
@@ -215,5 +224,9 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.accent,
     fontWeight: "700",
     textDecorationLine: "underline",
+  },
+  bannerWrap: {
+    paddingHorizontal: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
   },
 }));

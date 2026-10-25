@@ -6,10 +6,12 @@ import { useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../components/ui/AppButton";
+import { Banner } from "../../components/ui/Banner";
 import { Screen } from "../../components/ui/Screen";
 import { useAuth } from "../../features/auth/store";
 import { useMyBatches, useScanUnit } from "../../features/batches/hooks";
 import { ApiError } from "../../lib/api-client";
+import { useOnline } from "../../lib/use-online";
 
 type Feedback =
   | { kind: "ok"; code: string }
@@ -24,6 +26,7 @@ export default function ScanScreen() {
   const { data: batches } = useMyBatches();
   const scanUnit = useScanUnit();
   const { worker } = useAuth();
+  const isOnline = useOnline();
 
   const batch = batches?.find((b) => b.id === batchId);
   const [batchCode] = useState(batch?.batch_code ?? "");
@@ -88,6 +91,11 @@ export default function ScanScreen() {
   const handleScanned = ({ data }: { data: string }) => {
     if (lock.current) return;
     lock.current = true;
+
+    if (!isOnline) {
+      flashAndUnlock({ kind: "err", msg: "Offline — reconnect to scan" });
+      return;
+    }
 
     const code = data.trim();
 
@@ -158,6 +166,12 @@ export default function ScanScreen() {
           <Text style={styles.topBarText}>{torch ? "🔦 On" : "🔦 Off"}</Text>
         </Pressable>
       </View>
+
+      {!isOnline && (
+        <View style={styles.offlineBannerWrap}>
+          <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
+        </View>
+      )}
 
       {/* progress */}
       <View style={styles.progressWrap}>
@@ -247,6 +261,14 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: "rgba(0,0,0,0.45)",
   },
   topBarText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+
+  offlineBannerWrap: {
+    position: "absolute",
+    top: 96,
+    left: 20,
+    right: 20,
+    zIndex: 10,
+  },
 
   progressWrap: {
     position: "absolute",

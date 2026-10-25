@@ -67,6 +67,11 @@ interface ThemeColors {
   disabledBg: string;
   disabledFg: string;
   overlay: string;
+  overlaySurface: string;
+  overlayText: string;
+  overlayTextMuted: string;
+  overlayBorder: string;
+  cameraBg: string;
   flash: FlashColors;
 }
 
@@ -103,6 +108,11 @@ const light: ThemeColors = {
   disabledBg: "#E6E3DC",
   disabledFg: "#9C958E",
   overlay: "rgba(0,0,0,0.45)",
+  overlaySurface: "rgba(0,0,0,0.60)",
+  overlayText: "#FFFFFF",
+  overlayTextMuted: "rgba(255,255,255,0.80)",
+  overlayBorder: "rgba(255,255,255,0.85)",
+  cameraBg: "#000000",
   flash: { ok: "#15803D", dup: "#B45309", quota: "#2563EB", err: "#B91C1C" },
 };
 
@@ -128,6 +138,11 @@ const dark: ThemeColors = {
   disabledBg: "#33302C",
   disabledFg: "#6B6560",
   overlay: "rgba(0,0,0,0.55)",
+  overlaySurface: "rgba(0,0,0,0.60)",
+  overlayText: "#FFFFFF",
+  overlayTextMuted: "rgba(255,255,255,0.80)",
+  overlayBorder: "rgba(255,255,255,0.85)",
+  cameraBg: "#000000",
   flash: { ok: "#16A34A", dup: "#D97706", quota: "#2563EB", err: "#DC2626" },
 };
 

@@ -4,11 +4,13 @@ import { useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../components/ui/AppButton";
+import { Banner } from "../../components/ui/Banner";
 import { Card } from "../../components/ui/Card";
 import { Screen } from "../../components/ui/Screen";
 import { useAuth } from "../../features/auth/store";
 import { useCompleteBatch, useMyBatches, useStartBatch } from "../../features/batches/hooks";
 import { ApiError } from "../../lib/api-client";
+import { useOnline } from "../../lib/use-online";
 
 export default function BatchAction() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,6 +19,7 @@ export default function BatchAction() {
   const { data: batches } = useMyBatches();
   const startBatch = useStartBatch();
   const completeBatch = useCompleteBatch();
+  const isOnline = useOnline();
 
   const batch = useMemo(() => batches?.find((b) => b.id === id), [batches, id]);
   const [qty, setQty] = useState<string | null>(null); // null = untouched → prefill
@@ -85,6 +88,12 @@ export default function BatchAction() {
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Text style={styles.back}>← Queue</Text>
         </Pressable>
+
+        {!isOnline && (
+          <View style={styles.bannerWrap}>
+            <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
+          </View>
+        )}
 
         <Text style={styles.code}>{batch.batch_code}</Text>
         <Text style={styles.model}>
@@ -172,6 +181,9 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.textMuted,
     fontSize: 14,
     marginBottom: theme.spacing.lg,
+  },
+  bannerWrap: {
+    marginBottom: theme.spacing.md,
   },
   code: {
     color: theme.colors.accent,

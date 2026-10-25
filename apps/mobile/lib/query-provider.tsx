@@ -1,5 +1,12 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import NetInfo from "@react-native-community/netinfo";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+
+onlineManager.setEventListener((setOnline) => {
+  return NetInfo.addEventListener((state) => {
+    setOnline(!!state.isConnected);
+  });
+});
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [client] = useState(
