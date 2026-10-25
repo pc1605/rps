@@ -1,34 +1,45 @@
 import { ENROLL_PREFIX } from "@rps/shared";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { AccessibilityInfo, Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../components/ui/AppButton";
 import { Screen } from "../components/ui/Screen";
+import { Skeleton } from "../components/ui/Skeleton";
 import { useEnrollDraft } from "../features/auth/enroll-draft";
 
 export default function EnrollScan() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const setBadge = useEnrollDraft((s) => s.setBadge);
   const [permission, requestPermission] = useCameraPermissions();
   const [error, setError] = useState<string | null>(null);
   const lock = useRef(false);
 
-  if (!permission) return <Screen style={styles.center} />;
+  if (!permission) {
+    return (
+      <Screen style={styles.centerLoading}>
+        <Skeleton width="60%" height={24} />
+      </Screen>
+    );
+  }
+
   if (!permission.granted) {
     return (
-      <Screen style={styles.center}>
+      <Screen style={styles.permScreen}>
         <StatusBar style="auto" />
-        <Text style={styles.title}>Camera needed</Text>
-        <Text style={styles.text}>To scan your enrollment code.</Text>
-        <View style={{ width: "70%", marginTop: 24 }}>
-          <AppButton title="Allow camera" onPress={requestPermission} />
+        <View style={styles.permContent}>
+          <Text style={styles.permTitle}>Camera needed</Text>
+          <Text style={styles.permText}>To scan your enrollment code.</Text>
+          <View style={styles.permBtnWrap}>
+            <AppButton title="Allow camera" size="lg" onPress={requestPermission} />
+          </View>
+          <AppButton title="← Back" variant="ghost" size="md" onPress={() => router.back()} />
         </View>
-        <Pressable onPress={() => router.back()} style={{ marginTop: 20 }}>
-          <Text style={styles.link}>← Back</Text>
-        </Pressable>
       </Screen>
     );
   }
@@ -37,14 +48,30 @@ export default function EnrollScan() {
     if (lock.current) return;
     lock.current = true;
     const code = data.trim();
+
     if (!code.startsWith(ENROLL_PREFIX)) {
-      setError("Not an enrollment code — ask your admin for the QR");
+      const msg = "Not an enrollment code — ask your admin for the QR";
+      setError(msg);
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        AccessibilityInfo.announceForAccessibility(`Error: ${msg}`);
+      } catch {
+        // Ignore haptics failure
+      }
       setTimeout(() => {
         setError(null);
         lock.current = false;
       }, 1500);
       return;
     }
+
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      AccessibilityInfo.announceForAccessibility("Enrollment code scanned");
+    } catch {
+      // Ignore haptics failure
+    }
+
     setBadge(code.slice(ENROLL_PREFIX.length));
     router.back();
   };
@@ -53,13 +80,18 @@ export default function EnrollScan() {
     <View style={styles.cameraScreen}>
       <StatusBar style="light" />
       <CameraView
-        style={{ flex: 1 }}
+        style={styles.cameraView}
         facing="back"
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         onBarcodeScanned={onScanned}
       />
-      <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+      <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 8, 48) }]}>
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel enrollment scan"
+          style={styles.topBarBtn}
+        >
           <Text style={styles.topBarText}>← Cancel</Text>
         </Pressable>
       </View>
@@ -77,31 +109,65 @@ export default function EnrollScan() {
 }
 
 const styles = StyleSheet.create((theme) => ({
-  center: {
+  cameraScreen: {
+    flex: 1,
+    backgroundColor: theme.colors.cameraBg,
+  },
+  cameraView: {
+    flex: 1,
+  },
+  centerLoading: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: theme.spacing.lg,
   },
-  cameraScreen: { flex: 1, backgroundColor: "#000" },
-  title: { fontSize: 22, fontWeight: "800", color: theme.colors.text },
-  text: {
+  permScreen: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: theme.spacing.lg,
+  },
+  permContent: {
+    width: "100%",
+    maxWidth: 360,
+    alignItems: "center",
+    gap: theme.spacing.md,
+  },
+  permTitle: {
+    ...theme.text.title,
+    color: theme.colors.text,
+    textAlign: "center",
+  },
+  permText: {
     ...theme.text.body,
     color: theme.colors.textMuted,
     textAlign: "center",
-    marginTop: 8,
   },
-  link: { color: theme.colors.textFaint, textDecorationLine: "underline" },
+  permBtnWrap: {
+    width: "100%",
+    marginTop: theme.spacing.sm,
+  },
   topBar: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    paddingTop: 56,
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.xs,
+    backgroundColor: theme.colors.overlay,
   },
-  topBarText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  topBarBtn: {
+    minHeight: theme.touch.min,
+    minWidth: theme.touch.min,
+    justifyContent: "center",
+    paddingHorizontal: theme.spacing.sm,
+    alignSelf: "flex-start",
+  },
+  topBarText: {
+    ...theme.text.bodyMed,
+    color: theme.colors.overlayText,
+  },
   frameWrap: {
     position: "absolute",
     top: 0,
@@ -114,31 +180,31 @@ const styles = StyleSheet.create((theme) => ({
   frame: {
     width: 240,
     height: 240,
-    borderRadius: 24,
+    borderRadius: theme.radius.lg,
     borderWidth: 3,
-    borderColor: "rgba(255,255,255,0.85)",
+    borderColor: theme.colors.overlayBorder,
   },
   hint: {
-    color: "rgba(255,255,255,0.8)",
-    marginTop: 16,
-    fontSize: 13,
+    ...theme.text.small,
+    color: theme.colors.overlayTextMuted,
+    marginTop: theme.spacing.md,
     textAlign: "center",
-    paddingHorizontal: 40,
+    paddingHorizontal: theme.spacing.xl,
   },
   flash: {
     position: "absolute",
     bottom: 60,
-    left: 24,
-    right: 24,
-    borderRadius: 16,
-    padding: 18,
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
     alignItems: "center",
-    backgroundColor: "rgba(220,38,38,0.95)",
+    backgroundColor: theme.colors.flash.err,
+    zIndex: 20,
   },
   flashText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "800",
+    ...theme.text.heading,
+    color: theme.colors.overlayText,
     textAlign: "center",
   },
 }));

@@ -1,21 +1,18 @@
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
+import { AppButton } from "../components/ui/AppButton";
+import { Banner } from "../components/ui/Banner";
+import { Screen } from "../components/ui/Screen";
 import { useEnrollDraft } from "../features/auth/enroll-draft";
 import { useAuth } from "../features/auth/store";
 
 export default function Login() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { login, error, submitting } = useAuth();
   const [pin, setPin] = useState("");
   const code = useEnrollDraft((s) => s.badge);
@@ -32,93 +29,132 @@ export default function Login() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.screen}>
+    <Screen style={styles.screen}>
       <StatusBar style="auto" />
-      <View style={styles.content}>
-        <Text style={styles.eyebrow}>AMBIKA · RIDDHI</Text>
-        <Text style={styles.title}>RPS Worker</Text>
-        <Text style={styles.subtitle}>
-          Scan the enrollment QR from your admin, or type the code, then enter your PIN to set up this phone.
-        </Text>
-        <Text style={styles.label}>ENROLLMENT CODE</Text>
-        <Pressable onPress={() => router.push("/enroll-scan")} style={styles.scanBtn} hitSlop={8}>
-          <Text style={styles.scanBtnText}>
-            {code ? "📷 Scan a different code" : "📷 Scan enrollment code"}
-          </Text>
-        </Pressable>
-        <TextInput
-          value={code}
-          onChangeText={setCode}
-          placeholder="or type the code"
-          placeholderTextColor={styles.placeholder.color}
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={[styles.input, !!code && styles.inputFilled]}
-        />
-
-        <Text style={[styles.label, styles.labelSpaced]}>4-DIGIT PIN</Text>
-        <TextInput
-          value={pin}
-          onChangeText={(t) => setPin(t.replace(/\D/g, "").slice(0, 4))}
-          placeholder="••••"
-          placeholderTextColor={styles.placeholder.color}
-          keyboardType="number-pad"
-          secureTextEntry
-          maxLength={4}
-          style={[styles.input, styles.pinInput]}
-        />
-
-        {error && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        <Pressable
-          onPress={handleLogin}
-          disabled={!canSubmit}
-          style={({ pressed }) => [
-            styles.button,
-            !canSubmit && styles.buttonDisabled,
-            pressed && styles.buttonPressed,
-          ]}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top + 16, 56) }]}
+          keyboardShouldPersistTaps="handled"
         >
-          {submitting ? (
-            <ActivityIndicator color={styles.buttonText.color} />
-          ) : (
-            <Text style={[styles.buttonText, !canSubmit && styles.buttonTextDisabled]}>
-              Set up this phone →
+          <View style={styles.header}>
+            <Text style={styles.eyebrow}>AMBIKA · RIDDHI</Text>
+            <Text style={styles.title}>RPS Worker</Text>
+            <Text style={styles.subtitle}>
+              Scan the enrollment QR from your admin, or type the code, then enter your PIN to set up this
+              phone.
             </Text>
-          )}
-        </Pressable>
+          </View>
 
-        <Text style={styles.footnote}>One-time setup. You'll stay signed in on this phone.</Text>
-      </View>
-    </KeyboardAvoidingView>
+          {/* Primary Scan Button at top of form */}
+          <View style={styles.scanBtnWrap}>
+            <AppButton
+              title={code ? "Scan a different code" : "Scan enrollment code"}
+              icon={<Text style={styles.camIcon}>📷</Text>}
+              variant={code ? "secondary" : "primary"}
+              size="lg"
+              onPress={() => router.push("/enroll-scan")}
+            />
+          </View>
+
+          {/* Fallback code input */}
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>Enrollment code</Text>
+            <TextInput
+              value={code}
+              onChangeText={setCode}
+              placeholder="or type the code"
+              placeholderTextColor={styles.placeholder.color}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={[styles.input, styles.codeInput, !!code && styles.inputFilled]}
+            />
+          </View>
+
+          {/* PIN Input */}
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>4-digit PIN</Text>
+            <TextInput
+              value={pin}
+              onChangeText={(t) => setPin(t.replace(/\D/g, "").slice(0, 4))}
+              placeholder="••••"
+              placeholderTextColor={styles.placeholder.color}
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={4}
+              style={[styles.input, styles.pinInput]}
+            />
+          </View>
+
+          {error ? (
+            <View style={styles.errorWrap}>
+              <Banner kind="danger" text={error} />
+            </View>
+          ) : null}
+        </ScrollView>
+
+        {/* Bottom-anchored action area */}
+        <View style={[styles.bottomAction, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          <AppButton
+            title="Set up this phone →"
+            size="lg"
+            onPress={handleLogin}
+            disabled={!canSubmit}
+            loading={submitting}
+          />
+          <Text style={styles.footnote}>One-time setup. You'll stay signed in on this phone.</Text>
+        </View>
+      </KeyboardAvoidingView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
-  screen: { flex: 1, backgroundColor: theme.colors.bg },
-  content: { flex: 1, justifyContent: "center", padding: theme.spacing.lg },
-  eyebrow: { ...theme.text.eyebrow, color: theme.colors.accent },
+  screen: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    gap: theme.spacing.md,
+  },
+  header: {
+    marginBottom: theme.spacing.xs,
+  },
+  eyebrow: {
+    ...theme.text.caption,
+    color: theme.colors.accent,
+  },
   title: {
     ...theme.text.title,
     color: theme.colors.text,
-    marginTop: theme.spacing.xs,
+    marginTop: theme.spacing.xxs,
   },
   subtitle: {
     ...theme.text.body,
     color: theme.colors.textMuted,
-    marginTop: 6,
-    marginBottom: theme.spacing.xl,
+    marginTop: theme.spacing.xs,
   },
-  label: {
-    ...theme.text.label,
+  scanBtnWrap: {
+    marginVertical: theme.spacing.xs,
+  },
+  camIcon: {
+    ...theme.text.body,
+  },
+  field: {
+    gap: theme.spacing.xs,
+  },
+  fieldLabel: {
+    ...theme.text.caption,
     color: theme.colors.textMuted,
-    marginBottom: theme.spacing.sm,
   },
   input: {
+    ...theme.text.body,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -126,36 +162,37 @@ const styles = StyleSheet.create((theme) => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     color: theme.colors.text,
-    fontSize: 16,
+    minHeight: theme.touch.min,
   },
-  pinInput: { letterSpacing: 12, fontSize: 24, textAlign: "center" },
-  placeholder: { color: theme.colors.textFaint },
-  errorBox: {
-    backgroundColor: theme.colors.dangerBg,
-    borderRadius: theme.radius.sm + 2,
-    padding: theme.spacing.md - 4,
-    marginTop: theme.spacing.lg - 4,
+  codeInput: {
+    ...theme.text.code,
   },
-  errorText: { color: theme.colors.danger, fontSize: 14 },
-  button: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius.md,
-    paddingVertical: 18,
-    alignItems: "center",
-    marginTop: theme.spacing.lg + 4,
-  },
-  buttonDisabled: { backgroundColor: theme.colors.disabledBg },
-  buttonPressed: { opacity: 0.85 },
-  buttonText: { ...theme.text.button, color: theme.colors.accentFg },
-  buttonTextDisabled: { color: theme.colors.disabledFg },
-  footnote: {
-    color: theme.colors.textFaint,
-    fontSize: 12,
+  pinInput: {
+    ...theme.text.title,
+    fontVariant: ["tabular-nums"],
+    letterSpacing: 12,
     textAlign: "center",
-    marginTop: theme.spacing.lg,
   },
-  inputFilled: { borderColor: theme.colors.accent },
-  scanBtn: { alignSelf: "flex-start", marginTop: 8, marginBottom: 4 },
-  scanBtnText: { color: theme.colors.accent, fontWeight: "700", fontSize: 14 },
-  labelSpaced: { marginTop: theme.spacing.lg - 4 },
+  inputFilled: {
+    borderColor: theme.colors.accent,
+  },
+  placeholder: {
+    color: theme.colors.textFaint,
+  },
+  errorWrap: {
+    marginTop: theme.spacing.xs,
+  },
+  bottomAction: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.bg,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    gap: theme.spacing.xs,
+  },
+  footnote: {
+    ...theme.text.caption,
+    color: theme.colors.textFaint,
+    textAlign: "center",
+  },
 }));
