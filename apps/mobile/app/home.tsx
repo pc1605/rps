@@ -24,7 +24,7 @@ function BatchCard({
   station?: string;
   onOpen: (b: Batch) => void;
 }) {
-  const mine = batch.joined_by_me;
+  const mine = batch.joined_by_me ?? false;
   // Only cutters are locked out of an in-progress batch;
   // stitchers/packers can always open & join.
   const blocked = station === "cutter" && batch.status === "in_progress" && !mine;
@@ -49,7 +49,7 @@ function BatchCard({
           <Text style={styles.assignedTag}>
             📌{" "}
             {batch.my_target_qty != null
-              ? `Your share: ${batch.my_done_qty} / ${batch.my_target_qty}`
+              ? `Your share: ${batch.my_done_qty ?? 0} / ${batch.my_target_qty}`
               : "Assigned to you"}
             {batch.assigned_workers?.includes(",") ? `  ·  with ${batch.assigned_workers}` : ""}
           </Text>

@@ -29,7 +29,7 @@ export default function BatchAction() {
     );
   }
 
-  const mine = batch.joined_by_me;
+  const mine = batch.joined_by_me ?? false;
   const isCutter = worker?.station === "cutter";
   const isStitcher = worker?.station === "stitcher";
   const scanStation = isStitcher || worker?.station === "packer";
@@ -152,7 +152,7 @@ export default function BatchAction() {
             <Text style={styles.label}>
               {isStitcher
                 ? batch.my_target_qty != null
-                  ? `YOUR SHARE ${batch.my_done_qty} / ${batch.my_target_qty}  ·  BATCH ${stitchDone} / ${batch.units_total}`
+                  ? `YOUR SHARE ${batch.my_done_qty ?? 0} / ${batch.my_target_qty}  ·  BATCH ${stitchDone} / ${batch.units_total}`
                   : `STITCHED ${stitchDone} / ${batch.units_total}`
                 : `PACKED ${batch.units_packed} / ${batch.units_total}`}
             </Text>

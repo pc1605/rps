@@ -1,5 +1,7 @@
 "use client";
 
+import { ENROLL_PREFIX } from "@rps/shared";
+
 import { Check, Copy, Plus } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
@@ -170,7 +172,7 @@ export function CreateWorkerDialog() {
 
             <div className="space-y-3 py-2">
               <div className="flex justify-center rounded-lg border bg-white p-4">
-                <QRCodeSVG value={`RPS-ENROLL:${createdBadge}`} size={180} level="M" />
+                <QRCodeSVG value={`${ENROLL_PREFIX}${createdBadge}`} size={180} level="M" />
               </div>
               <ol className="list-decimal space-y-1 pl-5 text-small text-muted-foreground">
                 <li>On their phone, open RPS Worker.</li>

@@ -1,67 +1,19 @@
-export type Phase = "cutting" | "stitching" | "packing" | "completed";
-export type Status = "pending" | "in_progress" | "awaiting_assignment" | "completed" | "cancelled";
+export type {
+  AssignmentEntry,
+  AssignmentInput,
+  Batch,
+  BatchDetail,
+  BatchStats,
+  BatchStatus as Status,
+  Phase,
+  PhaseLogEntry,
+  Unit,
+  UnitStatus,
+} from "@rps/shared";
 
-export type UnitStatus = "pending" | "packed" | "defective" | "dispatched";
+export type { CarItem as CarModel } from "@/features/catalog/types";
 
-export interface AssignmentEntry {
-  phase: Phase;
-  worker_id: string;
-  worker_name: string;
-  target_qty?: number;
-  done_qty: number;
-}
-
-export interface AssignmentInput {
-  worker_id: string;
-  target_qty?: number;
-}
-
-export interface Batch {
-  id: string;
-  batch_code: string;
-  car_model_id: number;
-  brand_name: string;
-  model_name: string;
-  size_class: string;
-  roll_id?: string;
-  roll_code?: string;
-  quantity: number;
-  current_phase: Phase;
-  status: Status;
-  notes?: string;
-  rework_count: number;
-  created_by: string;
-  created_by_name?: string;
-  version: number;
-  created_at: string;
-  updated_at: string;
-  units_total: number;
-  units_packed: number;
-  stickers_printed_at?: string;
-  units_stitched?: number;
-  line_code?: string;
-  line_name?: string;
-  barcode?: string;
-  cut_qty: number;
-  parent_batch_id?: string;
-  parent_batch_code?: string;
-  short_reason?: string;
-  active_workers?: string;
-}
-
-export interface Unit {
-  id: string;
-  batch_id: string;
-  unit_code: string;
-  unit_number: number;
-  status: UnitStatus;
-  packed_at?: string;
-  created_at: string;
-  stitched_at?: string;
-  stitched_by_name?: string;
-  packed_by_name?: string;
-}
-
+// admin-only
 export interface CreateBatchInput {
   car_model_id: number;
   roll_id?: string;
@@ -69,49 +21,9 @@ export interface CreateBatchInput {
   notes?: string;
 }
 
-// Reference data for the create form
-export interface CarModel {
-  id: number;
-  brand_name: string;
-  name: string;
-  size_class: string;
-  pieces_per_set: number;
-  line_code?: string;
-  line_name?: string;
-  barcode?: string;
-  is_active: boolean;
-}
-
 export interface Roll {
   id: string;
   roll_code: string;
   color: string;
   remaining_meters: number;
-}
-
-export interface BatchStats {
-  in_cutting: number;
-  in_stitching: number;
-  in_packing: number;
-  awaiting_assignment: number;
-  completed_today: number;
-  total_active: number;
-}
-
-export interface PhaseLogEntry {
-  id: string;
-  phase: Phase;
-  worker_id: string;
-  worker_name: string;
-  started_at: string;
-  completed_at?: string;
-  duration_seconds?: number;
-  quantity_completed?: number;
-  notes?: string;
-}
-
-export interface BatchDetail extends Batch {
-  units: Unit[];
-  timeline: PhaseLogEntry[];
-  assignments: AssignmentEntry[];
 }

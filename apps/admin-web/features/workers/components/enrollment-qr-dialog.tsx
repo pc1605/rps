@@ -1,5 +1,7 @@
 "use client";
 
+import { ENROLL_PREFIX } from "@rps/shared";
+
 import { Check, Copy, QrCode } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
@@ -46,7 +48,7 @@ export function EnrollmentQrDialog({ workerId, workerName }: { workerId: string;
         {badge ? (
           <>
             <div className="flex justify-center rounded-lg border bg-white p-4">
-              <QRCodeSVG value={`RPS-ENROLL:${badge}`} size={200} level="M" />
+              <QRCodeSVG value={`${ENROLL_PREFIX}${badge}`} size={200} level="M" />
             </div>
             <div className="rounded-lg border bg-muted/40 p-3 flex items-center justify-between gap-3">
               <code className="font-mono text-xs break-all">{badge}</code>

@@ -1,3 +1,5 @@
+import type { SizeClass } from "@rps/shared";
+
 export interface Brand {
   id: number;
   name: string;
@@ -11,7 +13,7 @@ export interface CarItem {
   id: number;
   brand_name: string;
   name: string;
-  size_class: "small" | "medium" | "large";
+  size_class: SizeClass;
   pieces_per_set: number;
   line_code?: string;
   line_name?: string;

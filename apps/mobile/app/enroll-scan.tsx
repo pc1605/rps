@@ -1,3 +1,4 @@
+import { ENROLL_PREFIX } from "@rps/shared";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -7,8 +8,6 @@ import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../components/ui/AppButton";
 import { Screen } from "../components/ui/Screen";
 import { useEnrollDraft } from "../features/auth/enroll-draft";
-
-const PREFIX = "RPS-ENROLL:";
 
 export default function EnrollScan() {
   const router = useRouter();
@@ -38,7 +37,7 @@ export default function EnrollScan() {
     if (lock.current) return;
     lock.current = true;
     const code = data.trim();
-    if (!code.startsWith(PREFIX)) {
+    if (!code.startsWith(ENROLL_PREFIX)) {
       setError("Not an enrollment code — ask your admin for the QR");
       setTimeout(() => {
         setError(null);
@@ -46,7 +45,7 @@ export default function EnrollScan() {
       }, 1500);
       return;
     }
-    setBadge(code.slice(PREFIX.length));
+    setBadge(code.slice(ENROLL_PREFIX.length));
     router.back();
   };
 

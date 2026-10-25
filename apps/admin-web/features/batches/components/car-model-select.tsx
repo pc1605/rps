@@ -23,7 +23,7 @@ interface Props {
   onChange: (id: number) => void;
 }
 
-const size = (s: string) => sizeLabel[s] ?? s;
+const size = (s: string) => sizeLabel[s as keyof typeof sizeLabel] ?? s;
 
 function itemLabel(m: CarModel) {
   return `${m.brand_name} ${m.name} ${m.size_class} ${size(m.size_class)} ${m.line_name ?? ""}`;

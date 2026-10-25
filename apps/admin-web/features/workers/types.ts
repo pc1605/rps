@@ -1,15 +1,6 @@
-export type Station = "cutter" | "stitcher" | "packer";
+import type { Station } from "@rps/shared";
 
-export interface Worker {
-  id: string;
-  name: string;
-  phone?: string;
-  station: Station;
-  is_active: boolean;
-  last_login_at?: string;
-  created_at: string;
-  badge_token?: string; // only present right after creation
-}
+export type { Station, Worker } from "@rps/shared";
 
 export interface CreateWorkerInput {
   name: string;

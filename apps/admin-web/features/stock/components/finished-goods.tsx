@@ -58,7 +58,7 @@ export function FinishedGoods() {
                   {s.brand_name} {s.model_name}
                 </div>
                 <div className="text-caption text-muted-foreground">
-                  {sizeLabel[s.size_class] ?? s.size_class}
+                  {sizeLabel[s.size_class as keyof typeof sizeLabel] ?? s.size_class}
                   {s.line_name ? ` · ${s.line_name}` : ""}
                 </div>
                 {s.barcode && <div className="font-mono text-caption text-muted-foreground">{s.barcode}</div>}

@@ -1,5 +1,6 @@
 "use client";
 
+import { STATION_LABEL } from "@rps/shared";
 import { Users } from "lucide-react";
 import { Chip } from "@/components/rps/chip";
 import { type Column, DataTable } from "@/components/rps/data-table";
@@ -10,12 +11,6 @@ import { useWorkers } from "../hooks";
 import type { Worker } from "../types";
 import { CreateWorkerDialog } from "./create-worker-dialog";
 import { EnrollmentQrDialog } from "./enrollment-qr-dialog";
-
-const stationLabel: Record<string, string> = {
-  cutter: "Cutter",
-  stitcher: "Stitcher",
-  packer: "Packer",
-};
 
 const columns: Column<Worker>[] = [
   {
@@ -34,7 +29,7 @@ const columns: Column<Worker>[] = [
     width: "w-[140px]",
     cell: (w) => (
       <Chip tone={stationTone[w.station as keyof typeof stationTone]} dot>
-        {stationLabel[w.station] ?? w.station}
+        {STATION_LABEL[w.station] ?? w.station}
       </Chip>
     ),
   },

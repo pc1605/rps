@@ -1,10 +1,6 @@
-export type Station = "cutter" | "stitcher" | "packer";
+import type { Worker } from "@rps/shared";
 
-export interface Worker {
-  id: string;
-  name: string;
-  station: Station;
-}
+export type { Station, Worker } from "@rps/shared";
 
 export interface WorkerLoginResponse {
   worker: Worker;

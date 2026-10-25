@@ -1,3 +1,4 @@
+import { batchCodeOf, UNIT_CODE_RE } from "@rps/shared";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -15,8 +16,6 @@ type Feedback =
   | { kind: "dup"; code: string }
   | { kind: "quota"; mine: number; target: number }
   | { kind: "err"; msg: string };
-
-const UNIT_RE = /^B-\d{4}-\d{3}-\d{3}$/;
 
 export default function ScanScreen() {
   const { batchId } = useLocalSearchParams<{ batchId: string }>();
@@ -93,12 +92,12 @@ export default function ScanScreen() {
     const code = data.trim();
 
     // Local validation — no network for obviously wrong scans
-    if (!UNIT_RE.test(code)) {
+    if (!UNIT_CODE_RE.test(code)) {
       flashAndUnlock({ kind: "err", msg: "Not an RPS unit label" });
       return;
     }
     if (batch && !code.startsWith(`${batch.batch_code}-`)) {
-      const otherBatch = code.split("-").slice(0, 3).join("-");
+      const otherBatch = batchCodeOf(code);
       flashAndUnlock({
         kind: "err",
         msg: `Wrong batch — this mat is from ${otherBatch}`,
