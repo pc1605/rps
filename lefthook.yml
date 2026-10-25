@@ -1,0 +1,19 @@
+pre-commit:
+  parallel: true
+  commands:
+    format-lint:
+      glob: "*.{ts,tsx,js,jsx,json,css}"
+      run: pnpm exec prettier --write {staged_files} && pnpm exec biome lint --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+    go-fmt-lint:
+      root: "apps/backend/"
+      glob: "*.go"
+      run: gofmt -l . | (! grep .) && golangci-lint run ./...
+pre-push:
+  parallel: true
+  commands:
+    typecheck:
+      run: pnpm typecheck
+    go-test:
+      root: "apps/backend/"
+      run: go test ./...

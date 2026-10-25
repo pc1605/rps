@@ -6,6 +6,7 @@ nodeLinker: hoisted
 
 allowBuilds:
   core-js: false
+  lefthook: true
   sharp: true
   unrs-resolver: true
 
