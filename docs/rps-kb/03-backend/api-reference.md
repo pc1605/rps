@@ -11,19 +11,24 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | POST | `/auth/refresh` | `{refresh_token}` → tokens |
 | POST | `/worker/login` | `{badge_token, pin, device_id?}` → `{worker, tokens{access_token}}` (30d). Always 401 `invalid badge or pin` on failure |
 
-## Admin (owner/supervisor)
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/me` | current user |
-| GET | `/car-models` · `/rolls` | reference lists |
+| GET | `/car-models` | flat items: brand, name, size_class, pieces_per_set, line_code, line_name, barcode, is_active |
+| POST | `/car-models` | create flat item `{brand_id, name, size_class, pieces_per_set, product_line_id, barcode?}` (auto-generates 12-digit barcode if omitted) |
+| PATCH | `/car-models/:id` | update flat item `{brand_id, name, size_class, pieces_per_set, product_line_id, barcode?, is_active?}` |
+| GET/POST | `/car-brands` | list brands / create brand `{name}` |
+| GET | `/product-lines` | list active product lines (`REX-R`, `REX-87`, `PVC-18`, `PVC-21`) |
+| GET | `/rolls` | raw materials roll list |
 | GET | `/batches` | all batches, newest first (List) |
 | POST | `/batches` | `{car_model_id, quantity, roll_id?, notes?}` → 201 Batch (units created) |
 | GET | `/batches/stats` | `{in_cutting, awaiting_assignment, in_stitching, in_packing, completed_today, total_active}` |
-| GET | `/batches/:id` | BatchDetail: `units[]`, `timeline[]`, `assignments[]` |
+| GET | `/batches/:id` | BatchDetail: `units[]`, `timeline[]`, `assignments[]`, `cut_qty`, `parent_batch_id`, `short_reason` |
 | PUT | `/batches/:id/assignments` | `{phase:"stitching", assignments:[{worker_id, target_qty?}, …]}`. Empty list clears. Operates the gate for stitching. 400 on quota rule violations |
-| POST | `/batches/:id/stickers-printed` | stamps `stickers_printed_at` |
+| POST | `/batches/:id/resolve-short` | `{action:"split"|"reduce"|"recut", reason?}`. Resolves cutter short cuts. Split creates linked remainder batch; reduce cancels un-cut units; recut re-opens cutting |
+| POST | `/batches/:id/stickers-printed` | stamps `stickers_printed_at = now()` |
 | GET/POST | `/workers` | list (no badge exposed) / create `{name, station, pin, phone?}` → 201 with `badge_token` **once** |
-| GET | `/workers/:id/enrollment` | `{badge_token}` for re-showing the QR (admin). §3 will swap to one-time codes |
+| GET | `/workers/:id/enrollment` | `{badge_token}` for re-showing the QR (admin) |
 | GET/POST/PATCH | `/stock/rolls`, `/stock/rolls/:id` | rolls with `is_low`, `batch_count`; PATCH `{remaining_meters?, is_active?}` |
 | GET | `/stock/finished` | packed units grouped by model |
 | GET | `/reports/workers?from=YYYY-MM-DD&to=YYYY-MM-DD` | default last 7 days; per worker `batches_done, pieces_done, avg_duration_secs, currently_working` (open claim, window-independent); sorted pieces desc. Role-guarded |

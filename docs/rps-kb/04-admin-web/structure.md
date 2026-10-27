@@ -6,7 +6,8 @@
 app/(dashboard)/
   dashboard/page.tsx           stat cards (incl. "Ready for stitching" = stats.awaiting_assignment), recent activity
   batches/page.tsx             header + CreateBatchDialog + <Suspense><BatchList/></Suspense>
-  batches/[id]/page.tsx        detail: header (phase/ready badge, Labels PDF), AssignStitchersCard, BatchTimeline, units grid
+  batches/[id]/page.tsx        detail: header (phase/ready badge, Labels PDF), ShortCutPanel, AssignStitchersCard, BatchTimeline, units grid
+  cars/page.tsx                flat items catalog list, ItemDialog, brand & product line filters
   stock/page.tsx               Raw (rolls) / Finished tabs
   workers/page.tsx             WorkerList (+ enrollment QR per row), CreateWorkerDialog
   reports/page.tsx             RangePicker presets + WorkerReportTable + summary strip
@@ -16,15 +17,17 @@ components/layout/
 components/ui/                 shadcn (button, card, badge, table, dialog, input, select, checkbox, tabs, …)
 features/
   auth/                        login, store, refresh
+  catalog/                     types, api, hooks, item-dialog (flat car items, brands, product lines)
   batches/
     types.ts                   Batch, BatchDetail, Unit, PhaseLogEntry, AssignmentEntry, AssignmentInput, BatchStats
-    api.ts                     list/get/create/stats/setAssignments/markStickersPrinted
-    hooks.ts                   useBatches, useBatch(id), useBatchStats, useCreateBatch, useSetAssignments(id), useMarkStickersPrinted
+    api.ts                     list/get/create/stats/setAssignments/markStickersPrinted/resolveShort
+    hooks.ts                   useBatches, useBatch(id), useBatchStats, useCreateBatch, useSetAssignments(id), useMarkStickersPrinted, useResolveShort
     views.ts                   batchViews[]: key/label/dot/filter/count — shared by sub-nav and list
     label-pdf.ts               generateLabelPdf(batch, media)
     components/
       batch-list.tsx           config-driven table; filters by ?phase; Packing view adds Print/Reprint stickers column
       create-batch-dialog.tsx
+      short-cut-panel.tsx      split / reduce / recut resolution actions for short cuts
       batch-timeline.tsx       vertical rail of phase_logs entries (multi-entry per phase supported)
       assign-stitchers-card.tsx  checkbox per active stitcher + quota inputs + Split evenly + Save / Assign & print
   workers/                     types, api, hooks, components (worker-list, create-worker-dialog w/ QR, enrollment-qr-dialog)
@@ -33,8 +36,8 @@ lib/api-client.ts              axios; single-flight 401 → /auth/refresh; base 
 ```
 
 ## Data flow
-TanStack Query v5 everywhere. Mutations invalidate `["batches"]`, `["batch", id]`, `["workers"]` as relevant.
-Stats poll every 5s (drives sidebar counts). Lists poll periodically (**VERIFY** interval).
+TanStack Query v5 everywhere. Mutations invalidate `["batches"]`, `["batch", id]`, `["workers"]`, `["car-models"]` as relevant.
+Stats poll every 5s (`LIVE_FAST`, drives sidebar counts). Batch lists and batch details poll every 10s (`LIVE`, `refetchOnWindowFocus: true`). Car models cache for 5 minutes (`staleTime: 5 * 60_000`).
 
 ## Lint rule that bites: `react-hooks/set-state-in-effect`
 Never `useEffect(() => setState(props…))`. Reset draft state by remounting with a `key` derived from server state

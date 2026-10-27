@@ -4,12 +4,21 @@
 ```bash
 git clone git@github.com:pc1605/rps.git ~/Development/rps && cd ~/Development/rps
 pnpm install                       # if blocked: pnpm approve-builds → select listed packages → pnpm install
-docker compose up -d               # Postgres on 5433, Adminer on 8083 (VERIFY compose file name)
+docker compose up -d               # Postgres on 5433, Adminer on 8083 (via docker-compose.yml at repo root)
 set -a; source .env; set +a
 migrate -path apps/backend/migrations -database "$DATABASE_URL" up
 cd apps/backend && go run ./cmd/seed   # admin owner@ambika.local / admin123 + reference data
 ```
-Tools: Go, Node 20+, pnpm (corepack), golang-migrate CLI, Docker, Android Studio (SDK + emulator), adb.
+Tools: Go 1.23+, Node 20+, pnpm (corepack), golang-migrate CLI, Docker, Android Studio (SDK + emulator), adb, lefthook, golangci-lint.
+
+## Code Quality & CI Scripts
+```bash
+pnpm typecheck            # runs tsc across packages/shared, apps/admin-web, apps/mobile
+pnpm lint                 # runs Biome lint on JS/TS
+pnpm format:check         # verifies Prettier code style (or pnpm format to write)
+cd apps/backend && golangci-lint run ./...  # Go backend linter
+lefthook run pre-commit   # pre-commit git hook runner (configured via lefthook.yml)
+```
 
 ## Every session (4 terminals)
 ```bash

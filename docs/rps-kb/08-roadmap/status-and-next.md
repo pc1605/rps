@@ -6,26 +6,24 @@
 - Week 8: multi-worker stitching/packing (join model), scan-per-mat at stitching, per-worker attribution, `piece_rates` table,
   admin unit grid with stitched/packed names, cross-batch scan guard, scanner feedback fixes.
 
-## Built, compiles, **UI verification pending**
-- **Slice A** (assignment gate): `awaiting_assignment`, `batch_assignments`, `SetAssignments`, visibility filter, sidebar phase sub-nav
-  with counts, AssignStitchersCard, taffeta-at-assign, packing stickers + `stickers_printed_at`, mobile 📌 states.
-- **Slice A.2** (quotas): `target_qty`, sum/floor/no-remove rules, scan-time quota gate, quota inputs + Split evenly, mobile share display, blue quota flash.
-- **QR enrollment**: `RPS-ENROLL:` QR on create + Workers list, `GET /workers/:id/enrollment`, `enroll-scan.tsx`, store-backed login field.
-- Scanner black-preview fix (stable `onBarcodeScanned`) and quota flash header fix.
+## Built and verified (end-to-end tested)
+- **Weeks 1–7**: Auth (admin + worker), batches/units, worker app, phase state machine, stock (rolls + finished), batch timeline, QR taffeta labels (PDF), camera scanner, packer per-unit scans, worker productivity reports.
+- **Week 8**: Multi-worker stitching/packing (join model), scan-per-mat at stitching, per-worker attribution, `piece_rates` table, admin unit grid with stitched/packed names, cross-batch scan guard.
+- **Slice A & A.2** (Assignment gate & quotas): `awaiting_assignment` state, `batch_assignments`, `SetAssignments`, visibility filter, sidebar phase sub-nav with live counts, `AssignStitchersCard`, taffeta-at-assign, packing stickers + `stickers_printed_at`, mobile share display (`📌 Your share: 3/8`), strict quota gate, blue quota flash.
+- **QR Enrollment**: `RPS-ENROLL:` QR on worker creation + Workers list dialog, `GET /workers/:id/enrollment`, `enroll-scan.tsx`, store-backed login field.
+- **Short-Cut Handling**: Cumulative `cut_qty`, `parent_batch_id`, `short_reason`, `ShortCutPanel` with three admin resolution actions: `split` (creates remainder batch), `reduce` (clamps target and cancels un-cut units), `recut` (re-opens cutting queue).
+- **Catalog Management**: Flat items on `car_models` (`/cars`), `product_lines` table (`REX-R`, `REX-87`, `PVC-18`, `PVC-21`), `ItemDialog` with brand creation, 12-digit scanner-safe barcode generation (`car_barcode_seq` with Luhn check).
+- **Monorepo Shared Package**: `@rps/shared` (`packages/shared/`) providing single source of truth for labels, statuses, sizes, and domain constants.
+- **Tooling & CI**: golangci-lint, Biome linting, Prettier formatting, lefthook pre-commit automation, monorepo typecheck scripts (`pnpm typecheck`), and `TestReadQueriesSmoke` query smoke test.
+- **Design System & A11y (P1–P5)**: WCAG AA contrast compliance across light and dark modes on web and mobile, strict "act here" amber rule, programmatic form labels and button types, keyboard navigable DataTables, reduced-motion overrides, and Android font scaling support (`minHeight`).
 
-→ **First task for whoever picks this up:** run the full manual test in `06-operations/testing.md`, fix what breaks, update the
-Postman Multi-Worker folder for the gate + quotas, commit `[week9] slice A + A.2 verified`.
-
-## Remaining slices (designs in `remaining-slices.md`)
+## Next Slices (designs in `remaining-slices.md`)
 | Slice | Scope | Est. |
 |---|---|---|
 | **B** Rework | unit `rework` status, `rework_logs` + photo upload, packer Pack/Rework step, stitcher rework queue, admin visibility, per-unit sticker reprint | ~3 d |
-| **C** Materials & BOM | `materials` (types/units), car-model CRUD with BOM, consumption at cutting-complete (FIFO), stock UI rework | ~3 d |
-| **D** Earnings | rates per station (and per size if owner wants), ₹ column + date-range wage sheet on Reports | ~1 d |
-| **E** Hardening + Deploy | §3 worker auth (is_active check, one-time codes, rate limit, PIN reset UI), §4 admin (httpOnly refresh, secret rotation), Railway (API+PG) + Vercel, EAS build/update, real-device pilot | ~5 d |
-| — | New demo seed for the current schema; Postman updates; `packages/shared` types | ~1 d |
-
-**≈ 14 working days to factory-usable.** Full-time → end of September 2026; part-time → late October.
+| **C** Materials & BOM | `materials` (types/units), BOM linkage, consumption at cutting-complete (FIFO), stockyard materials tracking | ~3 d |
+| **D** Earnings | rates per station/size, ₹ column + date-range wage sheet on Reports (`piece_rates`) | ~1 d |
+| **E** Hardening + Deploy | §3 worker auth hardening, §4 admin (httpOnly refresh, secret rotation), Railway (API+PG) + Vercel deployment, EAS build/update, real-device pilot | ~5 d |
 
 ## Sequence
 1. Verify A/A.2 + scan login (test script) → 2. B (rework) → 3. C (materials) → 4. D (earnings) → 5. seed + Postman → 6. E (hardening, deploy) → pilot week at the factory.

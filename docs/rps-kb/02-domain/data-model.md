@@ -12,7 +12,7 @@ migrate -path apps/backend/migrations -database "$DATABASE_URL" up      # or: ve
 | `batch_phase` | cutting, stitching, packing, completed |
 | `batch_status` | pending, in_progress, completed, cancelled, **awaiting_assignment** (added 006) |
 | `worker_station` | cutter, stitcher, packer |
-| unit status (**VERIFY name**, e.g. `unit_status`) | pending, packed, defective, dispatched — Slice B will add `rework` |
+| `unit_status` | pending, packed, defective, dispatched — Slice B will add `rework` |
 
 Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` must not be used by a statement in the same transaction.
 
@@ -51,11 +51,33 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
 ### 007 — assignment_quotas
 - `batch_assignments.target_qty int CHECK (> 0)`, nullable (NULL = uncapped).
 
+### 008 — car_model_barcode
+- `ALTER TABLE car_models ADD COLUMN barcode TEXT UNIQUE;` (flat items carry barcode directly).
+
+### 009 — product_lines
+- `product_lines(id serial PK, code text unique, name text, is_active boolean default true)` seeded with `REX-R` (Rexine R), `REX-87` (Rexine 87), `PVC-18` (PVC mat 1.8 mm), `PVC-21` (PVC mat 2.1 mm).
+- `ALTER TABLE car_models ADD COLUMN product_line_id INT REFERENCES product_lines(id);`
+- `CREATE UNIQUE INDEX uq_car_models_item ON car_models (brand_id, lower(name), size_class, product_line_id);` (one flat item = brand + model + size + line).
+
+### 010 — car_models_active_barcode_seq
+- `ALTER TABLE car_models ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT true;`
+- `CREATE SEQUENCE car_barcode_seq START 10000001;` (generates scanner-safe 12-digit barcodes: 386 prefix + 8-digit sequence + Luhn check digit).
+
+### 011 — short_cut
+- `ALTER TABLE batches ADD COLUMN cut_qty INT NOT NULL DEFAULT 0;` (cumulative pieces reported cut by cutter).
+- `ALTER TABLE batches ADD COLUMN parent_batch_id UUID REFERENCES batches(id);` (set on remainder batch created by short-cut split).
+- `ALTER TABLE batches ADD COLUMN short_reason TEXT;` (reason notes recorded on short-cut reduction).
+- Backfill: `UPDATE batches SET cut_qty = quantity WHERE current_phase <> 'cutting';`
+
 ## Key invariants
 - One open cutting log per batch; many open stitching/packing logs (one per joined worker).
 - `phase_logs.quantity_completed` for stitching/packing = that worker's scan count, set when the phase auto-completes.
 - Every unit's `stitched_by`/`packed_by` is set by the scan that completed it — the per-mat truth and the wage record.
 - Quotas, when present on a phase, must sum to `batches.quantity`.
+- Short-cut policy: cutter reports cut count `N < Q`. Batch enters `awaiting_assignment` with short-cut banner. Admin chooses:
+  1. `split`: batch quantity reduced to `N`, remainder batch `(Q - N)` created with `parent_batch_id`.
+  2. `reduce`: batch quantity reduced to `N`, un-cut units marked cancelled, reason logged in `short_reason`.
+  3. `recut`: cutter re-assigned to cut remaining `(Q - N)` pieces.
 
 ## Reset (dev)
 ```bash

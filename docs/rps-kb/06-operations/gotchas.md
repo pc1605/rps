@@ -2,29 +2,16 @@
 
 ## Shell / tooling
 - The tool shell is `sh`, not bash: **no brace expansion** (`mkdir dir/{a,b}` makes a literal `{a,b}` dir). Zsh needs `"*:S"` quoted in logcat filters.
+- **zsh glob quoting**: In zsh, unquoted globs like `prettier --check apps/**/*.{ts,tsx}` trigger `zsh: no matches found`. Always wrap file patterns in quotes (`"apps/**/*.{ts,tsx}"`).
+- **golangci-lint PATH**: The binary typically resides in `$(go env GOPATH)/bin`. If `golangci-lint: command not found`, add `export PATH=$PATH:$(go env GOPATH)/bin` to `.bashrc`/`.zshrc`.
+- **Prettier / Biome split**: Biome is strictly used for fast AST linting (`pnpm lint`). Prettier is the authoritative formatter (`pnpm format:check` / `pnpm format`). Do not run `biome format --write` as it produces style diffs that fail CI Prettier checks.
+- **Typecheck scripts**: Always verify TypeScript across all packages with `pnpm typecheck` (`pnpm -r --if-present typecheck`), which checks `@rps/shared`, `apps/admin-web`, and `apps/mobile` in dependency order.
 - `.env` for migrations is at the **repo root**, not `apps/backend`. `source: no such file` / `URL cannot be empty` = wrong cwd.
 - golang-migrate leaves a **dirty** version after a half-failed migration: `force <prev>` then fix and `up`.
 - pnpm blocks postinstall scripts: `[ERR_PNPM_IGNORED_BUILDS]` → `pnpm approve-builds` (select) → `pnpm install`. Hoisted layout ⇒ packages are in the **root** `node_modules`.
 
-## Postgres
-- Check enum type names before writing migrations (`batch_phase`, `batch_status`, `worker_station`); guessed names failed twice.
-- `batch_code_counters` columns are `(year, last_number)`; `workers.created_by` is NOT NULL (seed scripts must set it).
-- Enum values can't be dropped; `ADD VALUE` can't be used by the same transaction that adds it.
-- `LEFT JOIN` + `BOOL_OR(x IS NULL)` is true when there are **no** rows (the joined row is all-NULL) — guard with `AND id IS NOT NULL` or use `EXISTS`.
-- Filtering a join by date also filters "is currently working" — compute that with an independent `EXISTS`.
-
-## Go / pgx
-- SELECT columns ≠ Scan targets → runtime error "number of field descriptions must equal number of destinations", or **silently swapped values when types match** (happened in GetStats). Align vertically.
-- Nullable columns → pointer fields (`*time.Time`, `*int`, `*string`).
-- Guards that must reject early (e.g. "packing completes automatically") must be the **first** thing in the function, not after the work is done.
-- Handlers swallow errors into a generic 500 — always `log.Error().Err(err)` first.
-- A pasted line landing inside a `Scan(...)` argument list produces `expected '==', found '='` two lines later.
-
-## Fiber
-- CORS `AllowMethods` must include every verb the web app uses (PUT was missing → preflight blocked). Native apps don't hit CORS, so Postman/mobile won't reveal it.
-- Guard on the `/api/v1` group runs before route matching → unknown paths give 401, not 404 (intentional).
-
 ## Next.js / React
+- **Radix Dialog click race**: Selecting an item from a shadcn `<Select>` inside a `<Dialog>` fires a pointer-down event on the select portal that Radix Dialog interprets as an outside click, causing the dialog to dismiss prematurely. Fixed in `components/ui/dialog.tsx` by setting a `menuOpenAtPointerDown` ref in `onPointerDownOutside` and calling `e.preventDefault()`.
 - TanStack v5: `isLoading = isPending && isFetching`. A **disabled** query or an **errored** query has `isLoading === false` with no data → empty-state flash. Branch on `isPending` and add an error branch.
 - `react-hooks/set-state-in-effect` lint: don't sync props into state in effects; remount with `key` or load in the dialog's `onOpenChange`.
 - `useSearchParams` needs a `<Suspense>` boundary.

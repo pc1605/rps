@@ -1,6 +1,13 @@
 # Testing
 
-## Postman collection (`rps.postman_collection.json` at repo root — VERIFY name)
+## Automated Smoke Tests
+```bash
+# Run real DB query smoke test (validates SELECT/Scan bindings, migrations, column aliases)
+cd apps/backend && set -a; source ../../.env; set +a
+go test -v ./internal/batch -run TestReadQueriesSmoke
+```
+
+## Postman collection (`apps/backend/RPS.postman_collection.json`)
 Variables: `baseUrl` (localhost:8080/api/v1), `accessToken`, `workerToken` (cutter), `stitcherToken`, `stitcher2Token`,
 `packerToken`, badge vars, `batchId`, `workerBatchId`, `scanBatchId/Code`, `stockRollId`, `reportFrom/To`.
 Convention: tests read `const responseData = pm.response.json().data`, assert `code` fields not messages (except worker-login

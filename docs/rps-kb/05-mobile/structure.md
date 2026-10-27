@@ -12,18 +12,19 @@ app/
   home.tsx               header (station queue label, name, sign out); queue FlatList of BatchCard; pull-to-refresh; error state
   batch/[id].tsx         station-specific action card (cutter: Start / blocked / qty+Complete; stitcher/packer: Join / progress+Open scanner)
   scan/[batchId].tsx     CameraView scanner: local validation, scan lock, feedback flashes, progress pill, done screen
-components/ui/           Screen, Card, AppButton
+components/ui/           AppButton, Banner, Card, Chip, Screen, Skeleton, Stat
 features/auth/
   store.ts               zustand: worker, login(code,pin), restore() (/worker/me), logout(); token in SecureStore
   enroll-draft.ts        zustand: badge scanned on enroll-scan, consumed by login (cleared after login)
 features/batches/
   types.ts               Batch (queue payload), ScanResult
   api.ts                 myBatches, start, complete, scanUnit
-  hooks.ts               useMyBatches (poll ~15s), useStartBatch, useCompleteBatch, useScanUnit (invalidates on phase/batch completion)
+  hooks.ts               useMyBatches (poll ~10-15s), useStartBatch, useCompleteBatch, useScanUnit (invalidates on phase/batch completion)
 lib/
   api-client.ts          axios; token interceptor from SecureStore; ApiError{status, code, message}; ngrok-skip-browser-warning header
-  theme.ts               dark + light AppTheme (string colors, text.eyebrow|title|label|body|button, spacing, radius)
+  theme.ts               dark + light AppTheme (Plex Sans & Mono, 4-pt grid, touch targets 48/56, contrast-verified tokens)
   unistyles.ts           StyleSheet.configure(themes, adaptiveThemes: true)
+  use-online.ts          NetInfo hook driving offline notice banners across screens
   query-provider.tsx
 ```
 

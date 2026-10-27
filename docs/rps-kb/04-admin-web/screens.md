@@ -11,6 +11,7 @@ Packed n/m · Created. **Packing view only**: extra column **Print stickers** �
 
 ## Batch detail — `/batches/[id]`
 - Header: code, model · qty · size, notes; **Labels PDF** (taffeta reprint); badge shows `ready for stitching` when parked.
+- **Short-cut panel** (`ShortCutPanel`): renders when `cut_qty < quantity` and `current_phase === "stitching"`. Displays amber warning banner with short piece count, and three resolution actions (`Split`, `Reduce`, `Recut`) triggering `POST /batches/:id/resolve-short`.
 - **Stitching assignment card** (only while `current_phase === "stitching"`):
   - pulsing "Ready for stitching — assign to release" while parked
   - one row per active stitcher: checkbox, `N done ·` (if any), quota input (`min` = done)
@@ -19,6 +20,11 @@ Packed n/m · Created. **Packing view only**: extra column **Print stickers** �
   - unchecking a stitcher with done > 0 is blocked with a toast (server enforces too)
 - **Production timeline**: one card per phase_log (icon/color per phase, worker, times, duration, pcs, notes; dashed/pulsing when open).
 - **Units grid**: `unit_code` · badge `pending | stitched (pink) | packed (lime) | defective | dispatched` · `🧵 stitched_by_name` · `📦 packed_by_name`.
+
+## Cars (Catalog) — `/cars`
+Catalog management of flat car items.
+- Table: Brand · Car model · Size (`S` / `M` / `L`) · Product line (`Rexine (R)`, `PVC 1.8 mm`) · Barcode (mono 12-digit sequence or custom) · Status (`Active` / `Inactive`) · Edit button.
+- **Add / Edit Item dialog** (`ItemDialog`): Brand select or inline new brand creation, car model name, size class, pieces per set (default 4), product line select, barcode input with "Generate on save" wand helper. Programmatic `<Label htmlFor="…">` and `<form onSubmit>` handling.
 
 ## Workers
 Table: name · station badge · active · last login · **QR icon** → EnrollmentQrDialog (fetches `/workers/:id/enrollment`, shows

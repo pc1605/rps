@@ -4,7 +4,7 @@
 | App | Tech | Port | Location |
 |---|---|---|---|
 | Backend API | Go + Fiber v2, pgx/pgxpool (raw SQL), golang-migrate, golang-jwt, bcrypt, zerolog | **8080** | `apps/backend` |
-| Database | PostgreSQL 16 in Docker (container `rps_postgres`) | **5433** on host | `docker-compose` at repo root (**VERIFY** filename) |
+| Database | PostgreSQL 16 in Docker (container `rps_postgres`) | **5433** on host | `docker-compose.yml` at repo root |
 | Adminer | DB browser | **8083** | Server field must be `postgres` (compose service name), not `db` |
 | Admin web | Next.js 16 (App Router, Turbopack), shadcn/ui, TanStack Query v5, Zustand, axios | **3000** | `apps/admin-web` |
 | Worker mobile | Expo SDK 57 **dev build** (not Expo Go), expo-router, Unistyles v3, expo-secure-store, expo-camera, TanStack Query, Zustand | Metro **8081** | `apps/mobile` |

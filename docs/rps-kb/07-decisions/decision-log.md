@@ -56,3 +56,21 @@ Direct APK now; EAS Build/Update after deploy. Auth is the access control. iOS n
 
 ### D17 — Phase filter lives in the sidebar, not page tabs (Sept 2026)
 Persistent sub-nav with live counts doubles as the status board; `?phase=` query param avoids clashing with `/batches/[id]`.
+
+### D18 — Flat car items over separate products table (Sept 2026)
+Floor mats are modeled directly as flat items on `car_models` (`brand_id`, `name`, `size_class`, `product_line_id`, `barcode`, `is_active`) rather than an abstract many-to-many product hierarchy. Barcodes live directly on the row, either entered manually or auto-generated via sequence `car_barcode_seq` with Luhn check digits (12-digit scanner-safe). Eliminates joins and keeps catalog operations fast.
+
+### D19 — Short-cut policy: Admin decides (split / reduce / recut) (Sept 2026)
+When a cutter completes a batch with `cut_qty < quantity`, the decision to adjust plans belongs to the admin, not the cutter. The batch pauses in `awaiting_assignment` with an amber short-cut banner. Admin has three explicit actions:
+1. `split`: batch quantity reduced to cut_qty; remainder batch created for remaining units with `parent_batch_id`.
+2. `reduce`: batch quantity clamped to cut_qty; un-cut units marked `cancelled`; `short_reason` logged.
+3. `recut`: cutting phase re-opened so a cutter can complete the shortfall.
+
+### D20 — Strict per-head quotas enforced at scan (Sept 2026)
+Stitcher quotas on `batch_assignments` (`target_qty`) are strictly validated on every scan. The server increments attribution and rejects scans beyond `target_qty` with 409 `quota_reached`. Guarantees piece-rate equity across workers and eliminates disputes.
+
+### D21 — Single formatter policy: Prettier for formatting, Biome for linting (Sept 2026)
+Biome handles high-speed AST linting (`pnpm lint`). Prettier is the single authoritative source of truth for code formatting (`pnpm format:check` / `pnpm format`). Prevents style conflicts and formatting fights across editors and git hooks.
+
+### D22 — `@rps/shared` package for cross-workspace truth (Sept 2026)
+Shared TypeScript package (`packages/shared/`) contains phase labels, status labels, size maps, and shared domain constants. Resolves D01's duplicated constants between web, mobile, and documentation.
