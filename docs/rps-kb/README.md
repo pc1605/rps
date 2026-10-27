@@ -31,6 +31,7 @@ work without the original conversation history.
 | `06-operations/` | Daily runbook, testing (Postman + manual scripts), gotchas |
 | `07-decisions/` | Decision log (ADR style) — the *why* behind everything |
 | `08-roadmap/` | Current status, remaining slices with designs, backlog |
+| `09-design/` | Design system tokens, component primitives, UI patterns, audit notes, polish backlog |
 
 ## Conventions used in this KB
 

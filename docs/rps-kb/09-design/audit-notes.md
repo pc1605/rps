@@ -1,0 +1,24 @@
+# RPS UI & Accessibility Audit Notes (P1–P5)
+
+This document records the design, accessibility, ergonomics, and reliability issues identified and resolved across iterations P1 through P5.
+
+---
+
+## Summary of Fixes
+
+| Area | Before (Issues) | After (Resolution) | Primary Files |
+|---|---|---|---|
+| **Color Tokens** | 5 duplicated, disconnected color maps across web and mobile. Hardcoded hex colors scattered in inline styles. | Single unified token hierarchy in `globals.css` + `lib/tokens.ts` (web) and `lib/theme.ts` (mobile). | `apps/admin-web/app/globals.css`<br>`apps/admin-web/lib/tokens.ts`<br>`apps/mobile/lib/theme.ts` |
+| **Amber Meaning** | Amber was overloaded: used for warnings, cutting phase, random borders, buttons, and decorative icons. | Amber (`--accent` / `#b45309`) strictly means **"Act here"**: primary buttons, unassigned batches, assigned-to-you card border, and focus rings. | `apps/admin-web/app/globals.css`<br>`apps/mobile/lib/theme.ts` |
+| **Responsive Shell** | Desktop-only layout with rigid 64-column navigation rail; horizontal scrollbars on tablets and phones. | Responsive shell with slide-over drawer (`Sheet`) on mobile, top bar with quick actions, and adaptive padding. | `apps/admin-web/components/layout/app-shell.tsx`<br>`apps/admin-web/components/layout/sidebar.tsx` |
+| **Data Tables** | Tables broke layout on screens `< 768px`, truncating columns and actions. | `DataTable` automatically renders responsive stacked cards `< md`, keeping actions visible. | `apps/admin-web/components/rps/data-table.tsx` |
+| **Form Labels** | Radix `<Label>` tags lacked `htmlFor` attributes, leaving form inputs unassociated for screen readers. | Full programmatic `htmlFor` + `id` pairing, explicit button types (`type="submit"` / `type="button"`), and `<form>` wrapping. | `apps/admin-web/features/catalog/components/item-dialog.tsx`<br>`apps/admin-web/features/workers/components/create-worker-dialog.tsx`<br>`apps/admin-web/features/stock/components/add-roll-dialog.tsx` |
+| **Accessible Buttons** | Icon-only buttons (`size="icon"`) lacked text or `aria-label`, leaving screen readers silent. | `aria-label` added to all icon buttons (theme toggle, sidebar menu, copy code, close buttons). | `apps/admin-web/components/ui/dialog.tsx`<br>`apps/admin-web/components/ui/sheet.tsx`<br>`apps/admin-web/features/workers/components/enrollment-qr-dialog.tsx` |
+| **Color Contrast** | Several token pairs failed WCAG AA 4.5:1 (light teal `#0d9488` at 3.58:1, light green `#16a34a` at 3.15:1, dark flash colors at 3.19:1). | Clamped light teal to `#0f766e` (5.23:1), light green to `#15803d` (4.80:1), and mobile flash colors to `>= 5.0:1`. | `apps/admin-web/app/globals.css`<br>`apps/mobile/lib/theme.ts` |
+| **Keyboard Nav** | Table rows with click actions were unreachable by keyboard; missing `:focus-visible` outlines. | Added `role="button"`, `tabIndex={0}`, Enter/Space key handlers, and visible amber focus rings (`:focus-visible`). | `apps/admin-web/components/rps/data-table.tsx`<br>`apps/admin-web/app/globals.css` |
+| **Dialog Click Race** | Radix Dialog closed unintentionally when selecting dropdown options due to pointer-down outside click race. | Added pointer-down flag ref in `components/ui/dialog.tsx` to prevent Radix from dismissing open dialogs during dropdown selection. | `apps/admin-web/components/ui/dialog.tsx` |
+| **Dashboard Low Stock** | Dashboard low-stock banner never rendered because condition checked nonexistent field on raw response. | Fixed stock query mapping to check `is_low` / `remaining_meters < 10` properly. | `apps/admin-web/features/stock/hooks.ts`<br>`apps/admin-web/app/(dashboard)/dashboard/page.tsx` |
+| **Mobile Font Scale** | Fixed-height buttons and inputs clipped text when user set Android font scale to 1.3x. | Migrated fixed `height: 56` to `minHeight: 56`, allowing flex containers to expand with large system text. | `apps/mobile/components/ui/AppButton.tsx`<br>`apps/mobile/app/batch/[id].tsx`<br>`apps/mobile/app/login.tsx` |
+| **Security & Logging** | Backend logged worker PINs and bearer tokens during authentication failures. | Stripped sensitive credential logging from HTTP request loggers and auth handlers. | `apps/backend/internal/auth/handler.go`<br>`apps/backend/internal/worker/handler.go` |
+| **Reduced Motion** | Pulse dots on active batch chips kept animating even when `prefers-reduced-motion` was active. | Added `@media (prefers-reduced-motion: reduce)` in `globals.css` clamping animations to `0.01ms !important`. | `apps/admin-web/app/globals.css` |
+| **Scanner Ergonomics** | Scanner camera froze on rapid consecutive scans; lacked audio/haptic feedback. | Implemented debounced scan locking ref, distinct haptic feedback per scan outcome, and accessibility announcements. | `apps/mobile/app/scan/[batchId].tsx` |
