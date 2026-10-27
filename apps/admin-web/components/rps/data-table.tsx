@@ -79,8 +79,23 @@ export function DataTable<T>({
             {rows.map((r) => (
               <TableRow
                 key={rowKey(r)}
+                tabIndex={onRowClick ? 0 : undefined}
+                role={onRowClick ? "button" : undefined}
                 onClick={onRowClick ? () => onRowClick(r) : undefined}
-                className={cn(onRowClick && "cursor-pointer")}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onRowClick(r);
+                        }
+                      }
+                    : undefined
+                }
+                className={cn(
+                  onRowClick &&
+                    "cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]",
+                )}
               >
                 {columns.map((c) => (
                   <TableCell key={c.key} className={cn("px-4 py-3.5", alignClass[c.align ?? "left"])}>
@@ -98,8 +113,24 @@ export function DataTable<T>({
         {rows.map((r) => (
           <li key={rowKey(r)}>
             <Card
-              className={cn("p-4", onRowClick && "active:bg-accent")}
+              role={onRowClick ? "button" : undefined}
+              tabIndex={onRowClick ? 0 : undefined}
+              className={cn(
+                "p-4",
+                onRowClick &&
+                  "cursor-pointer active:bg-accent focus-visible:outline-2 focus-visible:outline-brand",
+              )}
               onClick={onRowClick ? () => onRowClick(r) : undefined}
+              onKeyDown={
+                onRowClick
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onRowClick(r);
+                      }
+                    }
+                  : undefined
+              }
             >
               <div className="mb-3">{title.cell(r)}</div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2">

@@ -88,106 +88,134 @@ function ItemForm({ item, onDone }: { item?: CarItem; onDone: () => void }) {
 
   return (
     <DialogContent className="sm:max-w-md">
-      <DialogHeader>
-        <DialogTitle>{item ? "Edit item" : "Add item"}</DialogTitle>
-      </DialogHeader>
-      <div className="grid gap-4 py-2">
-        <div className="grid gap-1.5">
-          <Label>Brand</Label>
-          <Select
-            value={brandId}
-            onValueChange={(v) => {
-              setBrandId(v);
-              setNewBrand("");
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select brand" />
-            </SelectTrigger>
-            <SelectContent>
-              {brands?.map((b) => (
-                <SelectItem key={b.id} value={String(b.id)}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            placeholder="…or type a new brand"
-            value={newBrand}
-            onChange={(e) => {
-              setNewBrand(e.target.value);
-              if (e.target.value) setBrandId("");
-            }}
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label>Car model</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Baleno" />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          save();
+        }}
+        className="grid gap-4"
+      >
+        <DialogHeader>
+          <DialogTitle>{item ? "Edit item" : "Add item"}</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-2">
           <div className="grid gap-1.5">
-            <Label>Size</Label>
-            <Select value={size} onValueChange={(v) => setSize(v as CarItem["size_class"])}>
-              <SelectTrigger>
-                <SelectValue />
+            <Label htmlFor="item-brand">Brand</Label>
+            <Select
+              value={brandId}
+              onValueChange={(v) => {
+                setBrandId(v);
+                setNewBrand("");
+              }}
+            >
+              <SelectTrigger id="item-brand">
+                <SelectValue placeholder="Select brand" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="small">Small</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="large">Large</SelectItem>
+                {brands?.map((b) => (
+                  <SelectItem key={b.id} value={String(b.id)}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Label htmlFor="item-new-brand" className="sr-only">
+              New brand
+            </Label>
+            <Input
+              id="item-new-brand"
+              placeholder="…or type a new brand"
+              value={newBrand}
+              onChange={(e) => {
+                setNewBrand(e.target.value);
+                if (e.target.value) setBrandId("");
+              }}
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="item-name">Car model</Label>
+            <Input
+              id="item-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Baleno"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="item-size">Size</Label>
+              <Select value={size} onValueChange={(v) => setSize(v as CarItem["size_class"])}>
+                <SelectTrigger id="item-size">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="small">Small</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="large">Large</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="item-pieces">Pieces per set</Label>
+              <Input
+                id="item-pieces"
+                type="number"
+                min={1}
+                value={pieces}
+                onChange={(e) => setPieces(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="item-line">Product line</Label>
+            <Select value={lineId} onValueChange={setLineId}>
+              <SelectTrigger id="item-line">
+                <SelectValue placeholder="Rexine (R), PVC 1.8 mm…" />
+              </SelectTrigger>
+              <SelectContent>
+                {lines?.map((l) => (
+                  <SelectItem key={l.id} value={String(l.id)}>
+                    {l.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="grid gap-1.5">
-            <Label>Pieces per set</Label>
-            <Input type="number" min={1} value={pieces} onChange={(e) => setPieces(e.target.value)} />
+            <Label htmlFor="item-barcode">Barcode</Label>
+            <div className="flex gap-2">
+              <Input
+                id="item-barcode"
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+                placeholder="Scan, type, or leave blank to generate"
+                className="font-mono"
+              />
+              {!item && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  title="Generate on save"
+                  aria-label="Generate on save"
+                  onClick={() => setBarcode("")}
+                >
+                  <Wand2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">Blank = RPS generates a 12-digit code on save.</p>
           </div>
         </div>
-        <div className="grid gap-1.5">
-          <Label>Product line</Label>
-          <Select value={lineId} onValueChange={setLineId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Rexine (R), PVC 1.8 mm…" />
-            </SelectTrigger>
-            <SelectContent>
-              {lines?.map((l) => (
-                <SelectItem key={l.id} value={String(l.id)}>
-                  {l.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid gap-1.5">
-          <Label>Barcode</Label>
-          <div className="flex gap-2">
-            <Input
-              value={barcode}
-              onChange={(e) => setBarcode(e.target.value)}
-              placeholder="Scan, type, or leave blank to generate"
-              className="font-mono"
-            />
-            {!item && (
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                title="Generate on save"
-                onClick={() => setBarcode("")}
-              >
-                <Wand2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">Blank = RPS generates a 12-digit code on save.</p>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button onClick={save} disabled={!canSave || busy}>
-          {item ? "Save changes" : "Add item"}
-        </Button>
-      </DialogFooter>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onDone}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={!canSave || busy}>
+            {item ? "Save changes" : "Add item"}
+          </Button>
+        </DialogFooter>
+      </form>
     </DialogContent>
   );
 }

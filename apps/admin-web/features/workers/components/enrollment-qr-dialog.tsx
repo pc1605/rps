@@ -53,16 +53,18 @@ export function EnrollmentQrDialog({ workerId, workerName }: { workerId: string;
             <div className="rounded-lg border bg-muted/40 p-3 flex items-center justify-between gap-3">
               <code className="font-mono text-xs break-all">{badge}</code>
               <Button
+                type="button"
                 variant="outline"
                 size="icon"
                 className="shrink-0"
+                aria-label={copied ? "Copied" : "Copy enrollment code"}
                 onClick={() => {
                   navigator.clipboard.writeText(badge);
                   setCopied(true);
                   setTimeout(() => setCopied(false), 1500);
                 }}
               >
-                {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                {copied ? <Check className="h-4 w-4 text-working" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
           </>

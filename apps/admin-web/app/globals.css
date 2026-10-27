@@ -26,11 +26,11 @@
   /* phases — never used for buttons */
   --phase-cutting: #2563eb;
   --phase-stitching: #9333ea;
-  --phase-packing: #0d9488;
+  --phase-packing: #0f766e;
   --phase-completed: #15803d;
 
   /* states */
-  --state-working: #16a34a;
+  --state-working: #15803d;
   --state-danger: #b91c1c;
   --state-info: #2563eb;
 
