@@ -223,6 +223,7 @@ export default function ScanScreen() {
               onPress={() => setTorch((t) => !t)}
               accessibilityRole="button"
               accessibilityLabel={torch ? "Turn torch off" : "Turn torch on"}
+              accessibilityState={{ selected: torch }}
               style={styles.topBarBtn}
             >
               <Text style={styles.topBarText}>{torch ? "🔦 Torch on" : "🔦 Torch off"}</Text>

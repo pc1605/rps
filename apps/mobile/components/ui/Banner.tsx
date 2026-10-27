@@ -16,7 +16,12 @@ export function Banner({
     <View style={[styles.wrap, styles[kind]]} accessibilityRole="alert">
       <Text style={styles.text}>{text}</Text>
       {actionLabel && (
-        <Pressable onPress={onAction} hitSlop={12}>
+        <Pressable
+          onPress={onAction}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel}
+        >
           <Text style={styles.action}>{actionLabel}</Text>
         </Pressable>
       )}

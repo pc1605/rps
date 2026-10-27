@@ -38,6 +38,7 @@ function BatchCard({
       disabled={blocked}
       accessibilityRole="button"
       accessibilityLabel={`Batch ${batch.batch_code}, ${batch.brand_name} ${batch.model_name}`}
+      accessibilityState={{ disabled: blocked }}
     >
       <Card style={[styles.batchCard, mine && styles.cardMine, blocked && styles.cardBlocked]}>
         <View style={styles.cardHeader}>

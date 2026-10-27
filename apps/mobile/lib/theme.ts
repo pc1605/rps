@@ -100,8 +100,8 @@ const light: ThemeColors = {
   accent: "#B45309",
   accentFg: "#FFFFFF",
   accentSoft: "rgba(180,83,9,0.10)",
-  phase: { cutting: "#2563EB", stitching: "#9333EA", packing: "#0D9488", completed: "#15803D" },
-  success: "#16A34A",
+  phase: { cutting: "#2563EB", stitching: "#9333EA", packing: "#0F766E", completed: "#15803D" },
+  success: "#15803D",
   danger: "#B91C1C",
   dangerBg: "rgba(185,28,28,0.10)",
   warning: "#B45309",
@@ -144,7 +144,7 @@ const dark: ThemeColors = {
   overlayTextMuted: "rgba(255,255,255,0.80)",
   overlayBorder: "rgba(255,255,255,0.85)",
   cameraBg: "#000000",
-  flash: { ok: "#16A34A", dup: "#D97706", quota: "#2563EB", err: "#DC2626" },
+  flash: { ok: "#15803D", dup: "#B45309", quota: "#2563EB", err: "#DC2626" },
 };
 
 export const lightTheme: AppTheme = {

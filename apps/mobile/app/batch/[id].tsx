@@ -213,6 +213,7 @@ export default function BatchAction() {
                 disabled={qtyNum <= 1}
                 accessibilityRole="button"
                 accessibilityLabel="Decrease quantity"
+                accessibilityState={{ disabled: qtyNum <= 1 }}
                 style={({ pressed }) => [
                   styles.stepBtn,
                   qtyNum <= 1 && styles.stepBtnDisabled,
@@ -235,6 +236,7 @@ export default function BatchAction() {
                 disabled={qtyNum >= remaining}
                 accessibilityRole="button"
                 accessibilityLabel="Increase quantity"
+                accessibilityState={{ disabled: qtyNum >= remaining }}
                 style={({ pressed }) => [
                   styles.stepBtn,
                   qtyNum >= remaining && styles.stepBtnDisabled,
@@ -403,7 +405,7 @@ const styles = StyleSheet.create((theme) => ({
   },
   stepBtn: {
     width: theme.touch.primary,
-    height: theme.touch.primary,
+    minHeight: theme.touch.primary,
     borderRadius: theme.radius.md,
     backgroundColor: theme.colors.surface2,
     borderWidth: 1,
