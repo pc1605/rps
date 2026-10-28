@@ -1,15 +1,14 @@
 import { PHASE_LABEL, SIZE_LABEL } from "@rps/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Alert, Pressable, Text, TextInput, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../components/ui/AppButton";
 import { Banner } from "../../components/ui/Banner";
 import { Card } from "../../components/ui/Card";
 import { Chip } from "../../components/ui/Chip";
 import { Screen } from "../../components/ui/Screen";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Stat } from "../../components/ui/Stat";
 import { useAuth } from "../../features/auth/store";
@@ -20,7 +19,6 @@ import { useOnline } from "../../lib/use-online";
 export default function BatchAction() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { worker } = useAuth();
   const { data: batches, isPending } = useMyBatches();
   const startBatch = useStartBatch();
@@ -32,7 +30,7 @@ export default function BatchAction() {
 
   if (isPending) {
     return (
-      <Screen style={styles.centerLoading}>
+      <Screen header={<ScreenHeader back="Queue" />}>
         <View style={styles.skeletonContainer}>
           <Skeleton width="30%" height={36} />
           <Skeleton width="60%" height={28} />
@@ -46,7 +44,7 @@ export default function BatchAction() {
 
   if (!batch) {
     return (
-      <Screen style={styles.centerLoading}>
+      <Screen header={<ScreenHeader back="Queue" />}>
         <View style={styles.notFoundWrap}>
           <Text style={styles.notFoundTitle}>Batch not found</Text>
           <Text style={styles.notFoundText}>
@@ -118,196 +116,160 @@ export default function BatchAction() {
     setQty(String(Math.min(remaining, current + 1)));
   };
 
-  return (
-    <Screen style={styles.screen}>
-      <StatusBar style="auto" />
-
-      {/* Top Header */}
-      <View style={[styles.topHeader, { paddingTop: Math.max(insets.top + 8, 48) }]}>
+  const primaryAction = (() => {
+    if (isCutter && !mine && batch.status === "pending") {
+      return (
+        <AppButton title="Start cutting" size="lg" onPress={handleStart} loading={startBatch.isPending} />
+      );
+    }
+    if (isCutter && mine) {
+      return (
         <AppButton
-          title="← Queue"
-          variant="ghost"
-          size="md"
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Back to queue"
+          title="Report cut"
+          size="lg"
+          onPress={handleComplete}
+          disabled={!qtyValid}
+          loading={completeBatch.isPending}
+        />
+      );
+    }
+    if (scanStation && !mine) {
+      return <AppButton title="Join batch" size="lg" onPress={handleStart} loading={startBatch.isPending} />;
+    }
+    if (scanStation && mine) {
+      return <AppButton title="Open scanner" size="lg" onPress={() => router.push(`/scan/${batch.id}`)} />;
+    }
+    return undefined;
+  })();
+
+  return (
+    <Screen header={<ScreenHeader back="Queue" title={batch.batch_code} />} footer={primaryAction}>
+      {!isOnline && (
+        <View style={styles.bannerWrap}>
+          <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
+        </View>
+      )}
+
+      {/* Top: Batch Code + Phase */}
+      <View style={styles.codeRow}>
+        <Text style={styles.batchCode}>{batch.batch_code}</Text>
+        <Chip
+          label={PHASE_LABEL[batch.current_phase] ?? batch.current_phase}
+          color={styles.phaseColor(batch.current_phase).color}
+          dot
         />
       </View>
 
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: themeSpacing.xl }]}
-        keyboardShouldPersistTaps="handled"
-      >
-        {!isOnline && (
-          <View style={styles.bannerWrap}>
-            <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
-          </View>
-        )}
-
-        {/* Top: Batch Code + Phase */}
-        <View style={styles.codeRow}>
-          <Text style={styles.batchCode}>{batch.batch_code}</Text>
-          <Chip
-            label={PHASE_LABEL[batch.current_phase] ?? batch.current_phase}
-            color={styles.phaseColor(batch.current_phase).color}
-            dot
-          />
-        </View>
-
-        <Text style={styles.modelLine}>
-          {batch.brand_name} {batch.model_name}
-          <Text style={styles.modelMeta}>
-            {" · "}
-            {sizeText}
-            {batch.line_name ? ` · ${batch.line_name}` : ""}
-          </Text>
+      <Text style={styles.modelLine}>
+        {batch.brand_name} {batch.model_name}
+        <Text style={styles.modelMeta}>
+          {" · "}
+          {sizeText}
+          {batch.line_name ? ` · ${batch.line_name}` : ""}
         </Text>
+      </Text>
 
-        {/* Middle: Relevant Big Stat */}
-        <Card style={styles.statCard}>
-          {isCutter ? (
-            <Stat value={batch.quantity} label="mats to cut" big />
-          ) : batch.my_target_qty != null ? (
-            <Stat value={batch.my_done_qty ?? 0} of={batch.my_target_qty} label="your share" big />
-          ) : (
-            <Stat
-              value={isStitcher ? stitchDone : batch.units_packed}
-              of={batch.units_total}
-              label={isStitcher ? "mats stitched" : "mats packed"}
-              big
-            />
-          )}
-        </Card>
-
-        {/* Info Rows */}
-        <View style={styles.infoSection}>
-          {batch.assigned_workers ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Assigned workers</Text>
-              <Text style={styles.infoValue}>📌 {batch.assigned_workers}</Text>
-            </View>
-          ) : null}
-
-          {batch.active_workers ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Active workers</Text>
-              <Text style={styles.infoValue}>👤 {batch.active_workers}</Text>
-            </View>
-          ) : null}
-
-          {batch.notes ? (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Notes</Text>
-              <Text style={styles.notesText}>✎ {batch.notes}</Text>
-            </View>
-          ) : null}
-        </View>
-
-        {/* Cutter mine stepper inside content */}
-        {isCutter && mine && (
-          <Card style={styles.stepperCard}>
-            <Text style={styles.stepperCaption}>Pieces completed</Text>
-            <View style={styles.stepperRow}>
-              <Pressable
-                onPress={stepDecrement}
-                disabled={qtyNum <= 1}
-                accessibilityRole="button"
-                accessibilityLabel="Decrease quantity"
-                accessibilityState={{ disabled: qtyNum <= 1 }}
-                style={({ pressed }) => [
-                  styles.stepBtn,
-                  qtyNum <= 1 && styles.stepBtnDisabled,
-                  pressed && qtyNum > 1 && styles.stepBtnPressed,
-                ]}
-              >
-                <Text style={[styles.stepBtnText, qtyNum <= 1 && styles.stepBtnTextDisabled]}>−</Text>
-              </Pressable>
-
-              <TextInput
-                value={quantity}
-                onChangeText={(t) => setQty(t.replace(/\D/g, ""))}
-                keyboardType="number-pad"
-                style={styles.stepperInput}
-                accessibilityLabel="Quantity completed"
-              />
-
-              <Pressable
-                onPress={stepIncrement}
-                disabled={qtyNum >= remaining}
-                accessibilityRole="button"
-                accessibilityLabel="Increase quantity"
-                accessibilityState={{ disabled: qtyNum >= remaining }}
-                style={({ pressed }) => [
-                  styles.stepBtn,
-                  qtyNum >= remaining && styles.stepBtnDisabled,
-                  pressed && qtyNum < remaining && styles.stepBtnPressed,
-                ]}
-              >
-                <Text style={[styles.stepBtnText, qtyNum >= remaining && styles.stepBtnTextDisabled]}>+</Text>
-              </Pressable>
-            </View>
-            <Text style={styles.stepperSubtext}>
-              {remaining} remaining of {batch.quantity}
-            </Text>
-          </Card>
+      {/* Middle: Relevant Big Stat */}
+      <Card style={styles.statCard}>
+        {isCutter ? (
+          <Stat value={batch.quantity} label="mats to cut" big />
+        ) : batch.my_target_qty != null ? (
+          <Stat value={batch.my_done_qty ?? 0} of={batch.my_target_qty} label="your share" big />
+        ) : (
+          <Stat
+            value={isStitcher ? stitchDone : batch.units_packed}
+            of={batch.units_total}
+            label={isStitcher ? "mats stitched" : "mats packed"}
+            big
+          />
         )}
-      </ScrollView>
+      </Card>
 
-      {/* Bottom-anchored action area */}
-      <View style={[styles.actionArea, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <View style={styles.actionAreaInner}>
-          {isCutter && !mine && batch.status === "pending" && (
-            <AppButton title="Start cutting" size="lg" onPress={handleStart} loading={startBatch.isPending} />
-          )}
+      {/* Info Rows */}
+      <View style={styles.infoSection}>
+        {batch.assigned_workers ? (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Assigned workers</Text>
+            <Text style={styles.infoValue}>📌 {batch.assigned_workers}</Text>
+          </View>
+        ) : null}
 
-          {isCutter && !mine && batch.status === "in_progress" && (
-            <View style={styles.takenNotice}>
-              <Text style={styles.takenText}>
-                ⏳ {batch.active_workers ?? "Another cutter"} is cutting this batch
-              </Text>
-            </View>
-          )}
+        {batch.active_workers ? (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Active workers</Text>
+            <Text style={styles.infoValue}>👤 {batch.active_workers}</Text>
+          </View>
+        ) : null}
 
-          {isCutter && mine && (
-            <AppButton
-              title="Report cut"
-              size="lg"
-              onPress={handleComplete}
-              disabled={!qtyValid}
-              loading={completeBatch.isPending}
-            />
-          )}
-
-          {scanStation && !mine && (
-            <AppButton title="Join batch" size="lg" onPress={handleStart} loading={startBatch.isPending} />
-          )}
-
-          {scanStation && mine && (
-            <AppButton title="Open scanner" size="lg" onPress={() => router.push(`/scan/${batch.id}`)} />
-          )}
-        </View>
+        {batch.notes ? (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Notes</Text>
+            <Text style={styles.notesText}>✎ {batch.notes}</Text>
+          </View>
+        ) : null}
       </View>
+
+      {/* Cutter mine stepper inside content */}
+      {isCutter && mine && (
+        <Card style={styles.stepperCard}>
+          <Text style={styles.stepperCaption}>Pieces completed</Text>
+          <View style={styles.stepperRow}>
+            <Pressable
+              onPress={stepDecrement}
+              disabled={qtyNum <= 1}
+              accessibilityRole="button"
+              accessibilityLabel="Decrease quantity"
+              accessibilityState={{ disabled: qtyNum <= 1 }}
+              style={({ pressed }) => [
+                styles.stepBtn,
+                qtyNum <= 1 && styles.stepBtnDisabled,
+                pressed && qtyNum > 1 && styles.stepBtnPressed,
+              ]}
+            >
+              <Text style={[styles.stepBtnText, qtyNum <= 1 && styles.stepBtnTextDisabled]}>−</Text>
+            </Pressable>
+
+            <TextInput
+              value={quantity}
+              onChangeText={(t) => setQty(t.replace(/\D/g, ""))}
+              keyboardType="number-pad"
+              style={styles.stepperInput}
+              accessibilityLabel="Quantity completed"
+            />
+
+            <Pressable
+              onPress={stepIncrement}
+              disabled={qtyNum >= remaining}
+              accessibilityRole="button"
+              accessibilityLabel="Increase quantity"
+              accessibilityState={{ disabled: qtyNum >= remaining }}
+              style={({ pressed }) => [
+                styles.stepBtn,
+                qtyNum >= remaining && styles.stepBtnDisabled,
+                pressed && qtyNum < remaining && styles.stepBtnPressed,
+              ]}
+            >
+              <Text style={[styles.stepBtnText, qtyNum >= remaining && styles.stepBtnTextDisabled]}>+</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.stepperSubtext}>
+            {remaining} remaining of {batch.quantity}
+          </Text>
+        </Card>
+      )}
+
+      {isCutter && !mine && batch.status === "in_progress" && (
+        <View style={styles.takenNotice}>
+          <Text style={styles.takenText}>
+            ⏳ {batch.active_workers ?? "Another cutter"} is cutting this batch
+          </Text>
+        </View>
+      )}
     </Screen>
   );
 }
 
-const themeSpacing = {
-  sm: 12,
-  md: 16,
-  lg: 24,
-  xl: 32,
-};
-
 const styles = StyleSheet.create((theme) => ({
-  screen: {
-    flex: 1,
-  },
-  centerLoading: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing.lg,
-  },
   skeletonContainer: {
     alignSelf: "center",
     width: "100%",
@@ -328,23 +290,6 @@ const styles = StyleSheet.create((theme) => ({
     ...theme.text.body,
     color: theme.colors.textMuted,
     textAlign: "center",
-  },
-  topHeader: {
-    alignSelf: "center",
-    width: "100%",
-    maxWidth: 560,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.xs,
-  },
-  scrollContent: {
-    alignSelf: "center",
-    width: "100%",
-    maxWidth: 560,
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xs,
-    gap: theme.spacing.md,
   },
   bannerWrap: {
     marginBottom: theme.spacing.xs,
@@ -439,18 +384,6 @@ const styles = StyleSheet.create((theme) => ({
   stepperSubtext: {
     ...theme.text.caption,
     color: theme.colors.textFaint,
-  },
-  actionArea: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.bg,
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
-  },
-  actionAreaInner: {
-    alignSelf: "center",
-    width: "100%",
-    maxWidth: 560,
   },
   takenNotice: {
     minHeight: theme.touch.primary,

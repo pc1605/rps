@@ -4,8 +4,8 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
-import { AccessibilityInfo, Pressable, ScrollView, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AccessibilityInfo, Pressable, Text, View } from "react-native";
+import { type EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../components/ui/AppButton";
 import { Screen } from "../components/ui/Screen";
@@ -22,7 +22,7 @@ export default function EnrollScan() {
 
   if (!permission) {
     return (
-      <Screen style={styles.centerLoading}>
+      <Screen centered>
         <Skeleton width="60%" height={24} />
       </Screen>
     );
@@ -30,18 +30,12 @@ export default function EnrollScan() {
 
   if (!permission.granted) {
     return (
-      <Screen style={styles.permScreen}>
-        <StatusBar style="auto" />
-        <ScrollView contentContainerStyle={styles.permScroll} keyboardShouldPersistTaps="handled">
-          <View style={styles.permContent}>
-            <Text style={styles.permTitle}>Camera needed</Text>
-            <Text style={styles.permText}>To scan your enrollment code.</Text>
-            <View style={styles.permBtnWrap}>
-              <AppButton title="Allow camera" size="lg" onPress={requestPermission} />
-            </View>
-            <AppButton title="← Back" variant="ghost" size="md" onPress={() => router.back()} />
-          </View>
-        </ScrollView>
+      <Screen centered footer={<AppButton title="Allow camera" size="lg" onPress={requestPermission} />}>
+        <View style={styles.permContent}>
+          <Text style={styles.permTitle}>Camera needed</Text>
+          <Text style={styles.permText}>To scan your enrollment code.</Text>
+          <AppButton title="← Back" variant="ghost" size="md" onPress={() => router.back()} />
+        </View>
       </Screen>
     );
   }
@@ -79,7 +73,7 @@ export default function EnrollScan() {
   };
 
   return (
-    <View style={styles.cameraScreen}>
+    <Screen edges={[]} scroll={false}>
       <StatusBar style="light" />
       <CameraView
         style={styles.cameraView}
@@ -89,7 +83,7 @@ export default function EnrollScan() {
       />
 
       <View style={styles.overlayContainer} pointerEvents="box-none">
-        <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 8, 36) }]}>
+        <View style={styles.topBar(insets)}>
           <Pressable
             onPress={() => router.back()}
             accessibilityRole="button"
@@ -105,10 +99,7 @@ export default function EnrollScan() {
           <Text style={styles.hint}>Point at the enrollment QR on the admin screen</Text>
         </View>
 
-        <View
-          style={[styles.bottomFlashWrap, { paddingBottom: Math.max(insets.bottom + 16, 24) }]}
-          pointerEvents="box-none"
-        >
+        <View style={styles.bottomFlashWrap(insets)} pointerEvents="box-none">
           {error && (
             <View style={styles.flash}>
               <Text style={styles.flashText}>✗ {error}</Text>
@@ -116,35 +107,13 @@ export default function EnrollScan() {
           )}
         </View>
       </View>
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
-  cameraScreen: {
-    flex: 1,
-    backgroundColor: theme.colors.cameraBg,
-  },
   cameraView: {
-    flex: 1,
-  },
-  centerLoading: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing.lg,
-  },
-  permScreen: {
-    flex: 1,
-  },
-  permScroll: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: theme.spacing.lg,
-    alignSelf: "center",
-    width: "100%",
-    maxWidth: 560,
+    ...StyleSheet.absoluteFillObject,
   },
   permContent: {
     width: "100%",
@@ -162,19 +131,22 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.textMuted,
     textAlign: "center",
   },
-  permBtnWrap: {
-    width: "100%",
-    marginTop: theme.spacing.sm,
-  },
   overlayContainer: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: "space-between",
   },
-  topBar: {
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.xs,
+  topBar: (insets: EdgeInsets) => ({
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 56 + insets.top + theme.spacing.xs,
+    paddingTop: insets.top + theme.spacing.xs,
+    paddingLeft: insets.left + theme.spacing.md,
+    paddingRight: insets.right + theme.spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: theme.colors.overlay,
-  },
+  }),
   topBarBtn: {
     minHeight: theme.touch.min,
     minWidth: theme.touch.min,
@@ -187,6 +159,7 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.overlayText,
   },
   frameWrap: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -204,10 +177,13 @@ const styles = StyleSheet.create((theme) => ({
     textAlign: "center",
     paddingHorizontal: theme.spacing.xl,
   },
-  bottomFlashWrap: {
-    paddingHorizontal: theme.spacing.lg,
+  bottomFlashWrap: (insets: EdgeInsets) => ({
+    position: "absolute",
+    bottom: insets.bottom + theme.spacing.lg,
+    left: insets.left + theme.spacing.md,
+    right: insets.right + theme.spacing.md,
     alignItems: "center",
-  },
+  }),
   flash: {
     width: "100%",
     maxWidth: 480,

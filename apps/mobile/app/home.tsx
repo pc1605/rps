@@ -1,15 +1,14 @@
 import { PHASE_LABEL, SIZE_LABEL, STATION_LABEL } from "@rps/shared";
 import { useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../components/ui/AppButton";
 import { Banner } from "../components/ui/Banner";
 import { Card } from "../components/ui/Card";
 import { Chip } from "../components/ui/Chip";
 import { Screen } from "../components/ui/Screen";
+import { ScreenHeader } from "../components/ui/ScreenHeader";
 import { Skeleton } from "../components/ui/Skeleton";
 import { Stat } from "../components/ui/Stat";
 import { useAuth } from "../features/auth/store";
@@ -126,7 +125,6 @@ function QueueSkeleton() {
 
 export default function Home() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { worker, restore, logout } = useAuth();
   const { data: batches, isPending, isError, isRefetching, refetch } = useMyBatches();
   const isOnline = useOnline();
@@ -141,26 +139,27 @@ export default function Home() {
     : "My queue";
 
   return (
-    <Screen>
-      <StatusBar style="auto" />
-
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top + 16, 56) }]}>
-        <View style={styles.headerInfo}>
-          <Text style={styles.stationLabel}>{stationTitle}</Text>
-          <Text style={styles.name}>{worker?.name ?? "…"}</Text>
-        </View>
-        <AppButton
-          title="Sign out"
-          variant="ghost"
-          size="md"
-          onPress={async () => {
-            await logout();
-            router.replace("/login");
-          }}
+    <Screen
+      scroll={false}
+      header={
+        <ScreenHeader
+          large
+          subtitle={stationTitle}
+          title={worker?.name ?? "…"}
+          right={
+            <AppButton
+              title="Sign out"
+              variant="ghost"
+              size="md"
+              onPress={async () => {
+                await logout();
+                router.replace("/login");
+              }}
+            />
+          }
         />
-      </View>
-
+      }
+    >
       {!isOnline && (
         <View style={styles.bannerWrap}>
           <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
@@ -201,29 +200,6 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create((theme) => ({
-  header: {
-    alignSelf: "center",
-    width: "100%",
-    maxWidth: 560,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.md,
-  },
-  headerInfo: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
-  },
-  stationLabel: {
-    ...theme.text.small,
-    color: theme.colors.textMuted,
-  },
-  name: {
-    ...theme.text.title,
-    color: theme.colors.text,
-    marginTop: theme.spacing.xxs,
-  },
   bannerWrap: {
     alignSelf: "center",
     width: "100%",
@@ -235,8 +211,8 @@ const styles = StyleSheet.create((theme) => ({
     alignSelf: "center",
     width: "100%",
     maxWidth: 560,
-    padding: theme.spacing.lg,
-    paddingTop: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
     gap: theme.spacing.sm,
     flexGrow: 1,
   },

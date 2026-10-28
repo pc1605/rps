@@ -1,8 +1,6 @@
 import { useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Text, TextInput, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../components/ui/AppButton";
 import { Banner } from "../components/ui/Banner";
@@ -12,7 +10,6 @@ import { useAuth } from "../features/auth/store";
 
 export default function Login() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { login, error, submitting } = useAuth();
   const [pin, setPin] = useState("");
   const code = useEnrollDraft((s) => s.badge);
@@ -29,105 +26,79 @@ export default function Login() {
   };
 
   return (
-    <Screen style={styles.screen}>
-      <StatusBar style="auto" />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
-      >
-        <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top + 16, 56) }]}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.header}>
-            <Text style={styles.eyebrow}>AMBIKA · RIDDHI</Text>
-            <Text style={styles.title}>RPS Worker</Text>
-            <Text style={styles.subtitle}>
-              Scan the enrollment QR from your admin, or type the code, then enter your PIN to set up this
-              phone.
-            </Text>
-          </View>
-
-          {/* Primary Scan Button at top of form */}
-          <View style={styles.scanBtnWrap}>
-            <AppButton
-              title={code ? "Scan a different code" : "Scan enrollment code"}
-              icon={<Text style={styles.camIcon}>📷</Text>}
-              variant={code ? "secondary" : "primary"}
-              size="lg"
-              onPress={() => router.push("/enroll-scan")}
-            />
-          </View>
-
-          {/* Fallback code input */}
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Enrollment code</Text>
-            <TextInput
-              value={code}
-              onChangeText={setCode}
-              placeholder="or type the code"
-              placeholderTextColor={styles.placeholder.color}
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={[styles.input, styles.codeInput, !!code && styles.inputFilled]}
-            />
-          </View>
-
-          {/* PIN Input */}
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>4-digit PIN</Text>
-            <TextInput
-              value={pin}
-              onChangeText={(t) => setPin(t.replace(/\D/g, "").slice(0, 4))}
-              placeholder="••••"
-              placeholderTextColor={styles.placeholder.color}
-              keyboardType="number-pad"
-              secureTextEntry
-              maxLength={4}
-              style={[styles.input, styles.pinInput]}
-            />
-          </View>
-
-          {error ? (
-            <View style={styles.errorWrap}>
-              <Banner kind="danger" text={error} />
-            </View>
-          ) : null}
-        </ScrollView>
-
-        {/* Bottom-anchored action area */}
-        <View style={[styles.bottomAction, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          <View style={styles.bottomActionInner}>
-            <AppButton
-              title="Set up this phone →"
-              size="lg"
-              onPress={handleLogin}
-              disabled={!canSubmit}
-              loading={submitting}
-            />
-            <Text style={styles.footnote}>One-time setup. You'll stay signed in on this phone.</Text>
-          </View>
+    <Screen
+      centered
+      footer={
+        <View style={styles.bottomActionInner}>
+          <AppButton
+            title="Set up this phone →"
+            size="lg"
+            onPress={handleLogin}
+            disabled={!canSubmit}
+            loading={submitting}
+          />
+          <Text style={styles.footnote}>One-time setup. You'll stay signed in on this phone.</Text>
         </View>
-      </KeyboardAvoidingView>
+      }
+    >
+      <View style={styles.header}>
+        <Text style={styles.eyebrow}>AMBIKA · RIDDHI</Text>
+        <Text style={styles.title}>RPS Worker</Text>
+        <Text style={styles.subtitle}>
+          Scan the enrollment QR from your admin, or type the code, then enter your PIN to set up this phone.
+        </Text>
+      </View>
+
+      {/* Primary Scan Button at top of form */}
+      <View style={styles.scanBtnWrap}>
+        <AppButton
+          title={code ? "Scan a different code" : "Scan enrollment code"}
+          icon={<Text style={styles.camIcon}>📷</Text>}
+          variant={code ? "secondary" : "primary"}
+          size="lg"
+          onPress={() => router.push("/enroll-scan")}
+        />
+      </View>
+
+      {/* Fallback code input */}
+      <View style={styles.field}>
+        <Text style={styles.fieldLabel}>Enrollment code</Text>
+        <TextInput
+          value={code}
+          onChangeText={setCode}
+          placeholder="or type the code"
+          placeholderTextColor={styles.placeholder.color}
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={[styles.input, styles.codeInput, !!code && styles.inputFilled]}
+        />
+      </View>
+
+      {/* PIN Input */}
+      <View style={styles.field}>
+        <Text style={styles.fieldLabel}>4-digit PIN</Text>
+        <TextInput
+          value={pin}
+          onChangeText={(t) => setPin(t.replace(/\D/g, "").slice(0, 4))}
+          placeholder="••••"
+          placeholderTextColor={styles.placeholder.color}
+          keyboardType="number-pad"
+          secureTextEntry
+          maxLength={4}
+          style={[styles.input, styles.pinInput]}
+        />
+      </View>
+
+      {error ? (
+        <View style={styles.errorWrap}>
+          <Banner kind="danger" text={error} />
+        </View>
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
-  screen: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    alignSelf: "center",
-    width: "100%",
-    maxWidth: 560,
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
-    gap: theme.spacing.md,
-  },
   header: {
     marginBottom: theme.spacing.xs,
   },
@@ -186,13 +157,6 @@ const styles = StyleSheet.create((theme) => ({
   },
   errorWrap: {
     marginTop: theme.spacing.xs,
-  },
-  bottomAction: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.bg,
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
   },
   bottomActionInner: {
     alignSelf: "center",
