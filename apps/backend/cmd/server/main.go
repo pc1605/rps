@@ -41,9 +41,14 @@ func main() {
 	defer pool.Close()
 	log.Info().Msg("✓ database connected")
 
+	// ───── File Storage ─────
+	if err := os.MkdirAll(cfg.UploadDir+"/rework", 0750); err != nil {
+		log.Fatal().Err(err).Msg("failed to create upload directory")
+	}
+
 	// ───── Services (dependency wiring) ─────
 	authSvc := auth.NewService(pool, cfg.JWTAccessSecret, cfg.JWTRefreshSecret, cfg.JWTAccessTTL, cfg.JWTRefreshTTL)
-	batchSvc := batch.NewService(pool)
+	batchSvc := batch.NewService(pool, cfg.UploadDir)
 	refSvc := reference.NewService(pool)
 	workerSvc := worker.NewService(pool)
 	stockSvc := stock.NewService(pool)
@@ -73,6 +78,7 @@ func newApp(cfg *config.Config) *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName:               "RPS Backend v0.1",
 		DisableStartupMessage: true,
+		BodyLimit:             20 * 1024 * 1024,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			log.Error().Err(err).Str("path", c.Path()).Msg("request error")
 			return httpx.Internal(c, "something went wrong")

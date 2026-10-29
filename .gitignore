@@ -64,6 +64,7 @@ Thumbs.db
 logs/
 tmp/
 temp/
+uploads/
 .cache/
 *.tar.gz
 *.zip

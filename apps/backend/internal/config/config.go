@@ -21,6 +21,7 @@ type Config struct {
 	JWTRefreshTTL    time.Duration
 	QRHashSecret     string
 	CORSOrigins      []string
+	UploadDir        string
 }
 
 func Load() (*Config, error) {
@@ -38,6 +39,7 @@ func Load() (*Config, error) {
 		JWTRefreshSecret: mustEnv("JWT_REFRESH_SECRET"),
 		QRHashSecret:     getEnv("QR_HASH_SECRET", ""),
 		CORSOrigins:      strings.Split(getEnv("CORS_ORIGINS", "http://localhost:3000"), ","),
+		UploadDir:        getEnv("UPLOAD_DIR", "./uploads"),
 	}
 
 	accessMin, _ := strconv.Atoi(getEnv("JWT_ACCESS_TTL_MINUTES", "15"))

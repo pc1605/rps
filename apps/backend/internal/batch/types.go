@@ -25,6 +25,7 @@ const (
 	UnitPacked               UnitStatus = "packed"
 	UnitDefective            UnitStatus = "defective"
 	UnitDispatched           UnitStatus = "dispatched"
+	UnitRework               UnitStatus = "rework"
 	StatusAwaitingAssignment Status     = "awaiting_assignment"
 )
 
@@ -46,6 +47,7 @@ type Batch struct {
 	Status        Status     `json:"status"`
 	Notes         string     `json:"notes,omitempty"`
 	ReworkCount   int        `json:"rework_count"`
+	ReworkOpen    int        `json:"rework_open"`
 	CreatedBy     uuid.UUID  `json:"created_by"`
 	CreatedByName string     `json:"created_by_name,omitempty"`
 	Version       int        `json:"version"`
@@ -74,16 +76,17 @@ type Batch struct {
 
 // Unit is one physical mat.
 type Unit struct {
-	ID             uuid.UUID  `json:"id"`
-	BatchID        uuid.UUID  `json:"batch_id"`
-	UnitCode       string     `json:"unit_code"`
-	UnitNumber     int        `json:"unit_number"`
-	Status         UnitStatus `json:"status"`
-	PackedAt       *time.Time `json:"packed_at,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
-	StitchedAt     *time.Time `json:"stitched_at,omitempty"`
-	StitchedByName *string    `json:"stitched_by_name,omitempty"`
-	PackedByName   *string    `json:"packed_by_name,omitempty"`
+	ID             uuid.UUID     `json:"id"`
+	BatchID        uuid.UUID     `json:"batch_id"`
+	UnitCode       string        `json:"unit_code"`
+	UnitNumber     int           `json:"unit_number"`
+	Status         UnitStatus    `json:"status"`
+	PackedAt       *time.Time    `json:"packed_at,omitempty"`
+	CreatedAt      time.Time     `json:"created_at"`
+	StitchedAt     *time.Time    `json:"stitched_at,omitempty"`
+	StitchedByName *string       `json:"stitched_by_name,omitempty"`
+	PackedByName   *string       `json:"packed_by_name,omitempty"`
+	Rework         []ReworkEntry `json:"rework"`
 }
 
 type BatchDetail struct {
@@ -131,6 +134,7 @@ type ScanResult struct {
 	TotalUnits     int    `json:"total_units"`
 	PhaseCompleted bool   `json:"phase_completed"` // stitching → packing
 	BatchCompleted bool   `json:"batch_completed"` // packing → done
+	ReworkFixed    bool   `json:"rework_fixed,omitempty"`
 }
 
 // AssignmentInput — one assignee + optional quota (nil = uncapped).
@@ -145,4 +149,35 @@ type AssignmentEntry struct {
 	WorkerName string    `json:"worker_name"`
 	TargetQty  *int      `json:"target_qty,omitempty"`
 	DoneQty    int       `json:"done_qty"`
+}
+
+type ReworkPhoto struct {
+	ID  uuid.UUID `json:"id"`
+	URL string    `json:"url"`
+}
+
+type ReworkEntry struct {
+	ID            uuid.UUID     `json:"id"`
+	UnitID        uuid.UUID     `json:"unit_id"`
+	UnitCode      string        `json:"unit_code,omitempty"`
+	BatchID       uuid.UUID     `json:"batch_id"`
+	BatchCode     string        `json:"batch_code,omitempty"`
+	Brand         string        `json:"brand,omitempty"`
+	BrandName     string        `json:"brand_name,omitempty"`
+	Model         string        `json:"model,omitempty"`
+	ModelName     string        `json:"model_name,omitempty"`
+	SizeClass     string        `json:"size_class,omitempty"`
+	LineName      *string       `json:"line_name,omitempty"`
+	Round         int           `json:"round"`
+	Reasons       []string      `json:"reasons"`
+	Note          *string       `json:"note,omitempty"`
+	Route         string        `json:"route"`
+	FlaggedByName string        `json:"flagged_by_name"`
+	FlaggedAt     time.Time     `json:"flagged_at"`
+	Decision      *string       `json:"decision,omitempty"`
+	DecidedAt     *time.Time    `json:"decided_at,omitempty"`
+	FixedByName   *string       `json:"fixed_by_name,omitempty"`
+	FixedAt       *time.Time    `json:"fixed_at,omitempty"`
+	Photos        []ReworkPhoto `json:"photos"`
+	NewBatchCode  *string       `json:"new_batch_code,omitempty"`
 }
