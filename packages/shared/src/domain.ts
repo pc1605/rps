@@ -2,9 +2,41 @@
 
 export type Phase = "cutting" | "stitching" | "packing" | "completed";
 export type BatchStatus = "pending" | "in_progress" | "awaiting_assignment" | "completed" | "cancelled";
-export type UnitStatus = "pending" | "packed" | "defective" | "dispatched";
+export type UnitStatus = "pending" | "packed" | "defective" | "dispatched" | "rework";
 export type Station = "cutter" | "stitcher" | "packer";
 export type SizeClass = "small" | "medium" | "large";
+
+export type ReworkReason = "stitching_fault" | "stain" | "cutting_fault" | "material_defect" | "other";
+export type ReworkRoute = "stitcher" | "admin";
+export type ReworkDecision = "to_stitcher" | "recut" | "write_off";
+
+export interface ReworkPhoto {
+  id: string;
+  url: string;
+}
+
+export interface ReworkEntry {
+  id: string;
+  unit_id: string;
+  unit_code?: string;
+  batch_id: string;
+  batch_code?: string;
+  brand_name?: string;
+  model_name?: string;
+  size_class?: SizeClass;
+  line_name?: string;
+  round: number;
+  reasons: ReworkReason[];
+  note?: string;
+  route: ReworkRoute;
+  flagged_by_name: string;
+  flagged_at: string;
+  decision?: ReworkDecision;
+  decided_at?: string;
+  fixed_by_name?: string;
+  fixed_at?: string;
+  photos: ReworkPhoto[];
+}
 
 export interface Batch {
   id: string;
@@ -24,6 +56,7 @@ export interface Batch {
   status: BatchStatus;
   notes?: string;
   rework_count: number;
+  rework_open?: number;
   created_by: string;
   created_by_name?: string;
   version: number;
@@ -56,6 +89,7 @@ export interface Unit {
   stitched_by_name?: string;
   packed_at?: string;
   packed_by_name?: string;
+  rework?: ReworkEntry[];
 }
 
 export interface PhaseLogEntry {
@@ -96,6 +130,8 @@ export interface BatchStats {
   in_packing: number;
   completed_today: number;
   total_active: number;
+  rework_open: number;
+  rework_needs_decision: number;
 }
 
 export interface ScanResult {
@@ -107,6 +143,7 @@ export interface ScanResult {
   total_units: number;
   phase_completed: boolean;
   batch_completed: boolean;
+  rework_fixed?: boolean;
 }
 
 export interface Worker {

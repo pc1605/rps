@@ -1,4 +1,4 @@
-import type { BatchStatus, Phase, SizeClass, Station } from "./domain";
+import type { BatchStatus, Phase, ReworkReason, SizeClass, Station } from "./domain";
 
 /** Unit QR payload, e.g. B-2026-005-003. Labels, scanner and backend must agree. */
 export const UNIT_CODE_RE = /^B-\d{4}-\d{3}-\d{3}$/;
@@ -31,6 +31,14 @@ export const STATUS_LABEL: Partial<Record<BatchStatus, string>> = {
   cancelled: "Cancelled",
 };
 
+export const REWORK_REASON_LABEL: Record<ReworkReason, string> = {
+  stitching_fault: "Stitching fault",
+  stain: "Stain / dirt",
+  cutting_fault: "Cutting fault",
+  material_defect: "Material defect",
+  other: "Other",
+};
+
 /** API error codes (the `code` field of error responses). */
 export type ApiErrorCode =
   | "not_found"
@@ -42,5 +50,9 @@ export type ApiErrorCode =
   | "quota_reached"
   | "duplicate_barcode"
   | "duplicate_code"
+  | "in_rework"
+  | "rework_pending_decision"
+  | "not_your_rework"
+  | "rework_not_open"
   | "unauthorized"
   | "internal";
