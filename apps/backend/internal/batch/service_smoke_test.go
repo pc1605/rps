@@ -41,6 +41,21 @@ func TestReadQueriesSmoke(t *testing.T) {
 		}
 	}
 
+	// Rework queries smoke
+	if _, err := s.ListReworkForStitcher(ctx, uuid.New()); err != nil {
+		t.Fatalf("ListReworkForStitcher: %v", err)
+	}
+	if _, err := s.ListRework(ctx, "open", nil); err != nil {
+		t.Fatalf("ListRework(open): %v", err)
+	}
+	if _, err := s.ListRework(ctx, "all", nil); err != nil {
+		t.Fatalf("ListRework(all): %v", err)
+	}
+	adminRoute := "admin"
+	if _, err := s.ListRework(ctx, "open", &adminRoute); err != nil {
+		t.Fatalf("ListRework(open, admin): %v", err)
+	}
+
 	// Exercise Get on one batch per phase, so every unit/timeline/assignment path runs
 	seen := map[Phase]bool{}
 	for _, b := range list {

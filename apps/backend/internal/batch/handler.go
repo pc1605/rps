@@ -2,6 +2,11 @@ package batch
 
 import (
 	"errors"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -11,6 +16,8 @@ import (
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
 	"github.com/rs/zerolog/log"
 )
+
+var reworkFileRegex = regexp.MustCompile(`^[0-9a-f-]{36}\.(jpg|png)$`)
 
 type Handler struct {
 	svc *Service
@@ -173,6 +180,14 @@ func (h *Handler) ScanUnit(c *fiber.Ctx) error {
 	res, err := h.svc.ScanUnit(c.Context(), strings.TrimSpace(in.UnitCode), wid, auth.StationFromCtx(c), c.IP())
 	if err != nil {
 		switch {
+		case errors.Is(err, ErrInRework):
+			return httpx.Error(c, fiber.StatusConflict, "in_rework", "This mat is waiting for rework")
+		case errors.Is(err, ErrReworkPendingDecision):
+			return httpx.Error(c, fiber.StatusConflict, "rework_pending_decision", "Rework is awaiting admin decision")
+		case errors.Is(err, ErrNotYourRework):
+			return httpx.Error(c, fiber.StatusForbidden, "not_your_rework", "This rework is assigned to another stitcher")
+		case errors.Is(err, ErrReworkNotOpen):
+			return httpx.Error(c, fiber.StatusConflict, "rework_not_open", "Rework round is not open")
 		case errors.Is(err, ErrUnitNotFound):
 			return httpx.Error(c, fiber.StatusNotFound, "unit_not_found", "unknown QR — not an RPS unit label")
 		case errors.Is(err, ErrWrongPhase):
@@ -184,6 +199,7 @@ func (h *Handler) ScanUnit(c *fiber.Ctx) error {
 		case errors.Is(err, ErrNotYours):
 			return httpx.Forbidden(c, ErrNotYours.Error())
 		default:
+			log.Error().Err(err).Msg("scan unit")
 			return httpx.Internal(c, "scan failed")
 		}
 	}
@@ -284,4 +300,220 @@ func (h *Handler) ResolveShort(c *fiber.Ctx) error {
 		}
 	}
 	return httpx.OK(c, fiber.Map{"message": "resolved", "remainder_batch_code": remainder})
+}
+
+func (h *Handler) FlagRework(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "worker" {
+		return httpx.Forbidden(c, "worker token required")
+	}
+	if auth.StationFromCtx(c) != "packer" {
+		return httpx.Forbidden(c, "packer station required")
+	}
+	wid, _ := auth.WorkerID(c)
+	unitCode := strings.TrimSpace(c.Params("code"))
+	if unitCode == "" {
+		return httpx.BadRequest(c, "unit code required")
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		return httpx.BadRequest(c, "invalid multipart form")
+	}
+
+	var rawReasons []string
+	if vals, ok := form.Value["reasons"]; ok {
+		for _, val := range vals {
+			for _, part := range strings.Split(val, ",") {
+				p := strings.TrimSpace(part)
+				if p != "" {
+					rawReasons = append(rawReasons, p)
+				}
+			}
+		}
+	}
+	if len(rawReasons) == 0 {
+		return httpx.BadRequest(c, "at least one rework reason required")
+	}
+
+	var notePtr *string
+	if notes, ok := form.Value["note"]; ok && len(notes) > 0 {
+		n := strings.TrimSpace(notes[0])
+		if n != "" {
+			notePtr = &n
+		}
+	}
+
+	files := form.File["photos"]
+	if len(files) < 1 || len(files) > 3 {
+		return httpx.BadRequest(c, "1 to 3 photos required")
+	}
+
+	uploadDir := h.svc.UploadDir()
+	reworkDir := filepath.Join(uploadDir, "rework")
+	if err := os.MkdirAll(reworkDir, 0750); err != nil {
+		log.Error().Err(err).Msg("ensure rework upload dir")
+		return httpx.Internal(c, "failed to prepare upload storage")
+	}
+
+	var savedFiles []string
+	cleanSaved := func() {
+		for _, sf := range savedFiles {
+			_ = os.Remove(sf)
+		}
+	}
+
+	for _, file := range files {
+		if file.Size > 5*1024*1024 {
+			cleanSaved()
+			return httpx.BadRequest(c, "each photo must be 5MB or less")
+		}
+		src, err := file.Open()
+		if err != nil {
+			cleanSaved()
+			return httpx.BadRequest(c, "unable to read photo")
+		}
+		buf := make([]byte, 512)
+		n, err := src.Read(buf)
+		_ = src.Close()
+		if err != nil && !errors.Is(err, io.EOF) {
+			cleanSaved()
+			return httpx.BadRequest(c, "unable to inspect photo content")
+		}
+		contentType := http.DetectContentType(buf[:n])
+		var ext string
+		switch contentType {
+		case "image/jpeg":
+			ext = ".jpg"
+		case "image/png":
+			ext = ".png"
+		default:
+			cleanSaved()
+			return httpx.BadRequest(c, "photos must be jpeg or png")
+		}
+
+		filename := uuid.New().String() + ext
+		destPath := filepath.Join(reworkDir, filename)
+		if err := c.SaveFile(file, destPath); err != nil {
+			cleanSaved()
+			log.Error().Err(err).Msg("save rework photo")
+			return httpx.Internal(c, "failed to save photo")
+		}
+		savedFiles = append(savedFiles, destPath)
+	}
+
+	entry, err := h.svc.FlagRework(c.Context(), unitCode, wid, "packer", rawReasons, notePtr, savedFiles, c.IP())
+	if err != nil {
+		cleanSaved()
+		switch {
+		case errors.Is(err, ErrUnitNotFound):
+			return httpx.Error(c, fiber.StatusNotFound, "unit_not_found", "unit not found")
+		case errors.Is(err, ErrWrongPhase):
+			return httpx.Error(c, fiber.StatusConflict, "wrong_phase", err.Error())
+		case errors.Is(err, ErrNotStarted):
+			return httpx.Error(c, fiber.StatusConflict, "not_started", "join this batch before flagging rework")
+		case errors.Is(err, ErrInvalidInput):
+			return httpx.BadRequest(c, err.Error())
+		default:
+			log.Error().Err(err).Msg("flag rework")
+			return httpx.Internal(c, "failed to flag rework")
+		}
+	}
+
+	return httpx.OK(c, entry)
+}
+
+func (h *Handler) WorkerRework(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "worker" {
+		return httpx.Forbidden(c, "worker token required")
+	}
+	if auth.StationFromCtx(c) != "stitcher" {
+		return httpx.Forbidden(c, "stitcher station required")
+	}
+	wid, _ := auth.WorkerID(c)
+
+	items, err := h.svc.ListReworkForStitcher(c.Context(), wid)
+	if err != nil {
+		log.Error().Err(err).Msg("list rework for stitcher")
+		return httpx.Internal(c, "failed to list rework")
+	}
+	if items == nil {
+		items = []ReworkEntry{}
+	}
+	return httpx.OK(c, items)
+}
+
+func (h *Handler) AdminListRework(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "user" {
+		return httpx.Forbidden(c, "admin token required")
+	}
+	status := c.Query("status", "open")
+	var routePtr *string
+	if r := strings.TrimSpace(c.Query("route")); r != "" {
+		routePtr = &r
+	}
+
+	items, err := h.svc.ListRework(c.Context(), status, routePtr)
+	if err != nil {
+		if errors.Is(err, ErrInvalidInput) {
+			return httpx.BadRequest(c, err.Error())
+		}
+		log.Error().Err(err).Msg("list rework")
+		return httpx.Internal(c, "failed to list rework")
+	}
+	if items == nil {
+		items = []ReworkEntry{}
+	}
+	return httpx.OK(c, items)
+}
+
+func (h *Handler) AdminDecideRework(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "user" {
+		return httpx.Forbidden(c, "admin token required")
+	}
+	adminID, ok := auth.UserID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "missing user context")
+	}
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid rework id")
+	}
+	var in struct {
+		Decision string  `json:"decision"`
+		Note     *string `json:"note,omitempty"`
+	}
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+
+	entry, err := h.svc.DecideRework(c.Context(), id, strings.TrimSpace(in.Decision), in.Note, adminID, c.IP())
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return httpx.Error(c, fiber.StatusNotFound, "not_found", "rework entry not found")
+		case errors.Is(err, ErrReworkNotOpen):
+			return httpx.Error(c, fiber.StatusConflict, "rework_not_open", ErrReworkNotOpen.Error())
+		case errors.Is(err, ErrInvalidInput):
+			return httpx.BadRequest(c, err.Error())
+		default:
+			log.Error().Err(err).Msg("decide rework")
+			return httpx.Internal(c, "failed to decide rework")
+		}
+	}
+	return httpx.OK(c, entry)
+}
+
+func (h *Handler) ServeReworkFile(c *fiber.Ctx) error {
+	name := c.Params("name")
+	if !reworkFileRegex.MatchString(name) {
+		return httpx.BadRequest(c, "invalid file name")
+	}
+
+	filePath := filepath.Join(h.svc.UploadDir(), "rework", name)
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return httpx.Error(c, fiber.StatusNotFound, "not_found", "file not found")
+	}
+
+	c.Set("Cache-Control", "private, max-age=86400")
+	return c.SendFile(filePath)
 }

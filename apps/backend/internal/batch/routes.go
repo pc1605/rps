@@ -15,6 +15,13 @@ func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 	api.Get("/batches/:id", h.Get)
 	api.Get("/worker/batches", h.WorkerBatches)
 
+	// Rework routes
+	api.Post("/worker/units/:code/rework", h.FlagRework)
+	api.Get("/worker/rework", h.WorkerRework)
+	api.Get("/rework", h.AdminListRework)
+	api.Post("/rework/:id/decide", h.AdminDecideRework)
+	api.Get("/files/rework/:name", h.ServeReworkFile)
+
 	// Only owner + supervisor can create (Week 2 decision)
 	api.Post("/batches", authSvc.RequireRole("owner", "supervisor"), h.Create)
 	api.Post("/worker/batches/:id/start", h.StartBatch)

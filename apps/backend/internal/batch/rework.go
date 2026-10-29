@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -182,13 +183,14 @@ func (s *Service) FlagRework(ctx context.Context, unitCode string, workerID uuid
 
 	photos := make([]ReworkPhoto, 0, len(photoPaths))
 	for _, p := range photoPaths {
+		filename := filepath.Base(p)
 		photoID := uuid.New()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO rework_photos (id, rework_id, path) VALUES ($1, $2, $3)
-		`, photoID, reworkID, p); err != nil {
+		`, photoID, reworkID, filename); err != nil {
 			return nil, err
 		}
-		photos = append(photos, ReworkPhoto{ID: photoID, URL: "/api/v1/files/rework/" + p})
+		photos = append(photos, ReworkPhoto{ID: photoID, URL: "/api/v1/files/rework/" + filename})
 	}
 
 	if _, err := tx.Exec(ctx, `UPDATE batch_units SET status = 'rework' WHERE id = $1`, unitID); err != nil {
