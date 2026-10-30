@@ -1,6 +1,5 @@
 import { batchCodeOf, UNIT_CODE_RE } from "@rps/shared";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
@@ -14,9 +13,10 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { useAuth } from "../../features/auth/store";
 import { useMyBatches, useScanUnit } from "../../features/batches/hooks";
 import { ApiError } from "../../lib/api-client";
+import { feedback as triggerFeedback } from "../../lib/feedback";
 import { useOnline } from "../../lib/use-online";
 
-type Feedback =
+type FlashState =
   | { kind: "ok"; code: string }
   | { kind: "dup"; code: string }
   | { kind: "quota"; mine: number; target: number }
@@ -42,7 +42,7 @@ export default function ScanScreen() {
     mine: batch?.my_done_qty ?? 0,
     target: batch?.my_target_qty ?? null,
   });
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [flash, setFlash] = useState<FlashState | null>(null);
   const [done, setDone] = useState(false);
   const [torch, setTorch] = useState(false);
   const lock = useRef(false);
@@ -88,30 +88,27 @@ export default function ScanScreen() {
     );
   }
 
-  const flashAndUnlock = (fb: Feedback) => {
-    setFeedback(fb);
+  const flashAndUnlock = (fb: FlashState) => {
+    setFlash(fb);
 
-    // Haptics & a11y announcements
+    triggerFeedback(fb.kind);
+
     try {
       if (fb.kind === "ok") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         AccessibilityInfo.announceForAccessibility(`Scanned ${fb.code}`);
       } else if (fb.kind === "dup") {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         AccessibilityInfo.announceForAccessibility(`Already scanned ${fb.code}`);
       } else if (fb.kind === "quota") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         AccessibilityInfo.announceForAccessibility("Your share is complete");
       } else if (fb.kind === "err") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         AccessibilityInfo.announceForAccessibility(`Error: ${fb.msg}`);
       }
     } catch {
-      // Haptics can silently fail on unsupported devices
+      // Ignore a11y failure
     }
 
     setTimeout(() => {
-      setFeedback(null);
+      setFlash(null);
       lock.current = false;
     }, 1400);
   };
@@ -150,13 +147,13 @@ export default function ScanScreen() {
           mine: res.already_done ? p.mine : p.mine + 1,
         }));
         if (res.phase_completed || res.batch_completed) {
+          triggerFeedback("ok");
           try {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             AccessibilityInfo.announceForAccessibility(
               isStitcher ? "Stitching complete" : `${batchCode} complete`,
             );
           } catch {
-            // Ignore haptic failure
+            // Ignore a11y failure
           }
           setDone(true);
           return;
@@ -240,26 +237,26 @@ export default function ScanScreen() {
 
         {/* Bottom feedback flash */}
         <View style={styles.bottomFlashWrap(insets)} pointerEvents="box-none">
-          {feedback && (
+          {flash && (
             <View
               style={[
                 styles.flash,
-                feedback.kind === "ok" && styles.flashOk,
-                feedback.kind === "dup" && styles.flashDup,
-                feedback.kind === "quota" && styles.flashQuota,
-                feedback.kind === "err" && styles.flashErr,
+                flash.kind === "ok" && styles.flashOk,
+                flash.kind === "dup" && styles.flashDup,
+                flash.kind === "quota" && styles.flashQuota,
+                flash.kind === "err" && styles.flashErr,
               ]}
             >
               <Text style={styles.flashTitle}>
-                {feedback.kind === "ok" && `✓ ${feedback.code}`}
-                {feedback.kind === "dup" && "Already scanned"}
-                {feedback.kind === "quota" && "Your share is complete ✓"}
-                {feedback.kind === "err" && `✗ ${feedback.msg}`}
+                {flash.kind === "ok" && `✓ ${flash.code}`}
+                {flash.kind === "dup" && "Already scanned"}
+                {flash.kind === "quota" && "Your share is complete ✓"}
+                {flash.kind === "err" && `✗ ${flash.msg}`}
               </Text>
-              {feedback.kind === "dup" && <Text style={styles.flashSub}>{feedback.code}</Text>}
-              {feedback.kind === "quota" && (
+              {flash.kind === "dup" && <Text style={styles.flashSub}>{flash.code}</Text>}
+              {flash.kind === "quota" && (
                 <Text style={styles.flashSub}>
-                  {feedback.mine} / {feedback.target} mats — leave the rest for your co-workers
+                  {flash.mine} / {flash.target} mats — leave the rest for your co-workers
                 </Text>
               )}
             </View>
