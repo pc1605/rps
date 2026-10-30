@@ -31,7 +31,7 @@ function playSound(type: "ok" | "warn" | "err") {
   }
 }
 
-export type FeedbackKind = "ok" | "dup" | "quota" | "err" | "sent";
+export type FeedbackKind = "ok" | "dup" | "quota" | "err" | "sent" | "tick";
 
 export function feedback(kind: FeedbackKind): void {
   // 1. Haptics
@@ -42,6 +42,7 @@ export function feedback(kind: FeedbackKind): void {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         break;
       case "dup":
+      case "tick":
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         break;
       case "quota":
@@ -55,7 +56,7 @@ export function feedback(kind: FeedbackKind): void {
     // Haptics can fail silently on unsupported platforms
   }
 
-  // 2. Sound
+  // 2. Sound (tick has no sound)
   switch (kind) {
     case "ok":
     case "sent":

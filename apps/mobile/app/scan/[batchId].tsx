@@ -1,8 +1,8 @@
 import { batchCodeOf, UNIT_CODE_RE } from "@rps/shared";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { AccessibilityInfo, Pressable, Text, View } from "react-native";
 import { type EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
@@ -12,6 +12,7 @@ import { Screen } from "../../components/ui/Screen";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { useAuth } from "../../features/auth/store";
 import { useMyBatches, useScanUnit } from "../../features/batches/hooks";
+import { useReworkReturn } from "../../features/rework/store";
 import { ApiError } from "../../lib/api-client";
 import { feedback as triggerFeedback } from "../../lib/feedback";
 import { strings } from "../../lib/strings";
@@ -27,12 +28,11 @@ type FlashState =
   | { kind: "sent" };
 
 export default function ScanScreen() {
-  const { batchId, reworkSent } = useLocalSearchParams<{
-    batchId: string;
-    reworkSent?: string;
-  }>();
+  const { batchId } = useLocalSearchParams<{ batchId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isFocused = useIsFocused();
+  const consumeReworkReturn = useReworkReturn((s) => s.consume);
   const [permission, requestPermission] = useCameraPermissions();
   const { data: batches } = useMyBatches();
   const scanUnit = useScanUnit();
@@ -56,16 +56,51 @@ export default function ScanScreen() {
   const [torch, setTorch] = useState(false);
   const lock = useRef(false);
 
-  useEffect(() => {
-    if (reworkSent === "true") {
-      router.setParams({ reworkSent: undefined });
-      setFlash({ kind: "sent" });
-      lock.current = false;
-      setTimeout(() => {
-        setFlash(null);
-      }, 1400);
+  const flashAndUnlock = useCallback((fb: FlashState) => {
+    setFlash(fb);
+
+    if (fb.kind === "in_rework") {
+      triggerFeedback("dup");
+    } else if (fb.kind === "written_off") {
+      triggerFeedback("err");
+    } else {
+      triggerFeedback(fb.kind);
     }
-  }, [reworkSent, router]);
+
+    try {
+      if (fb.kind === "ok") {
+        AccessibilityInfo.announceForAccessibility(`Scanned ${fb.code}`);
+      } else if (fb.kind === "dup") {
+        AccessibilityInfo.announceForAccessibility(`Already scanned ${fb.code}`);
+      } else if (fb.kind === "quota") {
+        AccessibilityInfo.announceForAccessibility("Your share is complete");
+      } else if (fb.kind === "err") {
+        AccessibilityInfo.announceForAccessibility(`Error: ${fb.msg}`);
+      } else if (fb.kind === "in_rework") {
+        AccessibilityInfo.announceForAccessibility(`${strings.scanner.inRework}: ${fb.code}`);
+      } else if (fb.kind === "written_off") {
+        AccessibilityInfo.announceForAccessibility(strings.scanner.writtenOff);
+      }
+    } catch {
+      // Ignore a11y failure
+    }
+
+    setTimeout(() => {
+      setFlash(null);
+      lock.current = false;
+    }, 1400);
+  }, []);
+
+  // Focus effect: re-arm scanner when regaining focus and consume rework return flag
+  useFocusEffect(
+    useCallback(() => {
+      setInspectUnit(null);
+      lock.current = false;
+      if (consumeReworkReturn()) {
+        flashAndUnlock({ kind: "sent" });
+      }
+    }, [consumeReworkReturn, flashAndUnlock]),
+  );
 
   // --- permission states ---
   if (!permission) {
@@ -107,41 +142,6 @@ export default function ScanScreen() {
       </Screen>
     );
   }
-
-  const flashAndUnlock = (fb: FlashState) => {
-    setFlash(fb);
-
-    if (fb.kind === "in_rework") {
-      triggerFeedback("dup");
-    } else if (fb.kind === "written_off") {
-      triggerFeedback("err");
-    } else {
-      triggerFeedback(fb.kind);
-    }
-
-    try {
-      if (fb.kind === "ok") {
-        AccessibilityInfo.announceForAccessibility(`Scanned ${fb.code}`);
-      } else if (fb.kind === "dup") {
-        AccessibilityInfo.announceForAccessibility(`Already scanned ${fb.code}`);
-      } else if (fb.kind === "quota") {
-        AccessibilityInfo.announceForAccessibility("Your share is complete");
-      } else if (fb.kind === "err") {
-        AccessibilityInfo.announceForAccessibility(`Error: ${fb.msg}`);
-      } else if (fb.kind === "in_rework") {
-        AccessibilityInfo.announceForAccessibility(`${strings.scanner.inRework}: ${fb.code}`);
-      } else if (fb.kind === "written_off") {
-        AccessibilityInfo.announceForAccessibility(strings.scanner.writtenOff);
-      }
-    } catch {
-      // Ignore a11y failure
-    }
-
-    setTimeout(() => {
-      setFlash(null);
-      lock.current = false;
-    }, 1400);
-  };
 
   const executeScan = (code: string) => {
     scanUnit.mutate(code, {
@@ -220,6 +220,7 @@ export default function ScanScreen() {
 
     // Packer: show inspect sheet instead of immediately scanning
     if (isPacker) {
+      triggerFeedback("tick");
       setInspectUnit(code);
       return;
     }
@@ -238,7 +239,6 @@ export default function ScanScreen() {
     if (!inspectUnit) return;
     const code = inspectUnit;
     setInspectUnit(null);
-    lock.current = false;
     router.push({
       pathname: "/rework/new",
       params: { unitCode: code, batchId },
@@ -256,6 +256,7 @@ export default function ScanScreen() {
       <CameraView
         style={styles.cameraView}
         facing="back"
+        active={isFocused}
         enableTorch={torch}
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         onBarcodeScanned={handleScanned}

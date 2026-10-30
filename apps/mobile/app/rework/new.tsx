@@ -10,6 +10,7 @@ import { Screen } from "../../components/ui/Screen";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { useFlagRework } from "../../features/rework/hooks";
+import { useReworkReturn } from "../../features/rework/store";
 import { ApiError } from "../../lib/api-client";
 import { feedback } from "../../lib/feedback";
 import { strings } from "../../lib/strings";
@@ -17,13 +18,14 @@ import { strings } from "../../lib/strings";
 const REASON_KEYS: ReworkReason[] = ["stitching_fault", "stain", "cutting_fault", "material_defect", "other"];
 
 export default function NewReworkScreen() {
-  const { unitCode, batchId } = useLocalSearchParams<{
+  const { unitCode } = useLocalSearchParams<{
     unitCode: string;
     batchId: string;
   }>();
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const flagRework = useFlagRework();
+  const markSent = useReworkReturn((s) => s.markSent);
 
   const cameraRef = useRef<CameraView>(null);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -93,10 +95,8 @@ export default function NewReworkScreen() {
         photoUris: photos,
       });
       feedback("sent");
-      router.replace({
-        pathname: "/scan/[batchId]",
-        params: { batchId, reworkSent: "true" },
-      });
+      markSent();
+      router.back();
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.code === "already_in_rework") {
