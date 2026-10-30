@@ -49,3 +49,48 @@ Per batch beyond display fields: `units_total`, `units_packed`, `units_stitched`
 - Open self-service stitching queue → cherry-picking of small mats.
 - Soft targets / permission-only assignment → they want strict per-head quotas.
 - Unit-level pre-assignment ("Surya gets 001–008") → forces sorting the label strip by person; rejected for count quotas.
+
+## 8. Rework & Defects (Slice B)
+
+### Unit Lifecycle & States
+In addition to `pending` and `packed`, `batch_units` supports:
+- `rework`: The mat was flagged by a packer during packing inspection and paused for defect correction.
+- `defective`: The mat was permanently written off (by admin decision `write_off` or after recut creation).
+- **Completion condition**: A batch at packing advances to `completed` **only when every unit is either `packed` or `defective`** (`status IN ('packed', 'defective', 'dispatched')`). Units in `rework` or `pending` block batch completion.
+
+### Inspection & Flagging Flow
+1. **Peek before action**: A packer scans a mat QR to inspect its state via `GET /worker/units/:code/peek`. Peek returns unit metadata, `can_pack: true/false`, and `can_rework: true/false`.
+2. **Flagging**: If a mat has flaws, the packer submits `POST /worker/units/:code/rework` with multipart form data containing:
+   - `reasons`: array of strings (`stitching_fault`, `stain`, `cutting_fault`, `material_defect`, `other`).
+   - `note`: optional descriptive context.
+   - `photos`: 1–3 photos captured via camera.
+   - Flags unit as `status = 'rework'` and increments `batches.rework_count`.
+
+### Routing Rules & Escalation
+- **Round 1 Routing**:
+  - `stitching_fault`, `stain`, `other` → automatically routes to the original stitcher who stitched the mat (`bu.stitched_by`), with `route = 'stitcher'`.
+  - `cutting_fault` or `material_defect` → routes to `route = 'admin'` for management oversight.
+- **Round 2+ Escalation**: Any unit returned to rework for a second round (`round >= 2`) automatically routes to `route = 'admin'`, preventing infinite stitcher retry loops.
+
+### Stitcher Fix Scan
+- Stitchers view their assigned rework mats via `GET /worker/rework`.
+- When the stitcher repairs the defect, they scan the unit barcode (`POST /worker/units/scan`).
+- The server verifies `bu.stitched_by == worker_id` (403 `not_your_rework` if scanned by another worker).
+- Successful scan:
+  - Closes the rework log with `fixed_by = worker_id`, `fixed_at = NOW()`.
+  - Resets unit status from `'rework'` back to `'pending'`.
+  - Returns `{ rework_fixed: true }` in the scan response.
+  - Unit is now ready to be scanned and packed by the packer.
+
+### Admin Decisions
+For items routed to admin (`route = 'admin'`), the admin chooses via `POST /rework/:id/decide`:
+- `to_stitcher`: Overrides decision and routes mat back to the original stitcher to repair.
+- `recut`: Creates a new 1-mat batch for the same car model with linked audit history, marks original unit `defective`.
+- `write_off`: Confirms irreparable damage and marks unit `defective`.
+
+### Scan Enforcements in Rework
+- Packer scanning a unit in `rework` → 409 `in_rework` ("This mat is waiting for rework").
+- Packer scanning a `defective` unit → 409 `written_off` ("unit was written off as defective").
+- Stitcher scanning a unit awaiting admin decision → 409 `rework_pending_decision`.
+- Re-flagging an already-reworked unit while a round is open → 409 `already_in_rework`.
+

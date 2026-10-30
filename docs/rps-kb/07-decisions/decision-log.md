@@ -74,3 +74,36 @@ Biome handles high-speed AST linting (`pnpm lint`). Prettier is the single autho
 
 ### D22 — `@rps/shared` package for cross-workspace truth (Sept 2026)
 Shared TypeScript package (`packages/shared/`) contains phase labels, status labels, size maps, and shared domain constants. Resolves D01's duplicated constants between web, mobile, and documentation.
+
+### D23 — Packer photographs rework defects (Oct 2026)
+**Decision**: The packer captures 1–3 photos using their phone camera when flagging a unit for rework.
+**Why**: Visual evidence prevents finger-pointing and disputes between stitchers and packers about the origin and severity of the defect.
+**Consequences**: Multipart upload required on `/worker/units/:code/rework`; server saves files to disk; images displayed in mobile and admin rework views.
+**Status**: Built & Verified (Slice B).
+
+### D24 — Reason-based rework routing (Oct 2026)
+**Decision**: Rework routing depends strictly on defect category:
+- Stitching faults, stains, and other minor issues route directly to the stitcher who originally stitched the mat (`bu.stitched_by`).
+- Cutting faults and raw material defects route directly to admin oversight.
+**Why**: Stitchers can quickly repair sewing flaws, but cannot fix cut geometry or defective cloth rolls. Sending cloth flaws to stitchers wastes labor.
+**Consequences**: Round 1 automatically partitions queues; stitchers only receive fixable rework.
+**Status**: Built & Verified (Slice B).
+
+### D25 — Automatic escalation to admin on Round 2 (Oct 2026)
+**Decision**: Any mat returned to rework for a second round (`round >= 2`) automatically bypasses the stitcher queue and routes to admin.
+**Why**: If a mat remains defective after stitcher rework, repeated stitcher handoffs cause infinite loops and worker frustration. Management intervention is required.
+**Consequences**: Admin makes executive call on repeat failures (`to_stitcher`, `recut`, or `write_off`).
+**Status**: Built & Verified (Slice B).
+
+### D26 — Recut creates a new 1-mat batch (Oct 2026)
+**Decision**: When admin chooses `recut` for an irreparable unit, the defective unit is written off (`status = 'defective'`) and a new 1-mat batch is spawned for the same car model.
+**Why**: Keeps batch accounting and quota mathematics clean without reopening cutting on an active packing batch. The replacement unit goes through the standard cutting → stitching → packing pipeline with clean attribution.
+**Consequences**: Remainder recut batch is tracked with its own batch code; audit history links the replacement.
+**Status**: Built & Verified (Slice B).
+
+### D27 — Signed photo URLs with HMAC-SHA256 (Oct 2026)
+**Decision**: Rework photo files are served via expiring HMAC-SHA256 signed URLs (`/api/v1/files/rework/:name?exp=<unix>&sig=<hex>`) without Bearer token headers.
+**Why**: Mobile `<Image source={{uri}}>` and web `<img src>` struggle to send custom `Authorization: Bearer <token>` headers across native caching layers and image libraries. Public signed URLs allow native image caching while keeping storage private against tampering and unauthenticated scraping.
+**Consequences**: Secret key `FILE_URL_SECRET` configures signing and constant-time verification; URLs expire after `FILE_URL_TTL_MINUTES` (default 60m).
+**Status**: Built & Verified (Slice B).
+

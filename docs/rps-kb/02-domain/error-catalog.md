@@ -14,6 +14,13 @@ mapping: `handler.go` (`transitionResponse` for start/complete; dedicated switch
 | `ErrNotAssigned` | this batch is assigned to other workers | 403 `not_assigned` | join on an assigned phase by a non-assignee |
 | `ErrQuotaReached` | your share of this batch is complete (n/N) | 409 `quota_reached` | scan beyond `target_qty` |
 | `ErrUnitNotFound` | unknown QR — not an RPS unit label | 404 `unit_not_found` | scan of unknown code |
+| `ErrInRework` | This mat is waiting for rework | 409 `in_rework` | packer scans a mat currently flagged in rework |
+| `ErrUnitWrittenOff` | unit was written off as defective | 409 `written_off` | packer scans a unit marked defective |
+| `ErrAlreadyInRework` | unit is already in rework | 409 `already_in_rework` | flagging rework on a unit with an active open rework round |
+| `ErrReworkPendingDecision` | Rework is awaiting admin decision | 409 `rework_pending_decision` | stitcher scans a rework unit routed to admin before decision |
+| `ErrNotYourRework` | This rework is assigned to another stitcher | 403 `not_your_rework` | stitcher other than the original `stitched_by` scans rework |
+| `ErrReworkNotOpen` | Rework round is not open | 409 `rework_not_open` | stitcher fix scan or admin decision on closed rework entry |
+| `files.Verify` failure | invalid or expired signature | 403 `invalid_signature` | accessing rework photo URL with tampered sig or expired timestamp |
 | Guard | missing bearer token / invalid token | 401 | any protected route, including unknown paths under `/api/v1` |
 | Role guard | forbidden | 403 | worker token on admin route; non-owner/supervisor on reports |
 
