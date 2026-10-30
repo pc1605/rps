@@ -1,9 +1,9 @@
 import { batchCodeOf, UNIT_CODE_RE } from "@rps/shared";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useFocusEffect, useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useRef, useState } from "react";
-import { AccessibilityInfo, Pressable, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AccessibilityInfo, BackHandler, Pressable, Text, View } from "react-native";
 import { type EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../components/ui/AppButton";
@@ -17,6 +17,7 @@ import { useReworkReturn } from "../../features/rework/store";
 import { ApiError } from "../../lib/api-client";
 import { feedback as triggerFeedback } from "../../lib/feedback";
 import { strings } from "../../lib/strings";
+import { useCameraReady } from "../../lib/use-camera-ready";
 import { useOnline } from "../../lib/use-online";
 
 type FlashState =
@@ -33,13 +34,17 @@ export default function ScanScreen() {
   const { batchId } = useLocalSearchParams<{ batchId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const isFocused = useIsFocused();
+  const cameraReady = useCameraReady();
   const consumeReworkReturn = useReworkReturn((s) => s.consume);
   const [permission, requestPermission] = useCameraPermissions();
   const { data: batches } = useMyBatches();
   const scanUnit = useScanUnit();
   const { worker } = useAuth();
   const isOnline = useOnline();
+
+  const [cameraKey, setCameraKey] = useState(0);
+  const [cameraError, setCameraError] = useState(false);
+  const [releasing, setReleasing] = useState(false);
 
   const batch = batches?.find((b) => b.id === batchId);
   const [batchCode] = useState(batch?.batch_code ?? "");
@@ -101,6 +106,8 @@ export default function ScanScreen() {
   // Focus effect: re-arm scanner when regaining focus and consume rework return flag
   useFocusEffect(
     useCallback(() => {
+      setReleasing(false);
+      setCameraError(false);
       setInspectUnit(null);
       lock.current = false;
       if (consumeReworkReturn()) {
@@ -109,46 +116,28 @@ export default function ScanScreen() {
     }, [consumeReworkReturn, flashAndUnlock]),
   );
 
-  // --- permission states ---
-  if (!permission) {
-    return (
-      <Screen centered>
-        <Skeleton width="60%" height={24} />
-      </Screen>
-    );
-  }
+  const handleRetryCamera = useCallback(() => {
+    setCameraError(false);
+    setCameraKey((k) => k + 1);
+  }, []);
 
-  if (!permission.granted) {
-    return (
-      <Screen centered footer={<AppButton title="Allow camera" size="lg" onPress={requestPermission} />}>
-        <View style={styles.permContent}>
-          <Text style={styles.permTitle}>Camera needed</Text>
-          <Text style={styles.permText}>RPS uses the camera to scan unit QR labels.</Text>
-          <AppButton title="← Back" variant="ghost" size="md" onPress={() => router.back()} />
-        </View>
-      </Screen>
-    );
-  }
+  const handleBack = useCallback(() => {
+    setReleasing(true);
+    requestAnimationFrame(() => router.back());
+  }, [router]);
 
-  // --- batch completed state ---
-  if (done) {
-    return (
-      <Screen
-        centered
-        footer={<AppButton title="Back to my queue" size="lg" onPress={() => router.replace("/home")} />}
-      >
-        <View style={styles.doneContent}>
-          <Text style={styles.doneEmoji}>✓</Text>
-          <Text style={styles.doneTitle}>{isStitcher ? "Stitching complete" : `${batchCode} complete`}</Text>
-          <Text style={styles.doneText}>
-            {isStitcher
-              ? `All ${progress.total} mats stitched — batch sent to packing.`
-              : `All ${progress.total} mats packed and sent to the stockyard.`}
-          </Text>
-        </View>
-      </Screen>
-    );
-  }
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (inspectUnit) {
+        setInspectUnit(null);
+        lock.current = false;
+        return true;
+      }
+      handleBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [inspectUnit, handleBack]);
 
   const executeScan = (code: string) => {
     scanUnit.mutate(code, {
@@ -200,8 +189,8 @@ export default function ScanScreen() {
     });
   };
 
-  const handleScanned = ({ data }: { data: string }) => {
-    if (lock.current) return;
+  const handleScannedLatest = useRef<({ data }: { data: string }) => void>(() => {});
+  handleScannedLatest.current = ({ data }: { data: string }) => {
     lock.current = true;
 
     if (!isOnline) {
@@ -267,6 +256,11 @@ export default function ScanScreen() {
     executeScan(code);
   };
 
+  const handleScanned = useCallback(({ data }: { data: string }) => {
+    if (lock.current) return;
+    handleScannedLatest.current({ data });
+  }, []);
+
   const handlePack = () => {
     if (!inspectUnit) return;
     const code = inspectUnit;
@@ -278,9 +272,12 @@ export default function ScanScreen() {
     if (!inspectUnit) return;
     const code = inspectUnit;
     setInspectUnit(null);
-    router.push({
-      pathname: "/rework/new",
-      params: { unitCode: code, batchId },
+    setReleasing(true);
+    requestAnimationFrame(() => {
+      router.push({
+        pathname: "/rework/new",
+        params: { unitCode: code, batchId },
+      });
     });
   };
 
@@ -289,17 +286,60 @@ export default function ScanScreen() {
     lock.current = false;
   };
 
+  // --- permission states ---
+  if (!permission) {
+    return (
+      <Screen centered>
+        <Skeleton width="60%" height={24} />
+      </Screen>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <Screen centered footer={<AppButton title="Allow camera" size="lg" onPress={requestPermission} />}>
+        <View style={styles.permContent}>
+          <Text style={styles.permTitle}>Camera needed</Text>
+          <Text style={styles.permText}>RPS uses the camera to scan unit QR labels.</Text>
+          <AppButton title="← Back" variant="ghost" size="md" onPress={handleBack} />
+        </View>
+      </Screen>
+    );
+  }
+
+  // --- batch completed state ---
+  if (done) {
+    return (
+      <Screen
+        centered
+        footer={<AppButton title="Back to my queue" size="lg" onPress={() => router.replace("/home")} />}
+      >
+        <View style={styles.doneContent}>
+          <Text style={styles.doneEmoji}>✓</Text>
+          <Text style={styles.doneTitle}>{isStitcher ? "Stitching complete" : `${batchCode} complete`}</Text>
+          <Text style={styles.doneText}>
+            {isStitcher
+              ? `All ${progress.total} mats stitched — batch sent to packing.`
+              : `All ${progress.total} mats packed and sent to the stockyard.`}
+          </Text>
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen edges={[]} scroll={false}>
       <StatusBar style="light" />
       <View style={styles.cameraBg} />
-      {isFocused && (
+      {cameraReady && !releasing && (
         <CameraView
+          key={cameraKey}
           style={styles.cameraView}
           facing="back"
           enableTorch={torch}
           barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
           onBarcodeScanned={handleScanned}
+          onMountError={() => setCameraError(true)}
         />
       )}
 
@@ -307,7 +347,7 @@ export default function ScanScreen() {
       <View style={styles.overlayContainer} pointerEvents="box-none">
         <View style={styles.topBar(insets)}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={handleBack}
             accessibilityRole="button"
             accessibilityLabel="Back to queue"
             style={styles.topBarBtn}
@@ -327,6 +367,16 @@ export default function ScanScreen() {
 
         {/* Top badges / notices */}
         <View style={styles.topNotices(insets)} pointerEvents="box-none">
+          {cameraError && (
+            <View style={styles.offlineBannerWrap}>
+              <Banner
+                kind="danger"
+                text="Camera didn't start — tap to retry"
+                actionLabel="Retry"
+                onAction={handleRetryCamera}
+              />
+            </View>
+          )}
           {!isOnline && (
             <View style={styles.offlineBannerWrap}>
               <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />

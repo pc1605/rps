@@ -1,8 +1,8 @@
 import type { ReworkReason } from "@rps/shared";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BackHandler, Image, Pressable, Text, TextInput, View } from "react-native";
 import { type EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
@@ -16,6 +16,7 @@ import { useReworkReturn } from "../../features/rework/store";
 import { ApiError } from "../../lib/api-client";
 import { feedback } from "../../lib/feedback";
 import { strings } from "../../lib/strings";
+import { useCameraReady } from "../../lib/use-camera-ready";
 
 const REASON_KEYS: ReworkReason[] = ["stitching_fault", "stain", "cutting_fault", "material_defect", "other"];
 
@@ -25,7 +26,7 @@ export default function NewReworkScreen() {
     batchId: string;
   }>();
   const router = useRouter();
-  const isFocused = useIsFocused();
+  const cameraReady = useCameraReady();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const flagRework = useFlagRework();
@@ -39,37 +40,42 @@ export default function NewReworkScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
 
+  const [cameraKey, setCameraKey] = useState(0);
+  const [cameraError, setCameraError] = useState(false);
+  const [releasing, setReleasing] = useState(false);
+
+  const handleRetryCamera = useCallback(() => {
+    setCameraError(false);
+    setCameraKey((k) => k + 1);
+  }, []);
+
+  const handleBack = useCallback(() => {
+    setReleasing(true);
+    requestAnimationFrame(() => router.back());
+  }, [router]);
+
+  const handleNext = useCallback(() => {
+    setReleasing(true);
+    setStep(2);
+  }, []);
+
+  const handleBackToStep1 = useCallback(() => {
+    setReleasing(false);
+    setStep(1);
+  }, []);
+
   // Handle hardware back button on Android: Step 2 returns to Step 1
   useEffect(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
       if (step === 2) {
-        setStep(1);
+        handleBackToStep1();
         return true;
       }
-      return false;
+      handleBack();
+      return true;
     });
     return () => sub.remove();
-  }, [step]);
-
-  if (!permission) {
-    return (
-      <Screen centered>
-        <Skeleton width="60%" height={24} />
-      </Screen>
-    );
-  }
-
-  if (!permission.granted) {
-    return (
-      <Screen centered footer={<AppButton title="Allow camera" size="lg" onPress={requestPermission} />}>
-        <View style={styles.permContent}>
-          <Text style={styles.permTitle}>Camera needed</Text>
-          <Text style={styles.permText}>RPS uses the camera to capture rework defect photos.</Text>
-          <AppButton title="← Back" variant="ghost" size="md" onPress={() => router.back()} />
-        </View>
-      </Screen>
-    );
-  }
+  }, [step, handleBack, handleBackToStep1]);
 
   const handleCapture = async () => {
     if (photos.length >= 3 || isCapturing) return;
@@ -114,7 +120,8 @@ export default function NewReworkScreen() {
       });
       feedback("sent");
       markSent();
-      router.back();
+      setReleasing(true);
+      requestAnimationFrame(() => router.back());
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.code === "already_in_rework") {
@@ -130,19 +137,47 @@ export default function NewReworkScreen() {
     }
   };
 
+  if (!permission) {
+    return (
+      <Screen centered>
+        <Skeleton width="60%" height={24} />
+      </Screen>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <Screen centered footer={<AppButton title="Allow camera" size="lg" onPress={requestPermission} />}>
+        <View style={styles.permContent}>
+          <Text style={styles.permTitle}>Camera needed</Text>
+          <Text style={styles.permText}>RPS uses the camera to capture rework defect photos.</Text>
+          <AppButton title="← Back" variant="ghost" size="md" onPress={handleBack} />
+        </View>
+      </Screen>
+    );
+  }
+
   // Step 1: Fullscreen photo capture
   if (step === 1) {
     return (
       <Screen edges={[]} scroll={false}>
         <StatusBar style="light" />
         <View style={styles.cameraBg} />
-        {isFocused && <CameraView ref={cameraRef} style={styles.cameraView} facing="back" />}
+        {cameraReady && !releasing && (
+          <CameraView
+            key={cameraKey}
+            ref={cameraRef}
+            style={styles.cameraView}
+            facing="back"
+            onMountError={() => setCameraError(true)}
+          />
+        )}
 
         <View style={styles.overlayContainer} pointerEvents="box-none">
           {/* Top bar over camera */}
           <View style={styles.topBar(insets)}>
             <Pressable
-              onPress={() => router.back()}
+              onPress={handleBack}
               hitSlop={8}
               style={styles.topBarBtn}
               accessibilityRole="button"
@@ -157,6 +192,20 @@ export default function NewReworkScreen() {
               <Text style={styles.topBarStepText}>{strings.rework.stepOneOfTwo}</Text>
             </View>
           </View>
+
+          {/* Top badges / notices */}
+          {cameraError && (
+            <View style={styles.topNotices(insets)} pointerEvents="box-none">
+              <View style={styles.bannerWrap}>
+                <Banner
+                  kind="danger"
+                  text="Camera didn't start — tap to retry"
+                  actionLabel="Retry"
+                  onAction={handleRetryCamera}
+                />
+              </View>
+            </View>
+          )}
 
           {/* Bottom panel over camera */}
           <View style={styles.bottomPanel(insets)}>
@@ -207,7 +256,7 @@ export default function NewReworkScreen() {
               title={photos.length === 0 ? strings.rework.takeAPhoto : strings.rework.next}
               size="lg"
               disabled={photos.length === 0}
-              onPress={() => setStep(2)}
+              onPress={handleNext}
               accessibilityLabel={photos.length === 0 ? strings.rework.takeAPhoto : strings.rework.next}
             />
           </View>
@@ -222,7 +271,7 @@ export default function NewReworkScreen() {
       header={
         <ScreenHeader
           back
-          onBack={() => setStep(1)}
+          onBack={handleBackToStep1}
           title={unitCode}
           right={<Text style={styles.stepIndicator}>{strings.rework.stepTwoOfTwo}</Text>}
         />
@@ -252,7 +301,7 @@ export default function NewReworkScreen() {
           {photos.map((uri, idx) => (
             <Pressable
               key={uri}
-              onPress={() => setStep(1)}
+              onPress={handleBackToStep1}
               accessibilityRole="button"
               accessibilityLabel={`${strings.rework.tapToEditPhotos} (${idx + 1})`}
               style={styles.summaryThumbWrap}
@@ -370,6 +419,14 @@ const styles = StyleSheet.create((theme) => ({
     ...theme.text.bodyMed,
     color: theme.colors.overlayTextMuted,
   },
+  topNotices: (insets: EdgeInsets) => ({
+    position: "absolute",
+    top: insets.top + 56 + theme.spacing.xs,
+    left: insets.left + theme.spacing.md,
+    right: insets.right + theme.spacing.md,
+    alignItems: "center",
+    zIndex: 11,
+  }),
   bottomPanel: (insets: EdgeInsets) => ({
     position: "absolute",
     bottom: 0,

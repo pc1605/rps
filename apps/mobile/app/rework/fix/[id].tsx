@@ -1,19 +1,21 @@
 import { UNIT_CODE_RE } from "@rps/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useRef, useState } from "react";
-import { AccessibilityInfo, Pressable, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AccessibilityInfo, BackHandler, Pressable, Text, View } from "react-native";
 import { type EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../../components/ui/AppButton";
+import { Banner } from "../../../components/ui/Banner";
 import { Screen } from "../../../components/ui/Screen";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { useScanUnit } from "../../../features/batches/hooks";
 import { ApiError } from "../../../lib/api-client";
 import { feedback as triggerFeedback } from "../../../lib/feedback";
 import { strings } from "../../../lib/strings";
+import { useCameraReady } from "../../../lib/use-camera-ready";
 import { useOnline } from "../../../lib/use-online";
 
 type FlashState = { kind: "ok"; code: string } | { kind: "err"; msg: string };
@@ -24,7 +26,7 @@ export default function ReworkFixScreen() {
     unitCode: string;
   }>();
   const router = useRouter();
-  const isFocused = useIsFocused();
+  const cameraReady = useCameraReady();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [permission, requestPermission] = useCameraPermissions();
@@ -36,46 +38,29 @@ export default function ReworkFixScreen() {
   const [torch, setTorch] = useState(false);
   const lock = useRef(false);
 
-  // --- permission states ---
-  if (!permission) {
-    return (
-      <Screen centered>
-        <Skeleton width="60%" height={24} />
-      </Screen>
-    );
-  }
+  const [cameraKey, setCameraKey] = useState(0);
+  const [cameraError, setCameraError] = useState(false);
+  const [releasing, setReleasing] = useState(false);
 
-  if (!permission.granted) {
-    return (
-      <Screen centered footer={<AppButton title="Allow camera" size="lg" onPress={requestPermission} />}>
-        <View style={styles.permContent}>
-          <Text style={styles.permTitle}>Camera needed</Text>
-          <Text style={styles.permText}>RPS uses the camera to scan unit QR labels.</Text>
-          <AppButton title="← Back" variant="ghost" size="md" onPress={() => router.back()} />
-        </View>
-      </Screen>
-    );
-  }
+  const handleRetryCamera = useCallback(() => {
+    setCameraError(false);
+    setCameraKey((k) => k + 1);
+  }, []);
 
-  // --- success screen ---
-  if (fixed) {
-    return (
-      <Screen
-        centered
-        footer={
-          <AppButton title={strings.rework.backToQueue} size="lg" onPress={() => router.replace("/home")} />
-        }
-      >
-        <View style={styles.doneContent}>
-          <Text style={styles.doneEmoji}>✓</Text>
-          <Text style={styles.doneTitle}>{strings.rework.fixedTitle}</Text>
-          <Text style={styles.doneText}>{strings.rework.fixedDesc}</Text>
-        </View>
-      </Screen>
-    );
-  }
+  const handleBack = useCallback(() => {
+    setReleasing(true);
+    requestAnimationFrame(() => router.back());
+  }, [router]);
 
-  const flashAndUnlock = (fb: FlashState) => {
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      handleBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [handleBack]);
+
+  const flashAndUnlock = useCallback((fb: FlashState) => {
     setFlash(fb);
     triggerFeedback(fb.kind);
 
@@ -93,10 +78,10 @@ export default function ReworkFixScreen() {
       setFlash(null);
       lock.current = false;
     }, 1400);
-  };
+  }, []);
 
-  const handleScanned = ({ data }: { data: string }) => {
-    if (lock.current) return;
+  const handleScannedLatest = useRef<({ data }: { data: string }) => void>(() => {});
+  handleScannedLatest.current = ({ data }: { data: string }) => {
     lock.current = true;
 
     if (!isOnline) {
@@ -127,6 +112,7 @@ export default function ReworkFixScreen() {
           triggerFeedback("ok");
           queryClient.invalidateQueries({ queryKey: ["my-rework"] });
           queryClient.invalidateQueries({ queryKey: ["my-batches"] });
+          setReleasing(true);
           setFixed(true);
           return;
         }
@@ -162,17 +148,63 @@ export default function ReworkFixScreen() {
     });
   };
 
+  const handleScanned = useCallback(({ data }: { data: string }) => {
+    if (lock.current) return;
+    handleScannedLatest.current({ data });
+  }, []);
+
+  // --- permission states ---
+  if (!permission) {
+    return (
+      <Screen centered>
+        <Skeleton width="60%" height={24} />
+      </Screen>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <Screen centered footer={<AppButton title="Allow camera" size="lg" onPress={requestPermission} />}>
+        <View style={styles.permContent}>
+          <Text style={styles.permTitle}>Camera needed</Text>
+          <Text style={styles.permText}>RPS uses the camera to scan unit QR labels.</Text>
+          <AppButton title="← Back" variant="ghost" size="md" onPress={handleBack} />
+        </View>
+      </Screen>
+    );
+  }
+
+  // --- success screen ---
+  if (fixed) {
+    return (
+      <Screen
+        centered
+        footer={
+          <AppButton title={strings.rework.backToQueue} size="lg" onPress={() => router.replace("/home")} />
+        }
+      >
+        <View style={styles.doneContent}>
+          <Text style={styles.doneEmoji}>✓</Text>
+          <Text style={styles.doneTitle}>{strings.rework.fixedTitle}</Text>
+          <Text style={styles.doneText}>{strings.rework.fixedDesc}</Text>
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen edges={[]} scroll={false}>
       <StatusBar style="light" />
       <View style={styles.cameraBg} />
-      {isFocused && (
+      {cameraReady && !releasing && (
         <CameraView
+          key={cameraKey}
           style={styles.cameraView}
           facing="back"
           enableTorch={torch}
           barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
           onBarcodeScanned={handleScanned}
+          onMountError={() => setCameraError(true)}
         />
       )}
 
@@ -180,7 +212,7 @@ export default function ReworkFixScreen() {
       <View style={styles.overlayContainer} pointerEvents="box-none">
         <View style={styles.topBar(insets)}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={handleBack}
             accessibilityRole="button"
             accessibilityLabel="Back to detail"
             style={styles.topBarBtn}
@@ -200,6 +232,16 @@ export default function ReworkFixScreen() {
 
         {/* Top hint notice */}
         <View style={styles.topNotices(insets)} pointerEvents="box-none">
+          {cameraError && (
+            <View style={styles.bannerWrap}>
+              <Banner
+                kind="danger"
+                text="Camera didn't start — tap to retry"
+                actionLabel="Retry"
+                onAction={handleRetryCamera}
+              />
+            </View>
+          )}
           <View style={styles.targetWrap}>
             <Text style={styles.targetLabel}>Target Mat</Text>
             <Text style={styles.targetCode}>{unitCode}</Text>
@@ -304,6 +346,10 @@ const styles = StyleSheet.create((theme) => ({
     right: insets.right + theme.spacing.md,
     alignItems: "center",
   }),
+  bannerWrap: {
+    width: "100%",
+    maxWidth: 480,
+  },
   targetWrap: {
     backgroundColor: theme.colors.overlaySurface,
     borderRadius: theme.radius.pill,
