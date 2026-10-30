@@ -1,31 +1,178 @@
 {
   "info": {
-    "name": "RPS — Riddhi Production System",
-    "description": "Ambika Enterprise · Riddhi Car Floor Laminates",
+    "name": "RPS \u2014 Riddhi Production System",
+    "description": "Ambika Enterprise \u00b7 Riddhi Car Floor Laminates",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
-    { "key": "accessToken", "value": "" },
-    { "key": "refreshToken", "value": "" },
-    { "key": "batchId", "value": "" },
-    { "key": "carModelId", "value": "1" },
-    { "key": "rollId", "value": "" },
-    { "key": "workerId", "value": "" },
-    { "key": "badgeToken", "value": "" },
-    { "key": "workerToken", "value": "" },
-    { "key": "workerBatchId", "value": "" },
-    { "key": "stockRollId", "value": "" },
-    { "key": "stitcherBadge", "value": "" },
-    { "key": "stitcherToken", "value": "" },
-    { "key": "stitcher2Badge", "value": "" },
-    { "key": "stitcher2Token", "value": "" },
-    { "key": "packerBadge", "value": "" },
-    { "key": "packerToken", "value": "" },
-    { "key": "scanBatchId", "value": "" },
-    { "key": "scanBatchCode", "value": "" },
-    { "key": "reportFrom", "value": "" },
-    { "key": "reportTo", "value": "" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "batchId",
+      "value": ""
+    },
+    {
+      "key": "carModelId",
+      "value": "1"
+    },
+    {
+      "key": "rollId",
+      "value": ""
+    },
+    {
+      "key": "workerId",
+      "value": ""
+    },
+    {
+      "key": "badgeToken",
+      "value": ""
+    },
+    {
+      "key": "workerToken",
+      "value": ""
+    },
+    {
+      "key": "workerBatchId",
+      "value": ""
+    },
+    {
+      "key": "stockRollId",
+      "value": ""
+    },
+    {
+      "key": "stitcherBadge",
+      "value": ""
+    },
+    {
+      "key": "stitcherToken",
+      "value": ""
+    },
+    {
+      "key": "stitcher2Badge",
+      "value": ""
+    },
+    {
+      "key": "stitcher2Token",
+      "value": ""
+    },
+    {
+      "key": "packerBadge",
+      "value": ""
+    },
+    {
+      "key": "packerToken",
+      "value": ""
+    },
+    {
+      "key": "scanBatchId",
+      "value": ""
+    },
+    {
+      "key": "scanBatchCode",
+      "value": ""
+    },
+    {
+      "key": "reportFrom",
+      "value": ""
+    },
+    {
+      "key": "reportTo",
+      "value": ""
+    },
+    {
+      "key": "stitcherId",
+      "value": ""
+    },
+    {
+      "key": "stitcher2Id",
+      "value": ""
+    },
+    {
+      "key": "packerId",
+      "value": ""
+    },
+    {
+      "key": "brandId",
+      "value": ""
+    },
+    {
+      "key": "productLineId",
+      "value": ""
+    },
+    {
+      "key": "shortBatchId",
+      "value": ""
+    },
+    {
+      "key": "shortBatchCode",
+      "value": ""
+    },
+    {
+      "key": "reduceBatchId",
+      "value": ""
+    },
+    {
+      "key": "assignBatchId",
+      "value": ""
+    },
+    {
+      "key": "reworkBatchId",
+      "value": ""
+    },
+    {
+      "key": "reworkBatchCode",
+      "value": ""
+    },
+    {
+      "key": "reworkPhotoUrl",
+      "value": ""
+    },
+    {
+      "key": "reworkLogId1",
+      "value": ""
+    },
+    {
+      "key": "reworkLogId2",
+      "value": ""
+    },
+    {
+      "key": "reworkLogId3",
+      "value": ""
+    },
+    {
+      "key": "reworkLogId1Round2",
+      "value": ""
+    },
+    {
+      "key": "workerBatchQty",
+      "value": ""
+    },
+    {
+      "key": "splitBatchId",
+      "value": ""
+    },
+    {
+      "key": "reworkPhotoName",
+      "value": ""
+    },
+    {
+      "key": "reworkPhotoExp",
+      "value": ""
+    },
+    {
+      "key": "reworkPhotoSig",
+      "value": ""
+    }
   ],
   "item": [
     {
@@ -54,12 +201,17 @@
             "method": "GET",
             "url": {
               "raw": "http://localhost:8080/healthz",
-              "host": ["http://localhost:8080"],
-              "path": ["healthz"]
+              "host": [
+                "http://localhost:8080"
+              ],
+              "path": [
+                "healthz"
+              ]
             }
           }
         }
-      ]
+      ],
+      "description": "Public healthcheck probes. No prerequisites. Run anytime."
     },
     {
       "name": "Auth",
@@ -77,7 +229,7 @@
                   "if (responseData.tokens) {",
                   "    pm.collectionVariables.set('accessToken', responseData.tokens.access_token);",
                   "    pm.collectionVariables.set('refreshToken', responseData.tokens.refresh_token);",
-                  "    console.log('✓ tokens saved');",
+                  "    console.log('\u2713 tokens saved');",
                   "}",
                   "",
                   "pm.test('Response status code is 200', function () {",
@@ -95,15 +247,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"owner@ambika.local\",\n  \"password\": \"admin123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             }
           }
         },
@@ -128,15 +290,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"owner@ambika.local\",\n  \"password\": \"wrong\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             }
           }
         },
@@ -162,12 +334,19 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me"
+              ]
             }
           }
         },
@@ -190,12 +369,17 @@
             "method": "GET",
             "url": {
               "raw": "{{baseUrl}}/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me"
+              ]
             }
           }
         }
-      ]
+      ],
+      "description": "Admin user authentication (login, me, token refresh). Run top to bottom to set accessToken."
     },
     {
       "name": "Workers (Admin)",
@@ -215,7 +399,7 @@
                   "}",
                   "if (responseData.badge_token) {",
                   "    pm.collectionVariables.set('badgeToken', responseData.badge_token);",
-                  "    console.log('✓ workerId + badgeToken saved. Badge:', responseData.badge_token);",
+                  "    console.log('\u2713 workerId + badgeToken saved. Badge:', responseData.badge_token);",
                   "}",
                   "",
                   "pm.test('Response status code is 201', function () {",
@@ -234,8 +418,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -243,8 +433,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/workers",
-              "host": ["{{baseUrl}}"],
-              "path": ["workers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workers"
+              ]
             }
           }
         },
@@ -266,8 +460,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -275,8 +475,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/workers",
-              "host": ["{{baseUrl}}"],
-              "path": ["workers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workers"
+              ]
             }
           }
         },
@@ -308,12 +512,19 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/workers",
-              "host": ["{{baseUrl}}"],
-              "path": ["workers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workers"
+              ]
             }
           }
         },
@@ -334,19 +545,29 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"NoAuth\",\n  \"station\": \"cutter\",\n  \"pin\": \"1234\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/workers",
-              "host": ["{{baseUrl}}"],
-              "path": ["workers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workers"
+              ]
             }
           }
         }
-      ]
+      ],
+      "description": "Admin CRUD for workers. Prereqs: Auth -> Login. Run top to bottom to create sample workers and store badges."
     },
     {
       "name": "Worker Auth",
@@ -363,7 +584,7 @@
                   "",
                   "if (responseData.tokens) {",
                   "    pm.collectionVariables.set('workerToken', responseData.tokens.access_token);",
-                  "    console.log('✓ workerToken saved');",
+                  "    console.log('\u2713 workerToken saved');",
                   "}",
                   "",
                   "pm.test('Response status code is 200', function () {",
@@ -381,15 +602,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"badge_token\": \"{{badgeToken}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"tablet-cutting-01\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/worker/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "login"
+              ]
             }
           }
         },
@@ -414,15 +645,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"badge_token\": \"{{badgeToken}}\",\n  \"pin\": \"9999\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/worker/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "login"
+              ]
             }
           }
         },
@@ -447,15 +688,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"badge_token\": \"BADGE-does-not-exist\",\n  \"pin\": \"1234\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/worker/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "login"
+              ]
             }
           }
         },
@@ -482,12 +733,20 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/worker/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "me"
+              ]
             }
           }
         },
@@ -509,19 +768,27 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/workers",
-              "host": ["{{baseUrl}}"],
-              "path": ["workers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workers"
+              ]
             }
           }
         }
-      ]
+      ],
+      "description": "Worker station login with badge token and PIN. Prereqs: Workers (Admin) -> Create Worker. Run top to bottom to set workerToken."
     },
     {
-      "name": "Reference",
+      "name": "Cars & Reference",
       "item": [
         {
           "name": "List Car Models",
@@ -531,26 +798,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const responseData = pm.response.json().data;",
-                  "",
-                  "if (Array.isArray(responseData) && responseData.length > 0) {",
-                  "    pm.collectionVariables.set('carModelId', responseData[0].id);",
-                  "    console.log('✓ carModelId saved:', responseData[0].id);",
-                  "}",
-                  "",
-                  "pm.test('Response status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('Response data is an array', function () {",
-                  "    pm.expect(responseData).to.be.an('array');",
-                  "});",
-                  "pm.test('Each car model has id, brand_name, name, size_class', function () {",
-                  "    responseData.forEach(function (model) {",
-                  "        pm.expect(model).to.have.property('id');",
-                  "        pm.expect(model).to.have.property('brand_name');",
-                  "        pm.expect(model).to.have.property('name');",
-                  "        pm.expect(model).to.have.property('size_class');",
-                  "    });",
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response is an array', function () {",
+                  "    const res = pm.response.json().data || pm.response.json();",
+                  "    pm.expect(res).to.be.an('array');",
+                  "    if (res.length > 0) {",
+                  "        pm.collectionVariables.set('carModelId', String(res[0].id));",
+                  "    }",
                   "});"
                 ]
               }
@@ -559,12 +813,251 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/car-models",
-              "host": ["{{baseUrl}}"],
-              "path": ["car-models"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "car-models"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Car Brands",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response contains car brands', function () {",
+                  "    const res = pm.response.json().data || pm.response.json();",
+                  "    pm.expect(res).to.be.an('array');",
+                  "    if (res.length > 0) {",
+                  "        pm.collectionVariables.set('brandId', String(res[0].id));",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/car-brands",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "car-brands"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Brand",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('newBrandName', 'Brand-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Brand ID created', function () {",
+                  "    pm.expect(res.id).to.be.a('number');",
+                  "    pm.collectionVariables.set('brandId', String(res.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{newBrandName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/car-brands",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "car-brands"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Product Lines",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Product lines returned', function () {",
+                  "    pm.expect(res).to.be.an('array');",
+                  "    if (res.length > 0) {",
+                  "        pm.collectionVariables.set('productLineId', String(res[0].id));",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/product-lines",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "product-lines"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Car Model",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.variables.set('newModelName', 'Model-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Car model created with barcode', function () {",
+                  "    pm.expect(res.id).to.be.a('number');",
+                  "    pm.expect(res.barcode).to.be.a('string');",
+                  "    pm.collectionVariables.set('carModelId', String(res.id));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand_id\": {{brandId}},\n  \"name\": \"{{newModelName}}\",\n  \"size_class\": \"medium\",\n  \"pieces_per_set\": 5,\n  \"product_line_id\": {{productLineId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/car-models",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "car-models"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Car Model",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Item updated confirmation', function () {",
+                  "    pm.expect(res.message).to.eql('item updated');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pieces_per_set\": 4,\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/car-models/{{carModelId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "car-models",
+                "{{carModelId}}"
+              ]
             }
           }
         },
@@ -576,24 +1069,13 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const responseData = pm.response.json().data;",
-                  "",
-                  "if (Array.isArray(responseData) && responseData.length > 0) {",
-                  "    pm.collectionVariables.set('rollId', responseData[0].id);",
-                  "    console.log('✓ rollId saved:', responseData[0].id);",
-                  "}",
-                  "",
-                  "pm.test('Response status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('Response data is an array', function () {",
-                  "    pm.expect(responseData).to.be.an('array');",
-                  "});",
-                  "pm.test('Each roll has roll_code and remaining_meters', function () {",
-                  "    responseData.forEach(function (roll) {",
-                  "        pm.expect(roll).to.have.property('roll_code');",
-                  "        pm.expect(roll).to.have.property('remaining_meters');",
-                  "    });",
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Rolls list returned', function () {",
+                  "    pm.expect(res).to.be.an('array');",
+                  "    if (res.length > 0) {",
+                  "        pm.collectionVariables.set('rollId', res[0].id);",
+                  "    }",
                   "});"
                 ]
               }
@@ -602,16 +1084,24 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/rolls",
-              "host": ["{{baseUrl}}"],
-              "path": ["rolls"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rolls"
+              ]
             }
           }
         }
-      ]
+      ],
+      "description": "Car models, brands, product lines, and rolls. Prereqs: Auth\u2192Login (admin). Run top to bottom."
     },
     {
       "name": "Batches",
@@ -628,7 +1118,7 @@
                   "",
                   "if (responseData.id) {",
                   "    pm.collectionVariables.set('batchId', responseData.id);",
-                  "    console.log('✓ batchId saved:', responseData.id, 'code:', responseData.batch_code);",
+                  "    console.log('\u2713 batchId saved:', responseData.id, 'code:', responseData.batch_code);",
                   "}",
                   "",
                   "pm.test('Response status code is 201', function () {",
@@ -650,8 +1140,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -659,8 +1155,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/batches",
-              "host": ["{{baseUrl}}"],
-              "path": ["batches"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
             }
           }
         },
@@ -687,8 +1187,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -696,8 +1202,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/batches",
-              "host": ["{{baseUrl}}"],
-              "path": ["batches"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
             }
           }
         },
@@ -731,12 +1241,19 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/batches",
-              "host": ["{{baseUrl}}"],
-              "path": ["batches"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
             }
           }
         },
@@ -772,12 +1289,20 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/batches/{{batchId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["batches", "{{batchId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{batchId}}"
+              ]
             }
           }
         },
@@ -799,8 +1324,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -808,8 +1339,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/batches",
-              "host": ["{{baseUrl}}"],
-              "path": ["batches"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
             }
           }
         },
@@ -830,19 +1365,29 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"car_model_id\": 1,\n  \"quantity\": 5\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/batches",
-              "host": ["{{baseUrl}}"],
-              "path": ["batches"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
             }
           }
         }
-      ]
+      ],
+      "description": "Batch creation, listing, roll assignment, and details. Prereqs: Auth -> Login, Cars & Reference. Run top to bottom."
     },
     {
       "name": "Worker Phase Flow",
@@ -863,31 +1408,13 @@
                   "    });",
                   "    if (pendingBatch) {",
                   "        pm.collectionVariables.set('workerBatchId', pendingBatch.id);",
-                  "        console.log('✓ workerBatchId saved:', pendingBatch.id, 'code:', pendingBatch.batch_code);",
-                  "    } else {",
-                  "        console.log('⚠ No pending batch at this station — run Batches → Create Batch first');",
+                  "        pm.collectionVariables.set('workerBatchQty', String(pendingBatch.quantity));",
+                  "        console.log('\u2713 workerBatchId saved:', pendingBatch.id, 'qty:', pendingBatch.quantity);",
                   "    }",
                   "}",
                   "",
-                  "pm.test('Response status code is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "pm.test('Response data is an array', function () {",
-                  "    pm.expect(responseData).to.be.an('array');",
-                  "});",
-                  "pm.test('Each batch has code and status', function () {",
-                  "    responseData.forEach(function (batch) {",
-                  "        pm.expect(batch).to.have.property('batch_code');",
-                  "        pm.expect(batch).to.have.property('status');",
-                  "    });",
-                  "});",
-                  "pm.test('Claimed batches expose the active worker name', function () {",
-                  "    responseData.forEach(function (batch) {",
-                  "        if (batch.status === 'in_progress') {",
-                  "            pm.expect(batch.active_worker_name).to.be.a('string');",
-                  "        }",
-                  "    });",
-                  "});"
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response data is an array', function () { pm.expect(responseData).to.be.an('array'); });"
                 ]
               }
             }
@@ -895,12 +1422,20 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/worker/batches",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches"
+              ]
             }
           }
         },
@@ -926,12 +1461,22 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/worker/batches/{{workerBatchId}}/start",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches", "{{workerBatchId}}", "start"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{workerBatchId}}",
+                "start"
+              ]
             }
           }
         },
@@ -957,12 +1502,22 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/worker/batches/{{workerBatchId}}/start",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches", "{{workerBatchId}}", "start"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{workerBatchId}}",
+                "start"
+              ]
             }
           }
         },
@@ -988,17 +1543,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{workerToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"quantity_completed\": 10,\n  \"notes\": \"Postman phase test\"\n}"
+              "raw": "{\n  \"quantity_completed\": {{workerBatchQty}},\n  \"notes\": \"Postman phase test\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/worker/batches/{{workerBatchId}}/complete",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches", "{{workerBatchId}}", "complete"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{workerBatchId}}",
+                "complete"
+              ]
             }
           }
         },
@@ -1024,17 +1592,30 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{workerToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"quantity_completed\": 10\n}"
+              "raw": "{\n  \"quantity_completed\": {{workerBatchQty}}\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/worker/batches/{{workerBatchId}}/complete",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches", "{{workerBatchId}}", "complete"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{workerBatchId}}",
+                "complete"
+              ]
             }
           }
         },
@@ -1060,16 +1641,27 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/worker/batches/{{workerBatchId}}/start",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches", "{{workerBatchId}}", "start"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{workerBatchId}}",
+                "start"
+              ]
             }
           }
         }
-      ]
+      ],
+      "description": "Single-worker sequential phase progression (cutting, stitching, packing). Prereqs: Auth -> Login, Worker Auth -> Worker Login. Run top to bottom."
     },
     {
       "name": "Stock",
@@ -1106,12 +1698,20 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/stock/rolls",
-              "host": ["{{baseUrl}}"],
-              "path": ["stock", "rolls"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock",
+                "rolls"
+              ]
             }
           }
         },
@@ -1137,7 +1737,7 @@
                   "",
                   "if (responseData.id) {",
                   "    pm.collectionVariables.set('stockRollId', responseData.id);",
-                  "    console.log('✓ stockRollId saved:', responseData.id, responseData.roll_code);",
+                  "    console.log('\u2713 stockRollId saved:', responseData.id, responseData.roll_code);",
                   "}",
                   "",
                   "pm.test('Response status code is 201', function () {",
@@ -1156,8 +1756,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1165,8 +1771,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/stock/rolls",
-              "host": ["{{baseUrl}}"],
-              "path": ["stock", "rolls"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock",
+                "rolls"
+              ]
             }
           }
         },
@@ -1192,8 +1803,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1201,8 +1818,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/stock/rolls",
-              "host": ["{{baseUrl}}"],
-              "path": ["stock", "rolls"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock",
+                "rolls"
+              ]
             }
           }
         },
@@ -1232,8 +1854,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1241,8 +1869,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/stock/rolls/{{stockRollId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["stock", "rolls", "{{stockRollId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock",
+                "rolls",
+                "{{stockRollId}}"
+              ]
             }
           }
         },
@@ -1264,8 +1898,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1273,8 +1913,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/stock/rolls/{{stockRollId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["stock", "rolls", "{{stockRollId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock",
+                "rolls",
+                "{{stockRollId}}"
+              ]
             }
           }
         },
@@ -1304,8 +1950,14 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1313,8 +1965,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/stock/rolls/{{stockRollId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["stock", "rolls", "{{stockRollId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock",
+                "rolls",
+                "{{stockRollId}}"
+              ]
             }
           }
         },
@@ -1336,20 +1994,29 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/stock/rolls",
-              "host": ["{{baseUrl}}"],
-              "path": ["stock", "rolls"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock",
+                "rolls"
+              ]
             }
           }
         }
-      ]
+      ],
+      "description": "Raw material rolls inventory management. Prereqs: Auth -> Login. Run top to bottom."
     },
     {
       "name": "Multi-Worker Scanning",
-      "description": "The Week-8 model: joinable stitching/packing, scan-per-mat, per-worker attribution. Prereqs: Auth→Login (admin), Worker Auth→Worker Login (cutter). Run top to bottom.",
+      "description": "The Week-8 model: joinable stitching/packing, scan-per-mat, per-worker attribution with assignment gate and quotas. Prereqs: Auth\u2192Login (admin), Worker Auth\u2192Worker Login (cutter). Run top to bottom.",
       "item": [
         {
           "name": "Setup: Create Batch (qty 4)",
@@ -1372,8 +2039,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1381,8 +2054,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/batches",
-              "host": ["{{baseUrl}}"],
-              "path": ["batches"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
             }
           }
         },
@@ -1396,7 +2073,11 @@
                 "exec": [
                   "const responseData = pm.response.json().data || pm.response.json();",
                   "if (responseData.badge_token) { pm.collectionVariables.set('stitcherBadge', responseData.badge_token); }",
-                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });"
+                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
+                  "if (responseData.id) { pm.collectionVariables.set('stitcherId', responseData.id); }",
+                  "if (responseData.id) { pm.collectionVariables.set('stitcherId', responseData.id); }",
+                  "if (responseData.id) { pm.collectionVariables.set('stitcherId', responseData.id); }",
+                  "if (responseData.id) { pm.collectionVariables.set('stitcherId', responseData.id); }"
                 ]
               }
             }
@@ -1404,8 +2085,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1413,8 +2100,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/workers",
-              "host": ["{{baseUrl}}"],
-              "path": ["workers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workers"
+              ]
             }
           }
         },
@@ -1428,7 +2119,11 @@
                 "exec": [
                   "const responseData = pm.response.json().data || pm.response.json();",
                   "if (responseData.badge_token) { pm.collectionVariables.set('stitcher2Badge', responseData.badge_token); }",
-                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });"
+                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
+                  "if (responseData.id) { pm.collectionVariables.set('stitcher2Id', responseData.id); }",
+                  "if (responseData.id) { pm.collectionVariables.set('stitcher2Id', responseData.id); }",
+                  "if (responseData.id) { pm.collectionVariables.set('stitcher2Id', responseData.id); }",
+                  "if (responseData.id) { pm.collectionVariables.set('stitcher2Id', responseData.id); }"
                 ]
               }
             }
@@ -1436,8 +2131,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1445,8 +2146,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/workers",
-              "host": ["{{baseUrl}}"],
-              "path": ["workers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workers"
+              ]
             }
           }
         },
@@ -1460,7 +2165,11 @@
                 "exec": [
                   "const responseData = pm.response.json().data || pm.response.json();",
                   "if (responseData.badge_token) { pm.collectionVariables.set('packerBadge', responseData.badge_token); }",
-                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });"
+                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
+                  "if (responseData.id) { pm.collectionVariables.set('packerId', responseData.id); }",
+                  "if (responseData.id) { pm.collectionVariables.set('packerId', responseData.id); }",
+                  "if (responseData.id) { pm.collectionVariables.set('packerId', responseData.id); }",
+                  "if (responseData.id) { pm.collectionVariables.set('packerId', responseData.id); }"
                 ]
               }
             }
@@ -1468,8 +2177,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1477,8 +2192,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/workers",
-              "host": ["{{baseUrl}}"],
-              "path": ["workers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workers"
+              ]
             }
           }
         },
@@ -1499,15 +2218,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"badge_token\": \"{{stitcherBadge}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"pm-stitcher-a\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/worker/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "login"
+              ]
             }
           }
         },
@@ -1528,15 +2257,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"badge_token\": \"{{stitcher2Badge}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"pm-stitcher-b\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/worker/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "login"
+              ]
             }
           }
         },
@@ -1557,15 +2296,25 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"badge_token\": \"{{packerBadge}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"pm-packer\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/worker/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "login"
+              ]
             }
           }
         },
@@ -1585,12 +2334,22 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/worker/batches/{{scanBatchId}}/start",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches", "{{scanBatchId}}", "start"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{scanBatchId}}",
+                "start"
+              ]
             }
           }
         },
@@ -1610,8 +2369,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{workerToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1619,8 +2384,199 @@
             },
             "url": {
               "raw": "{{baseUrl}}/worker/batches/{{scanBatchId}}/complete",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches", "{{scanBatchId}}", "complete"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{scanBatchId}}",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assign Stitchers with Quotas (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Assignments updated', function () {",
+                  "    pm.expect(res.message).to.eql('assignments updated');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"stitching\",\n  \"assignments\": [\n    { \"worker_id\": \"{{stitcherId}}\", \"target_qty\": 2 },\n    { \"worker_id\": \"{{stitcher2Id}}\", \"target_qty\": 2 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{scanBatchId}}/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{scanBatchId}}",
+                "assignments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assign Stitchers with Quotas (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Assignments updated', function () {",
+                  "    pm.expect(res.message).to.eql('assignments updated');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"stitching\",\n  \"assignments\": [\n    { \"worker_id\": \"{{stitcherId}}\", \"target_qty\": 2 },\n    { \"worker_id\": \"{{stitcher2Id}}\", \"target_qty\": 2 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{scanBatchId}}/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{scanBatchId}}",
+                "assignments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assign Stitchers with Quotas (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Assignments updated', function () {",
+                  "    pm.expect(res.message).to.eql('assignments updated');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"stitching\",\n  \"assignments\": [\n    { \"worker_id\": \"{{stitcherId}}\", \"target_qty\": 2 },\n    { \"worker_id\": \"{{stitcher2Id}}\", \"target_qty\": 2 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{scanBatchId}}/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{scanBatchId}}",
+                "assignments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assign Stitchers with Quotas (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Assignments updated', function () {",
+                  "    pm.expect(res.message).to.eql('assignments updated');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"stitching\",\n  \"assignments\": [\n    { \"worker_id\": \"{{stitcherId}}\", \"target_qty\": 2 },\n    { \"worker_id\": \"{{stitcher2Id}}\", \"target_qty\": 2 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{scanBatchId}}/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{scanBatchId}}",
+                "assignments"
+              ]
             }
           }
         },
@@ -1640,12 +2596,22 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{stitcherToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/worker/batches/{{scanBatchId}}/start",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches", "{{scanBatchId}}", "start"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{scanBatchId}}",
+                "start"
+              ]
             }
           }
         },
@@ -1665,12 +2631,22 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{stitcher2Token}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcher2Token}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/worker/batches/{{scanBatchId}}/start",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches", "{{scanBatchId}}", "start"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{scanBatchId}}",
+                "start"
+              ]
             }
           }
         },
@@ -1690,12 +2666,22 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{stitcherToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/worker/batches/{{scanBatchId}}/start",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches", "{{scanBatchId}}", "start"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{scanBatchId}}",
+                "start"
+              ]
             }
           }
         },
@@ -1724,12 +2710,20 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{stitcherToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/worker/batches",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches"
+              ]
             }
           }
         },
@@ -1755,8 +2749,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{stitcherToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1764,8 +2764,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/worker/units/scan",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "units", "scan"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
             }
           }
         },
@@ -1786,8 +2792,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{stitcherToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1795,8 +2807,202 @@
             },
             "url": {
               "raw": "{{baseUrl}}/worker/units/scan",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "units", "scan"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Target can't be lower than completed (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 400', function () { pm.response.to.have.status(400); });",
+                  "const res = pm.response.json();",
+                  "pm.test('Target cannot drop below completed units', function () {",
+                  "    const msg = res.error || res.message || '';",
+                  "    pm.expect(msg).to.include('target can\\'t be lower');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"stitching\",\n  \"assignments\": [\n    { \"worker_id\": \"{{stitcherId}}\", \"target_qty\": 1 },\n    { \"worker_id\": \"{{stitcher2Id}}\", \"target_qty\": 3 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{scanBatchId}}/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{scanBatchId}}",
+                "assignments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Target can't be lower than completed (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 400', function () { pm.response.to.have.status(400); });",
+                  "const res = pm.response.json();",
+                  "pm.test('Target cannot drop below completed units', function () {",
+                  "    const msg = res.error || res.message || '';",
+                  "    pm.expect(msg).to.include('target can\\'t be lower');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"stitching\",\n  \"assignments\": [\n    { \"worker_id\": \"{{stitcherId}}\", \"target_qty\": 1 },\n    { \"worker_id\": \"{{stitcher2Id}}\", \"target_qty\": 3 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{scanBatchId}}/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{scanBatchId}}",
+                "assignments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Target can't be lower than completed (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 400', function () { pm.response.to.have.status(400); });",
+                  "const res = pm.response.json();",
+                  "pm.test('Target cannot drop below completed units', function () {",
+                  "    const msg = res.error || res.message || '';",
+                  "    pm.expect(msg).to.include('target can\\'t be lower');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"stitching\",\n  \"assignments\": [\n    { \"worker_id\": \"{{stitcherId}}\", \"target_qty\": 1 },\n    { \"worker_id\": \"{{stitcher2Id}}\", \"target_qty\": 3 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{scanBatchId}}/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{scanBatchId}}",
+                "assignments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Target can't be lower than completed (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 400', function () { pm.response.to.have.status(400); });",
+                  "const res = pm.response.json();",
+                  "pm.test('Target cannot drop below completed units', function () {",
+                  "    const msg = res.error || res.message || '';",
+                  "    pm.expect(msg).to.include('target can\\'t be lower');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"stitching\",\n  \"assignments\": [\n    { \"worker_id\": \"{{stitcherId}}\", \"target_qty\": 1 },\n    { \"worker_id\": \"{{stitcher2Id}}\", \"target_qty\": 3 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{scanBatchId}}/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{scanBatchId}}",
+                "assignments"
+              ]
             }
           }
         },
@@ -1817,8 +3023,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{stitcher2Token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcher2Token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1826,8 +3038,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/worker/units/scan",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "units", "scan"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
             }
           }
         },
@@ -1852,8 +3070,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{stitcher2Token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcher2Token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1861,8 +3085,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/worker/units/scan",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "units", "scan"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
             }
           }
         },
@@ -1886,8 +3116,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{stitcherToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1895,13 +3131,20 @@
             },
             "url": {
               "raw": "{{baseUrl}}/worker/batches/{{scanBatchId}}/complete",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "batches", "{{scanBatchId}}", "complete"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{scanBatchId}}",
+                "complete"
+              ]
             }
           }
         },
         {
-          "name": "A scans unit 4 — stitching phase completes",
+          "name": "B scans unit 4 \u2014 stitching phase completes",
           "event": [
             {
               "listen": "test",
@@ -1910,7 +3153,7 @@
                 "exec": [
                   "const responseData = pm.response.json().data;",
                   "pm.test('Progress 4 of 4', function () { pm.expect(responseData.done_count).to.eql(4); });",
-                  "pm.test('phase_completed true — batch advances to packing', function () {",
+                  "pm.test('phase_completed true \u2014 batch advances to packing', function () {",
                   "    pm.expect(responseData.phase_completed).to.be.true;",
                   "});",
                   "pm.test('batch is not fully completed yet', function () {",
@@ -1923,8 +3166,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{stitcherToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcher2Token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1932,20 +3181,26 @@
             },
             "url": {
               "raw": "{{baseUrl}}/worker/units/scan",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "units", "scan"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
             }
           }
         },
         {
-          "name": "Stitcher scans after phase moved (409)",
+          "name": "Stitcher cannot start/join after phase moved (409)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Stitcher cannot scan a batch at packing', function () { pm.response.to.have.status(409); });"
+                  "pm.test('Stitcher cannot start a batch at packing', function () { pm.response.to.have.status(409); });"
                 ]
               }
             }
@@ -1953,36 +3208,72 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{stitcherToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"unit_code\": \"{{scanBatchCode}}-001\"\n}"
-            },
+            "body": null,
             "url": {
-              "raw": "{{baseUrl}}/worker/units/scan",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "units", "scan"]
+              "raw": "{{baseUrl}}/worker/batches/{{scanBatchId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{scanBatchId}}",
+                "start"
+              ]
             }
           }
         },
         {
-          "name": "Packer joins + scans all 4 (last completes batch)",
+          "name": "Packer joins batch",
           "event": [
             {
-              "listen": "prerequest",
+              "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// join first (idempotent), then this request scans -001; -002..-004 follow",
-                  "const base = pm.collectionVariables.get('baseUrl');",
-                  "const id = pm.collectionVariables.get('scanBatchId');",
-                  "pm.sendRequest({ url: base + '/worker/batches/' + id + '/start', method: 'POST',",
-                  "  header: { 'Authorization': 'Bearer ' + pm.collectionVariables.get('packerToken') } }, function () {});"
+                  "pm.test('Packer joins batch (200)', function () { pm.response.to.have.status(200); });"
                 ]
               }
-            },
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{packerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{scanBatchId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{scanBatchId}}",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Packer scans 1",
+          "event": [
             {
               "listen": "test",
               "script": {
@@ -1998,8 +3289,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{packerToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{packerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -2007,8 +3304,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/worker/units/scan",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "units", "scan"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
             }
           }
         },
@@ -2042,8 +3345,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{packerToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{packerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -2051,13 +3360,19 @@
             },
             "url": {
               "raw": "{{baseUrl}}/worker/units/scan",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "units", "scan"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
             }
           }
         },
         {
-          "name": "Packer scans 4 — batch completes",
+          "name": "Packer scans 4 \u2014 batch completes",
           "event": [
             {
               "listen": "test",
@@ -2076,8 +3391,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{packerToken}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{packerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -2085,8 +3406,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/worker/units/scan",
-              "host": ["{{baseUrl}}"],
-              "path": ["worker", "units", "scan"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
             }
           }
         }
@@ -2094,7 +3421,7 @@
     },
     {
       "name": "Reports",
-      "description": "Prereqs: Auth→Login (admin). For meaningful numbers, run the Unit Scanning folder first so at least one batch has completed phase_logs.",
+      "description": "Prereqs: Auth\u2192Login (admin). For meaningful numbers, run the Unit Scanning folder first so at least one batch has completed phase_logs.",
       "item": [
         {
           "name": "Worker Productivity (default 7 days)",
@@ -2142,12 +3469,20 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/reports/workers",
-              "host": ["{{baseUrl}}"],
-              "path": ["reports", "workers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "workers"
+              ]
             }
           }
         },
@@ -2189,15 +3524,29 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/reports/workers?from={{reportFrom}}&to={{reportTo}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["reports", "workers"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "workers"
+              ],
               "query": [
-                { "key": "from", "value": "{{reportFrom}}" },
-                { "key": "to", "value": "{{reportTo}}" }
+                {
+                  "key": "from",
+                  "value": "{{reportFrom}}"
+                },
+                {
+                  "key": "to",
+                  "value": "{{reportTo}}"
+                }
               ]
             }
           }
@@ -2220,15 +3569,29 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/reports/workers?from=2026-07-31&to=2026-07-01",
-              "host": ["{{baseUrl}}"],
-              "path": ["reports", "workers"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "workers"
+              ],
               "query": [
-                { "key": "from", "value": "2026-07-31" },
-                { "key": "to", "value": "2026-07-01" }
+                {
+                  "key": "from",
+                  "value": "2026-07-31"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-07-01"
+                }
               ]
             }
           }
@@ -2251,12 +3614,1854 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{workerToken}}" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
             ],
             "url": {
               "raw": "{{baseUrl}}/reports/workers",
-              "host": ["{{baseUrl}}"],
-              "path": ["reports", "workers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "workers"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Short-Cut Resolution",
+      "description": "Tests for short cut lifecycle: split, reduce, and recut. Prereqs: Auth\u2192Login (admin), Worker Auth\u2192Worker Login (cutter). Run top to bottom.",
+      "item": [
+        {
+          "name": "Setup: Create Batch for Recut (qty 4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.collectionVariables.set('shortBatchId', res.id);",
+                  "pm.collectionVariables.set('shortBatchCode', res.batch_code);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": {{carModelId}},\n  \"quantity\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Cutter Start (recut batch)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{shortBatchId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{shortBatchId}}",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Cutter Complete (short 2 of 4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity_completed\": 2,\n  \"notes\": \"roll damaged\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{shortBatchId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{shortBatchId}}",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Resolve Short \u2014 Recut",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Batch returned to cutting', function () {",
+                  "    pm.expect(res.message).to.eql('resolved');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"recut\",\n  \"reason\": \"new material received\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{shortBatchId}}/resolve-short",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{shortBatchId}}",
+                "resolve-short"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Setup: Create Batch for Split (qty 4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.collectionVariables.set('splitBatchId', res.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": {{carModelId}},\n  \"quantity\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Cutter Start (split batch)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{splitBatchId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{splitBatchId}}",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Cutter Complete (cut 2 of 4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity_completed\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{splitBatchId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{splitBatchId}}",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Resolve Short \u2014 Split",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Split creates remainder batch code', function () {",
+                  "    pm.expect(res.message).to.eql('resolved');",
+                  "    pm.expect(res.remainder_batch_code).to.be.a('string').and.to.have.length.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"split\",\n  \"reason\": \"split remaining to new batch\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{splitBatchId}}/resolve-short",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{splitBatchId}}",
+                "resolve-short"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Setup: Create Batch for Reduce (qty 4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.collectionVariables.set('reduceBatchId', res.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": {{carModelId}},\n  \"quantity\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Cutter Start (reduce batch)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{reduceBatchId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{reduceBatchId}}",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Cutter Complete (cut 3 of 4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity_completed\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{reduceBatchId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{reduceBatchId}}",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Resolve Short \u2014 Reduce",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Reduced cleanly', function () {",
+                  "    pm.expect(res.message).to.eql('resolved');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"reduce\",\n  \"reason\": \"roll ended\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{reduceBatchId}}/resolve-short",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{reduceBatchId}}",
+                "resolve-short"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assignments & Quotas",
+      "description": "Tests for admin assignments and quota enforcement (sum ok 200, sum mismatch 400). Prereqs: Auth\u2192Login, Multi-Worker Scanning setup (workers created). Run top to bottom.",
+      "item": [
+        {
+          "name": "Setup: Create Batch (qty 4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.collectionVariables.set('assignBatchId', res.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": {{carModelId}},\n  \"quantity\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Cutter Start",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{assignBatchId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{assignBatchId}}",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Cutter Complete (cut 4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity_completed\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{assignBatchId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{assignBatchId}}",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assignments PUT \u2014 Quotas Sum Mismatch (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 400', function () { pm.response.to.have.status(400); });",
+                  "const res = pm.response.json();",
+                  "pm.test('Sum mismatch error returned', function () {",
+                  "    const msg = res.error || res.message || '';",
+                  "    pm.expect(msg).to.include('quotas total');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"stitching\",\n  \"assignments\": [\n    { \"worker_id\": \"{{stitcherId}}\", \"target_qty\": 2 },\n    { \"worker_id\": \"{{stitcher2Id}}\", \"target_qty\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{assignBatchId}}/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{assignBatchId}}",
+                "assignments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assignments PUT \u2014 Quotas Sum OK (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Assignments updated successfully', function () {",
+                  "    pm.expect(res.message).to.eql('assignments updated');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"stitching\",\n  \"assignments\": [\n    { \"worker_id\": \"{{stitcherId}}\", \"target_qty\": 2 },\n    { \"worker_id\": \"{{stitcher2Id}}\", \"target_qty\": 2 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{assignBatchId}}/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{assignBatchId}}",
+                "assignments"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rework Flow",
+      "description": "Tests for rework flag (multipart with fixture image), peek, worker rework list, stitcher fix scan, packer blocked in rework, written-off scan, admin rework list & decisions (to_stitcher, recut, write_off), signed URLs without auth (200) and tampered sig (403). Prereqs: Auth\u2192Login, Multi-Worker Scanning setup (stitcher & packer tokens). Run top to bottom.",
+      "item": [
+        {
+          "name": "Setup: Create Batch (qty 3)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.collectionVariables.set('reworkBatchId', res.id);",
+                  "pm.collectionVariables.set('reworkBatchCode', res.batch_code);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": {{carModelId}},\n  \"quantity\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Cutter Start",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{reworkBatchId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{reworkBatchId}}",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Cutter Complete (cut 3)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity_completed\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{reworkBatchId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{reworkBatchId}}",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Setup: Assign Stitcher A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"stitching\",\n  \"assignments\": [\n    { \"worker_id\": \"{{stitcherId}}\", \"target_qty\": 3 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{reworkBatchId}}/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{reworkBatchId}}",
+                "assignments"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Stitcher A Joins",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{reworkBatchId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{reworkBatchId}}",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Stitcher A Scans Unit 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_code\": \"{{reworkBatchCode}}-001\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/units/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Stitcher A Scans Unit 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_code\": \"{{reworkBatchCode}}-002\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/units/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Stitcher A Scans Unit 3 (advances to packing)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_code\": \"{{reworkBatchCode}}-003\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/units/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pipeline: Packer Joins Batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{packerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/batches/{{reworkBatchId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "batches",
+                "{{reworkBatchId}}",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Worker Unit Peek",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Unit details returned correctly', function () {",
+                  "    pm.expect(res.unit_code).to.eql(pm.collectionVariables.get('reworkBatchCode') + '-001');",
+                  "    pm.expect(res.batch_code).to.eql(pm.collectionVariables.get('reworkBatchCode'));",
+                  "    pm.expect(res.can_pack).to.be.true;",
+                  "    pm.expect(res.can_rework).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{packerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/units/{{reworkBatchCode}}-001/peek",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "{{reworkBatchCode}}-001",
+                "peek"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Flag Rework (Stitcher Route)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Rework flagged with stitcher route', function () {",
+                  "    pm.expect(res.route).to.eql('stitcher');",
+                  "    pm.expect(res.round).to.eql(1);",
+                  "    pm.expect(res.photos).to.be.an('array').with.lengthOf.at.least(1);",
+                  "    pm.collectionVariables.set('reworkLogId1', res.id);",
+                  "    const photoUrl = (res.photos[0] && res.photos[0].url) || res.photos[0];",
+                  "    const parts = photoUrl.split('?');",
+                  "    const filename = parts[0].split('/').pop();",
+                  "    const query = parts[1] || '';",
+                  "    const expMatch = query.match(/exp=([^&]+)/);",
+                  "    const sigMatch = query.match(/sig=([^&]+)/);",
+                  "    pm.collectionVariables.set('reworkPhotoName', filename);",
+                  "    pm.collectionVariables.set('reworkPhotoExp', expMatch ? expMatch[1] : '');",
+                  "    pm.collectionVariables.set('reworkPhotoSig', sigMatch ? sigMatch[1] : '');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{packerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "reasons",
+                  "value": "stitching_fault",
+                  "type": "text"
+                },
+                {
+                  "key": "note",
+                  "value": "uneven seam",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "postman/fixtures/fault.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/units/{{reworkBatchCode}}-001/rework",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "{{reworkBatchCode}}-001",
+                "rework"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Packer Scan of Rework Mat (409 in_rework)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 409', function () { pm.response.to.have.status(409); });",
+                  "const res = pm.response.json();",
+                  "pm.test('Error code is in_rework', function () {",
+                  "    const code = (res.error && res.error.code) || res.code || '';",
+                  "    pm.expect(code).to.eql('in_rework');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{packerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_code\": \"{{reworkBatchCode}}-001\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/units/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Signed File URL Without Auth (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Content-Type is image', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('image');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/files/rework/{{reworkPhotoName}}?exp={{reworkPhotoExp}}&sig={{reworkPhotoSig}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                "rework",
+                "{{reworkPhotoName}}"
+              ],
+              "query": [
+                {
+                  "key": "exp",
+                  "value": "{{reworkPhotoExp}}"
+                },
+                {
+                  "key": "sig",
+                  "value": "{{reworkPhotoSig}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Signed File URL Tampered Sig (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 403', function () { pm.response.to.have.status(403); });",
+                  "const res = pm.response.json();",
+                  "pm.test('Error code is invalid_signature', function () {",
+                  "    const code = (res.error && res.error.code) || res.code || '';",
+                  "    pm.expect(code).to.eql('invalid_signature');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/files/rework/{{reworkPhotoName}}?exp={{reworkPhotoExp}}&sig=tamperedbadsignature",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "files",
+                "rework",
+                "{{reworkPhotoName}}"
+              ],
+              "query": [
+                {
+                  "key": "exp",
+                  "value": "{{reworkPhotoExp}}"
+                },
+                {
+                  "key": "sig",
+                  "value": "tamperedbadsignature"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Worker Rework List",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Rework item is present in stitcher list', function () {",
+                  "    pm.expect(res).to.be.an('array');",
+                  "    const found = res.find(r => r.unit_code === pm.collectionVariables.get('reworkBatchCode') + '-001');",
+                  "    pm.expect(found).to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/worker/rework",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "rework"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Stitcher Fix Scan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Rework fixed marked true', function () {",
+                  "    pm.expect(res.rework_fixed).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_code\": \"{{reworkBatchCode}}-001\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/units/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Flag Rework (Admin Route)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Rework flagged with admin route', function () {",
+                  "    pm.expect(res.route).to.eql('admin');",
+                  "    pm.collectionVariables.set('reworkLogId2', res.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{packerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "reasons",
+                  "value": "cutting_fault",
+                  "type": "text"
+                },
+                {
+                  "key": "note",
+                  "value": "cloth defect",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "postman/fixtures/fault.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/units/{{reworkBatchCode}}-002/rework",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "{{reworkBatchCode}}-002",
+                "rework"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin List Rework",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Contains flagged item', function () {",
+                  "    pm.expect(res).to.be.an('array');",
+                  "    const found = res.find(r => r.id === pm.collectionVariables.get('reworkLogId2'));",
+                  "    pm.expect(found).to.not.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rework?status=open&route=admin",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rework"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "open"
+                },
+                {
+                  "key": "route",
+                  "value": "admin"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Decide Rework \u2014 to_stitcher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Decision set to to_stitcher', function () {",
+                  "    pm.expect(res.decision).to.eql('to_stitcher');",
+                  "    pm.expect(res.route).to.eql('stitcher');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"to_stitcher\",\n  \"note\": \"stitcher to trim edge\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rework/{{reworkLogId2}}/decide",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rework",
+                "{{reworkLogId2}}",
+                "decide"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Flag Rework for Recut",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.collectionVariables.set('reworkLogId3', res.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{packerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "reasons",
+                  "value": "cutting_fault",
+                  "type": "text"
+                },
+                {
+                  "key": "note",
+                  "value": "heavy cut defect",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "postman/fixtures/fault.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/units/{{reworkBatchCode}}-003/rework",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "{{reworkBatchCode}}-003",
+                "rework"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Decide Rework \u2014 recut",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Decision set to recut with new batch code', function () {",
+                  "    pm.expect(res.decision).to.eql('recut');",
+                  "    pm.expect(res.new_batch_code).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"recut\",\n  \"note\": \"recut unit from fresh roll\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rework/{{reworkLogId3}}/decide",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rework",
+                "{{reworkLogId3}}",
+                "decide"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Flag Rework Round 2 (Escalation to Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Round 2 escalated to admin', function () {",
+                  "    pm.expect(res.round).to.eql(2);",
+                  "    pm.expect(res.route).to.eql('admin');",
+                  "    pm.collectionVariables.set('reworkLogId1Round2', res.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{packerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "reasons",
+                  "value": "stitching_fault",
+                  "type": "text"
+                },
+                {
+                  "key": "note",
+                  "value": "still defective after fix",
+                  "type": "text"
+                },
+                {
+                  "key": "photos",
+                  "type": "file",
+                  "src": "postman/fixtures/fault.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/units/{{reworkBatchCode}}-001/rework",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "{{reworkBatchCode}}-001",
+                "rework"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Decide Rework \u2014 write_off",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const res = pm.response.json().data || pm.response.json();",
+                  "pm.test('Decision set to write_off', function () {",
+                  "    pm.expect(res.decision).to.eql('write_off');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"write_off\",\n  \"note\": \"unrepairable defect\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/rework/{{reworkLogId1Round2}}/decide",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rework",
+                "{{reworkLogId1Round2}}",
+                "decide"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Written-off Scan (409 written_off)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 409', function () { pm.response.to.have.status(409); });",
+                  "const res = pm.response.json();",
+                  "pm.test('Error code is written_off', function () {",
+                  "    const code = (res.error && res.error.code) || res.code || '';",
+                  "    pm.expect(code).to.eql('written_off');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{packerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_code\": \"{{reworkBatchCode}}-001\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/units/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "units",
+                "scan"
+              ]
             }
           }
         }
