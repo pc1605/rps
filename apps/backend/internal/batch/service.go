@@ -913,6 +913,75 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 
 var ErrUnitNotFound = errors.New("unit not found")
 
+// PeekUnit is a read-only check for packers before showing the inspect sheet.
+func (s *Service) PeekUnit(ctx context.Context, unitCode string, workerID uuid.UUID) (*UnitPeek, error) {
+	var (
+		unitID      uuid.UUID
+		unitStatus  UnitStatus
+		batchID     uuid.UUID
+		batchCode   string
+		batchPhase  Phase
+		batchStatus Status
+	)
+	err := s.pool.QueryRow(ctx, `
+		SELECT bu.id, bu.status, b.id, b.batch_code, b.current_phase, b.status
+		FROM batch_units bu JOIN batches b ON b.id = bu.batch_id
+		WHERE bu.unit_code = $1
+	`, unitCode).Scan(&unitID, &unitStatus, &batchID, &batchCode, &batchPhase, &batchStatus)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrUnitNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var joined bool
+	err = s.pool.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM phase_logs
+			WHERE batch_id = $1 AND phase = 'packing' AND worker_id = $2 AND completed_at IS NULL
+		)
+	`, batchID, workerID).Scan(&joined)
+	if err != nil {
+		return nil, err
+	}
+
+	canPack := unitStatus == UnitPending && batchPhase == PhasePacking && batchStatus == StatusInProgress && joined
+	canRework := canPack
+
+	var reason *string
+	if !canPack {
+		var r string
+		if unitStatus == UnitPacked || unitStatus == UnitDispatched {
+			r = "already_packed"
+		} else if unitStatus == UnitRework {
+			r = "in_rework"
+		} else if unitStatus == UnitDefective {
+			r = "written_off"
+		} else if batchPhase != PhasePacking {
+			r = "wrong_phase"
+		} else if !joined || batchStatus != StatusInProgress {
+			r = "not_started"
+		}
+		if r != "" {
+			reason = &r
+		}
+	}
+
+	return &UnitPeek{
+		UnitCode:    unitCode,
+		BatchID:     batchID,
+		BatchCode:   batchCode,
+		Status:      unitStatus,
+		BatchPhase:  batchPhase,
+		BatchStatus: batchStatus,
+		Joined:      joined,
+		CanPack:     canPack,
+		CanRework:   canRework,
+		Reason:      reason,
+	}, nil
+}
+
 // ScanUnit marks one unit packed (packer's per-unit scan).
 // Idempotent on re-scan. Auto-completes the batch on the last unit.
 // ScanUnit: stitcher scans a mat they just stitched; packer scans a mat they

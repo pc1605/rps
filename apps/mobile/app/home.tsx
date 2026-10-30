@@ -1,8 +1,9 @@
-import { PHASE_LABEL, SIZE_LABEL, STATION_LABEL } from "@rps/shared";
+import { PHASE_LABEL, SIZE_LABEL, STATION_LABEL, type ReworkEntry } from "@rps/shared";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
+import { AuthImage } from "../components/AuthImage";
 import { AppButton } from "../components/ui/AppButton";
 import { Banner } from "../components/ui/Banner";
 import { Card } from "../components/ui/Card";
@@ -14,7 +15,67 @@ import { Stat } from "../components/ui/Stat";
 import { useAuth } from "../features/auth/store";
 import { useMyBatches } from "../features/batches/hooks";
 import type { Batch } from "../features/batches/types";
+import { useMyRework } from "../features/rework/hooks";
+import { strings } from "../lib/strings";
 import { useOnline } from "../lib/use-online";
+
+function ReworkCard({ item, onOpen }: { item: ReworkEntry; onOpen: (item: ReworkEntry) => void }) {
+  const modelText =
+    item.brand_name && item.model_name ? `${item.brand_name} ${item.model_name}` : (item.batch_code ?? "");
+  const metaText = item.size_class
+    ? `${SIZE_LABEL[item.size_class] ?? item.size_class}${item.line_name ? ` · ${item.line_name}` : ""}`
+    : (item.line_name ?? "");
+
+  const firstPhoto = item.photos?.[0];
+
+  return (
+    <Pressable
+      onPress={() => onOpen(item)}
+      accessibilityRole="button"
+      accessibilityLabel={`Rework ${item.unit_code ?? ""}, ${modelText}`}
+    >
+      <Card style={styles.reworkCard}>
+        <View style={styles.reworkCardContent}>
+          {firstPhoto && (
+            <AuthImage
+              url={firstPhoto.url}
+              accessibilityLabel="Rework defect photo"
+              style={styles.reworkThumb}
+            />
+          )}
+          <View style={styles.reworkInfo}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.reworkCode}>{item.unit_code}</Text>
+              {item.round > 1 && (
+                <View style={styles.roundBadge}>
+                  <Text style={styles.roundBadgeText}>{strings.rework.roundBadge(item.round)}</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.modelLine}>
+              <Text style={styles.modelName}>{modelText}</Text>
+              {metaText ? <Text style={styles.modelMeta}>{metaText}</Text> : null}
+            </View>
+
+            <View style={styles.reasonsRow}>
+              {item.reasons.map((r) => {
+                const reasonInfo = strings.rework.reasons[r];
+                return (
+                  <Chip
+                    key={r}
+                    label={`${reasonInfo?.emoji ?? "•"} ${reasonInfo?.label ?? r}`}
+                    color={styles.dangerColor.color}
+                  />
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Card>
+    </Pressable>
+  );
+}
 
 function BatchCard({
   batch,
@@ -127,6 +188,7 @@ export default function Home() {
   const router = useRouter();
   const { worker, restore, logout } = useAuth();
   const { data: batches, isPending, isError, isRefetching, refetch } = useMyBatches();
+  const { data: reworkItems, refetch: refetchRework } = useMyRework();
   const isOnline = useOnline();
 
   // Cold-start: token exists but profile not loaded yet
@@ -137,6 +199,15 @@ export default function Home() {
   const stationTitle = worker
     ? `${STATION_LABEL[worker.station as keyof typeof STATION_LABEL] ?? worker.station} queue`
     : "My queue";
+
+  const handleRefresh = () => {
+    refetch();
+    if (worker?.station === "stitcher") {
+      refetchRework();
+    }
+  };
+
+  const hasRework = (reworkItems?.length ?? 0) > 0;
 
   return (
     <Screen
@@ -175,23 +246,42 @@ export default function Home() {
             kind="danger"
             text="Couldn't load your queue. Check connection and retry."
             actionLabel="Retry"
-            onAction={() => refetch()}
+            onAction={() => handleRefresh()}
           />
         </View>
       ) : (
         <FlatList
           data={batches ?? []}
           keyExtractor={(b) => b.id}
+          ListHeaderComponent={
+            hasRework ? (
+              <View style={styles.reworkSection}>
+                <View style={styles.reworkSectionHeader}>
+                  <Text style={styles.reworkSectionTitle}>{strings.rework.homeSectionTitle}</Text>
+                  <View style={styles.reworkCountBadge}>
+                    <Text style={styles.reworkCountBadgeText}>{reworkItems?.length}</Text>
+                  </View>
+                </View>
+                <View style={styles.reworkList}>
+                  {reworkItems?.map((item) => (
+                    <ReworkCard key={item.id} item={item} onOpen={(it) => router.push(`/rework/${it.id}`)} />
+                  ))}
+                </View>
+              </View>
+            ) : null
+          }
           renderItem={({ item }) => (
             <BatchCard batch={item} station={worker?.station} onOpen={(b) => router.push(`/batch/${b.id}`)} />
           )}
           contentContainerStyle={styles.listContent}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} />}
           ListEmptyComponent={
-            <View style={styles.center}>
-              <Text style={styles.emptyTitle}>All clear</Text>
-              <Text style={styles.emptyText}>Nothing waiting at your station.</Text>
-            </View>
+            !hasRework ? (
+              <View style={styles.center}>
+                <Text style={styles.emptyTitle}>All clear</Text>
+                <Text style={styles.emptyText}>Nothing waiting at your station.</Text>
+              </View>
+            ) : null
           }
         />
       )}
@@ -279,6 +369,77 @@ const styles = StyleSheet.create((theme) => ({
     marginTop: theme.spacing.xs,
     textAlign: "center",
   },
+  reworkSection: {
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  reworkSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+  },
+  reworkSectionTitle: {
+    ...theme.text.heading,
+    color: theme.colors.text,
+  },
+  reworkCountBadge: {
+    backgroundColor: theme.colors.danger,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: 2,
+    minWidth: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reworkCountBadgeText: {
+    ...theme.text.caption,
+    color: theme.colors.overlayText,
+  },
+  reworkList: {
+    gap: theme.spacing.sm,
+  },
+  reworkCard: {
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  reworkCardContent: {
+    flexDirection: "row",
+    gap: theme.spacing.md,
+    alignItems: "center",
+  },
+  reworkThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: theme.radius.sm,
+    overflow: "hidden",
+  },
+  reworkInfo: {
+    flex: 1,
+    gap: theme.spacing.xs,
+  },
+  reworkCode: {
+    ...theme.text.code,
+    color: theme.colors.text,
+  },
+  roundBadge: {
+    backgroundColor: theme.colors.dangerBg,
+    borderColor: theme.colors.danger,
+    borderWidth: 1,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: 2,
+  },
+  roundBadgeText: {
+    ...theme.text.caption,
+    color: theme.colors.danger,
+  },
+  reasonsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.xxs,
+    marginTop: theme.spacing.xxs,
+  },
   phaseColor: (phase: string) => ({
     color: theme.colors.phase[phase as keyof typeof theme.colors.phase] ?? theme.colors.textMuted,
   }),
@@ -290,5 +451,8 @@ const styles = StyleSheet.create((theme) => ({
   },
   successColor: {
     color: theme.colors.success,
+  },
+  dangerColor: {
+    color: theme.colors.danger,
   },
 }));

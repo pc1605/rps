@@ -1,1 +1,1 @@
-export type { Batch, BatchStatus, Phase, ScanResult } from "@rps/shared";
+export type { Batch, BatchStatus, PeekReason, Phase, ScanResult, UnitPeek } from "@rps/shared";

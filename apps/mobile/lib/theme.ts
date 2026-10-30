@@ -28,9 +28,9 @@ const text = {
   code: { fontSize: 14, lineHeight: 20, fontFamily: fonts.mono },
   codeLarge: { fontSize: 24, lineHeight: 30, fontFamily: fonts.mono },
   button: { fontSize: 16, lineHeight: 20, fontFamily: fonts.semibold },
-  // legacy — kept so current screens render unchanged; P4 migrates them off these
   eyebrow: { fontSize: 12, lineHeight: 16, letterSpacing: 2, fontFamily: fonts.medium },
   label: { fontSize: 12, lineHeight: 16, letterSpacing: 1, fontFamily: fonts.medium },
+  emoji: { fontSize: 32, lineHeight: 36 },
 } as const;
 
 interface PhaseColors {
