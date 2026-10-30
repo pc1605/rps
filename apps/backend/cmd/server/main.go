@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -42,7 +43,7 @@ func main() {
 	log.Info().Msg("✓ database connected")
 
 	// ───── File Storage ─────
-	if err := os.MkdirAll(cfg.UploadDir+"/rework", 0750); err != nil {
+	if err := os.MkdirAll(filepath.Join(cfg.UploadDir, "rework"), 0750); err != nil {
 		log.Fatal().Err(err).Msg("failed to create upload directory")
 	}
 

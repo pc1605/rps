@@ -309,7 +309,7 @@ func (h *Handler) FlagRework(c *fiber.Ctx) error {
 		return httpx.Forbidden(c, "worker token required")
 	}
 	if auth.StationFromCtx(c) != "packer" {
-		return httpx.Forbidden(c, "packer station required")
+		return httpx.Forbidden(c, "only packers can send a mat to rework")
 	}
 	wid, _ := auth.WorkerID(c)
 	unitCode := strings.TrimSpace(c.Params("code"))
@@ -403,7 +403,7 @@ func (h *Handler) FlagRework(c *fiber.Ctx) error {
 		savedFiles = append(savedFiles, destPath)
 	}
 
-	entry, err := h.svc.FlagRework(c.Context(), unitCode, wid, "packer", rawReasons, notePtr, savedFiles, c.IP())
+	entry, err := h.svc.FlagRework(c.Context(), unitCode, wid, auth.StationFromCtx(c), rawReasons, notePtr, savedFiles, c.IP())
 	if err != nil {
 		cleanSaved()
 		switch {
