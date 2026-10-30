@@ -5,7 +5,7 @@ import * as React from "react";
 import type { ReworkPhoto } from "@rps/shared";
 import { Chip } from "@/components/rps/chip";
 import { Card } from "@/components/ui/card";
-import { AuthImage } from "@/features/rework/components/auth-image";
+import { RemoteImage } from "@/features/rework/components/remote-image";
 import { PhotoLightbox } from "@/features/rework/components/photo-lightbox";
 import { ReasonChip } from "@/features/rework/components/reason-chip";
 import { unitTone } from "@/lib/tokens";
@@ -147,7 +147,7 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
                             className="h-10 w-10 overflow-hidden rounded border border-border focus:outline-none focus:ring-1 focus:ring-ring"
                             aria-label={`View photo ${pIdx + 1} of round ${round.round}`}
                           >
-                            <AuthImage
+                            <RemoteImage
                               key={photo.url}
                               src={photo.url}
                               alt={`Round ${round.round} thumbnail ${pIdx + 1}`}

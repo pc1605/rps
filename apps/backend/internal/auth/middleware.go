@@ -27,6 +27,9 @@ func (s *Service) Guard() fiber.Handler {
 		if strings.HasPrefix(c.Path(), "/api/v1/public/") {
 			return c.Next()
 		}
+		if strings.HasPrefix(c.Path(), "/api/v1/files/rework/") {
+			return c.Next()
+		}
 		key := c.Method() + " " + c.Path()
 		if PublicPaths[key] {
 			return c.Next()

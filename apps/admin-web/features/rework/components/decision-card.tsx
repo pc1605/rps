@@ -20,7 +20,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDecideRework } from "../hooks";
-import { AuthImage } from "./auth-image";
+import { RemoteImage } from "./remote-image";
 import { PhotoLightbox } from "./photo-lightbox";
 import { ReasonChip } from "./reason-chip";
 
@@ -193,7 +193,7 @@ export function DecisionCard({ entry }: { entry: ReworkEntry }) {
                   className="group relative h-16 w-16 overflow-hidden rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring"
                   aria-label={`View photo ${idx + 1} of ${entry.photos.length}`}
                 >
-                  <AuthImage
+                  <RemoteImage
                     key={photo.url}
                     src={photo.url}
                     alt={`Rework thumbnail ${idx + 1}`}

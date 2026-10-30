@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/pc1605/rps/apps/backend/internal/audit"
+	"github.com/pc1605/rps/apps/backend/internal/files"
 )
 
 var allowedReasons = map[string]bool{
@@ -190,7 +191,7 @@ func (s *Service) FlagRework(ctx context.Context, unitCode string, workerID uuid
 		`, photoID, reworkID, filename); err != nil {
 			return nil, err
 		}
-		photos = append(photos, ReworkPhoto{ID: photoID, URL: "/api/v1/files/rework/" + filename})
+		photos = append(photos, ReworkPhoto{ID: photoID, URL: "/api/v1/files/rework/" + filename + "?" + files.Sign(filename, 0)})
 	}
 
 	if _, err := tx.Exec(ctx, `UPDATE batch_units SET status = 'rework' WHERE id = $1`, unitID); err != nil {
@@ -572,7 +573,7 @@ func (s *Service) attachPhotos(ctx context.Context, entries []*ReworkEntry) erro
 		if entry, ok := entryMap[rwID]; ok {
 			entry.Photos = append(entry.Photos, ReworkPhoto{
 				ID:  photoID,
-				URL: "/api/v1/files/rework/" + path,
+				URL: "/api/v1/files/rework/" + path + "?" + files.Sign(path, 0),
 			})
 		}
 	}

@@ -18,6 +18,7 @@ import (
 	"github.com/pc1605/rps/apps/backend/internal/batch"
 	"github.com/pc1605/rps/apps/backend/internal/config"
 	"github.com/pc1605/rps/apps/backend/internal/db"
+	"github.com/pc1605/rps/apps/backend/internal/files"
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
 	"github.com/pc1605/rps/apps/backend/internal/reference"
 	"github.com/pc1605/rps/apps/backend/internal/report"
@@ -46,6 +47,7 @@ func main() {
 	if err := os.MkdirAll(filepath.Join(cfg.UploadDir, "rework"), 0750); err != nil {
 		log.Fatal().Err(err).Msg("failed to create upload directory")
 	}
+	files.Configure(cfg.FileURLSecret, cfg.FileURLTTL)
 
 	// ───── Services (dependency wiring) ─────
 	authSvc := auth.NewService(pool, cfg.JWTAccessSecret, cfg.JWTRefreshSecret, cfg.JWTAccessTTL, cfg.JWTRefreshTTL)

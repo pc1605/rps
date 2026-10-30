@@ -5,7 +5,7 @@ import * as React from "react";
 import type { ReworkPhoto } from "@rps/shared";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AuthImage } from "./auth-image";
+import { RemoteImage } from "./remote-image";
 
 export interface PhotoLightboxProps {
   photos: ReworkPhoto[];
@@ -80,7 +80,7 @@ export function PhotoLightbox({
 
         <div className="relative flex min-h-[320px] max-h-[75vh] w-full items-center justify-center bg-black/5 p-4 dark:bg-black/40">
           {currentPhoto ? (
-            <AuthImage
+            <RemoteImage
               key={currentPhoto.url}
               src={currentPhoto.url}
               alt={`${title} (${index + 1} of ${photos.length})`}
