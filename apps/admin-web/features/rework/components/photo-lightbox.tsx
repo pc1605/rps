@@ -84,8 +84,8 @@ export function PhotoLightbox({
               key={currentPhoto.url}
               src={currentPhoto.url}
               alt={`${title} (${index + 1} of ${photos.length})`}
-              className="max-h-[68vh] w-auto max-w-full rounded-md object-contain shadow-sm"
-              skeletonClassName="h-[60vh] w-full max-w-xl"
+              className="h-[68vh] w-full rounded-md"
+              style={{ objectFit: "contain" }}
             />
           ) : (
             <div className="text-small text-muted-foreground">No photo available</div>
