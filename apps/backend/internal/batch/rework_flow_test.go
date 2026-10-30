@@ -211,8 +211,8 @@ func TestReworkFlow(t *testing.T) {
 
 	// 4. Second flag of same unit blocked while open
 	_, err = s.FlagRework(ctx, unit1.UnitCode, packerID, "packer", []string{"stain"}, nil, []string{dummyPhoto}, "127.0.0.1")
-	if err == nil {
-		t.Fatalf("expected error on duplicate open rework flag, got nil")
+	if err == nil || !errors.Is(err, ErrAlreadyInRework) {
+		t.Fatalf("expected ErrAlreadyInRework on duplicate open rework flag, got: %v", err)
 	}
 
 	// Packer scanning rework unit is blocked
@@ -277,6 +277,12 @@ func TestReworkFlow(t *testing.T) {
 	}
 	if u1Status != UnitDefective {
 		t.Errorf("expected unit status defective, got %s", u1Status)
+	}
+
+	// Packer scanning written-off / defective unit must receive ErrUnitWrittenOff
+	_, err = s.ScanUnit(ctx, unit1.UnitCode, packerID, "packer", "127.0.0.1")
+	if err == nil || !errors.Is(err, ErrUnitWrittenOff) {
+		t.Fatalf("expected ErrUnitWrittenOff when packer scans written-off unit, got: %v", err)
 	}
 
 	// 8. Pack unit 2 → batch completes

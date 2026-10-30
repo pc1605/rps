@@ -162,9 +162,7 @@ type ReworkEntry struct {
 	UnitCode      string        `json:"unit_code,omitempty"`
 	BatchID       uuid.UUID     `json:"batch_id"`
 	BatchCode     string        `json:"batch_code,omitempty"`
-	Brand         string        `json:"brand,omitempty"`
 	BrandName     string        `json:"brand_name,omitempty"`
-	Model         string        `json:"model,omitempty"`
 	ModelName     string        `json:"model_name,omitempty"`
 	SizeClass     string        `json:"size_class,omitempty"`
 	LineName      *string       `json:"line_name,omitempty"`

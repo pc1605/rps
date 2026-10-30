@@ -51,8 +51,10 @@ export type ApiErrorCode =
   | "duplicate_barcode"
   | "duplicate_code"
   | "in_rework"
+  | "already_in_rework"
   | "rework_pending_decision"
   | "not_your_rework"
   | "rework_not_open"
+  | "written_off"
   | "unauthorized"
   | "internal";

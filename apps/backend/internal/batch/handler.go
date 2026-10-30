@@ -182,6 +182,8 @@ func (h *Handler) ScanUnit(c *fiber.Ctx) error {
 		switch {
 		case errors.Is(err, ErrInRework):
 			return httpx.Error(c, fiber.StatusConflict, "in_rework", "This mat is waiting for rework")
+		case errors.Is(err, ErrUnitWrittenOff):
+			return httpx.Error(c, fiber.StatusConflict, "written_off", err.Error())
 		case errors.Is(err, ErrReworkPendingDecision):
 			return httpx.Error(c, fiber.StatusConflict, "rework_pending_decision", "Rework is awaiting admin decision")
 		case errors.Is(err, ErrNotYourRework):
@@ -407,6 +409,8 @@ func (h *Handler) FlagRework(c *fiber.Ctx) error {
 		switch {
 		case errors.Is(err, ErrUnitNotFound):
 			return httpx.Error(c, fiber.StatusNotFound, "unit_not_found", "unit not found")
+		case errors.Is(err, ErrAlreadyInRework):
+			return httpx.Error(c, fiber.StatusConflict, "already_in_rework", err.Error())
 		case errors.Is(err, ErrWrongPhase):
 			return httpx.Error(c, fiber.StatusConflict, "wrong_phase", err.Error())
 		case errors.Is(err, ErrNotStarted):

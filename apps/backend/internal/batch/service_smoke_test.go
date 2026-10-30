@@ -23,7 +23,7 @@ func TestReadQueriesSmoke(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	s := NewService(pool)
+	s := NewService(pool, "")
 
 	list, err := s.List(ctx)
 	if err != nil {

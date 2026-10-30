@@ -17,6 +17,8 @@ var (
 	ErrInvalidInput          = errors.New("invalid input")
 	ErrNotFound              = errors.New("batch not found")
 	ErrInRework              = errors.New("this mat is waiting for rework")
+	ErrUnitWrittenOff        = errors.New("this mat was written off — keep it aside")
+	ErrAlreadyInRework       = errors.New("this mat is already in rework")
 	ErrReworkPendingDecision = errors.New("rework is awaiting admin decision")
 	ErrNotYourRework         = errors.New("this rework is assigned to another stitcher")
 	ErrReworkNotOpen         = errors.New("rework round is not open")
@@ -39,12 +41,11 @@ type Stats struct {
 	ReworkNeedsDecision int `json:"rework_needs_decision"`
 }
 
-func NewService(pool *pgxpool.Pool, uploadDir ...string) *Service {
-	dir := "./uploads"
-	if len(uploadDir) > 0 && uploadDir[0] != "" {
-		dir = uploadDir[0]
+func NewService(pool *pgxpool.Pool, uploadDir string) *Service {
+	if uploadDir == "" {
+		uploadDir = "./uploads"
 	}
-	return &Service{pool: pool, uploadDir: dir}
+	return &Service{pool: pool, uploadDir: uploadDir}
 }
 
 func (s *Service) UploadDir() string {
@@ -1034,6 +1035,10 @@ func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.U
 		return res, tx.Commit(ctx)
 	}
 
+	if unitStatus == UnitDefective {
+		return nil, ErrUnitWrittenOff
+	}
+
 	// Idempotent paths
 	if phase == PhaseStitching && (stitchedAt != nil || unitStatus == UnitPacked || unitStatus == UnitDispatched) {
 		res.AlreadyDone = true
@@ -1042,7 +1047,7 @@ func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.U
 		}
 		return res, tx.Commit(ctx)
 	}
-	if phase == PhasePacking && (unitStatus == UnitPacked || unitStatus == UnitDispatched || unitStatus == UnitDefective) {
+	if phase == PhasePacking && (unitStatus == UnitPacked || unitStatus == UnitDispatched) {
 		res.AlreadyDone = true
 		if err := progress("status IN ('packed','dispatched','defective')"); err != nil {
 			return nil, err

@@ -150,10 +150,6 @@ func (s *Service) FlagRework(ctx context.Context, unitCode string, workerID uuid
 		return nil, ErrNotStarted
 	}
 
-	if unitStatus != UnitPending {
-		return nil, fmt.Errorf("%w: unit must be pending (currently %s)", ErrInvalidInput, unitStatus)
-	}
-
 	var openExists bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS(SELECT 1 FROM rework_logs WHERE unit_id = $1 AND fixed_at IS NULL AND (decision IS NULL OR decision = 'to_stitcher'))
@@ -161,7 +157,11 @@ func (s *Service) FlagRework(ctx context.Context, unitCode string, workerID uuid
 		return nil, err
 	}
 	if openExists {
-		return nil, ErrReworkNotOpen
+		return nil, ErrAlreadyInRework
+	}
+
+	if unitStatus != UnitPending {
+		return nil, fmt.Errorf("%w: unit must be pending (currently %s)", ErrInvalidInput, unitStatus)
 	}
 
 	var count int
@@ -280,8 +280,6 @@ func (s *Service) ListReworkForStitcher(ctx context.Context, stitcherID uuid.UUI
 		); err != nil {
 			return nil, err
 		}
-		e.Brand = e.BrandName
-		e.Model = e.ModelName
 		e.FixedByName = fixedByName
 		entries = append(entries, &e)
 	}
@@ -347,8 +345,6 @@ func (s *Service) ListRework(ctx context.Context, status string, route *string) 
 		); err != nil {
 			return nil, err
 		}
-		e.Brand = e.BrandName
-		e.Model = e.ModelName
 		e.FixedByName = fixedByName
 		entries = append(entries, &e)
 	}
