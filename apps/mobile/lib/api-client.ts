@@ -6,6 +6,15 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 if (!API_URL) throw new Error("EXPO_PUBLIC_API_URL is not set — check apps/mobile/.env and rebuild the app");
 const TOKEN_KEY = "rps_worker_token";
 
+export const apiOrigin = (): string => {
+  return API_URL.replace(/\/api\/v1\/?$/, "");
+};
+
+export const authHeaders = async (): Promise<Record<string, string>> => {
+  const token = await tokenStore.get();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 export const tokenStore = {
   get: async (): Promise<string | null> => {
     if (Platform.OS === "web")

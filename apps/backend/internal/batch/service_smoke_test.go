@@ -2,6 +2,7 @@ package batch
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 
@@ -66,5 +67,10 @@ func TestReadQueriesSmoke(t *testing.T) {
 		if _, err := s.Get(ctx, b.ID); err != nil {
 			t.Fatalf("Get(%s, %s): %v", b.BatchCode, b.CurrentPhase, err)
 		}
+	}
+
+	// Peek query smoke: unknown unit returns ErrUnitNotFound without panic
+	if _, err := s.PeekUnit(ctx, "NONEXISTENT_UNIT_CODE", uuid.New()); !errors.Is(err, ErrUnitNotFound) {
+		t.Fatalf("PeekUnit(unknown): expected ErrUnitNotFound, got %v", err)
 	}
 }

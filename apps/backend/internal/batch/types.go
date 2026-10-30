@@ -180,3 +180,17 @@ type ReworkEntry struct {
 	Photos        []ReworkPhoto `json:"photos"`
 	NewBatchCode  *string       `json:"new_batch_code,omitempty"`
 }
+
+// UnitPeek is the lightweight check result for packers before showing the inspect sheet.
+type UnitPeek struct {
+	UnitCode    string     `json:"unit_code"`
+	BatchID     uuid.UUID  `json:"batch_id"`
+	BatchCode   string     `json:"batch_code"`
+	Status      UnitStatus `json:"status"`
+	BatchPhase  Phase      `json:"batch_phase"`
+	BatchStatus Status     `json:"batch_status"`
+	Joined      bool       `json:"joined"`
+	CanPack     bool       `json:"can_pack"`
+	CanRework   bool       `json:"can_rework"`
+	Reason      *string    `json:"reason,omitempty"`
+}

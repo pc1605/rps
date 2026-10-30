@@ -7,7 +7,7 @@ export function Skeleton({
   width = "100%",
   radius,
 }: {
-  height?: number;
+  height?: number | `${number}%`;
   width?: number | `${number}%`;
   radius?: number;
 }) {

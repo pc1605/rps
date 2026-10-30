@@ -158,3 +158,18 @@ export interface Worker {
   created_at: string;
   badge_token?: string; // only on create
 }
+
+export type PeekReason = "already_packed" | "in_rework" | "written_off" | "wrong_phase" | "not_started";
+
+export interface UnitPeek {
+  unit_code: string;
+  batch_id: string;
+  batch_code: string;
+  status: UnitStatus;
+  batch_phase: Phase;
+  batch_status: BatchStatus;
+  joined: boolean;
+  can_pack: boolean;
+  can_rework: boolean;
+  reason?: PeekReason;
+}
