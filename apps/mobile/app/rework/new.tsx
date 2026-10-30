@@ -1,8 +1,10 @@
 import type { ReworkReason } from "@rps/shared";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
-import { useRef, useState } from "react";
-import { Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useRef, useState } from "react";
+import { BackHandler, Image, Pressable, Text, TextInput, View } from "react-native";
+import { type EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../components/ui/AppButton";
 import { Banner } from "../../components/ui/Banner";
@@ -24,16 +26,30 @@ export default function NewReworkScreen() {
   }>();
   const router = useRouter();
   const isFocused = useIsFocused();
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const flagRework = useFlagRework();
   const markSent = useReworkReturn((s) => s.markSent);
 
   const cameraRef = useRef<CameraView>(null);
+  const [step, setStep] = useState<1 | 2>(1);
   const [photos, setPhotos] = useState<string[]>([]);
   const [selectedReasons, setSelectedReasons] = useState<ReworkReason[]>([]);
   const [note, setNote] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+
+  // Handle hardware back button on Android: Step 2 returns to Step 1
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (step === 2) {
+        setStep(1);
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [step]);
 
   if (!permission) {
     return (
@@ -59,6 +75,7 @@ export default function NewReworkScreen() {
     if (photos.length >= 3 || isCapturing) return;
     try {
       setIsCapturing(true);
+      feedback("tick");
       const pic = await cameraRef.current?.takePictureAsync({
         quality: 0.5,
       });
@@ -113,132 +130,442 @@ export default function NewReworkScreen() {
     }
   };
 
-  return (
-    <Screen
-      header={<ScreenHeader back title={unitCode ?? "Rework"} />}
-      footer={
-        <AppButton
-          title={strings.rework.sendToRework}
-          size="lg"
-          disabled={!canSubmit}
-          loading={flagRework.isPending}
-          onPress={handleSubmit}
-          accessibilityLabel={strings.rework.sendToRework}
-        />
-      }
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        {errorMsg && (
-          <View style={styles.bannerWrap}>
-            <Banner kind="danger" text={errorMsg} />
-          </View>
-        )}
+  // Step 1: Fullscreen photo capture
+  if (step === 1) {
+    return (
+      <Screen edges={[]} scroll={false}>
+        <StatusBar style="light" />
+        <View style={styles.cameraBg} />
+        {isFocused && <CameraView ref={cameraRef} style={styles.cameraView} facing="back" />}
 
-        {/* Section: Photos */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {strings.rework.photosTitle} ({photos.length}/3)
-          </Text>
-
-          <View style={styles.cameraBox}>
-            {isFocused && <CameraView ref={cameraRef} style={styles.camera} facing="back" />}
-            <View style={styles.shutterOverlay} pointerEvents="box-none">
-              <Pressable
-                onPress={handleCapture}
-                disabled={photos.length >= 3 || isCapturing}
-                accessibilityRole="button"
-                accessibilityLabel={strings.rework.shutterA11y}
-                style={({ pressed }) => [
-                  styles.shutterBtn,
-                  photos.length >= 3 && styles.shutterDisabled,
-                  pressed && styles.shutterPressed,
-                ]}
-              >
-                <View style={styles.shutterInner} />
-              </Pressable>
+        <View style={styles.overlayContainer} pointerEvents="box-none">
+          {/* Top bar over camera */}
+          <View style={styles.topBar(insets)}>
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={8}
+              style={styles.topBarBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
+              <Text style={styles.topBarBackText}>‹ Back</Text>
+            </Pressable>
+            <Text style={styles.topBarUnitCode} numberOfLines={1}>
+              {unitCode}
+            </Text>
+            <View style={styles.topBarStepWrap}>
+              <Text style={styles.topBarStepText}>{strings.rework.stepOneOfTwo}</Text>
             </View>
           </View>
 
-          {/* Thumbnails row */}
-          {photos.length > 0 && (
+          {/* Bottom panel over camera */}
+          <View style={styles.bottomPanel(insets)}>
+            {/* Thumbnails row (up to 3, 56x56, rounded, remove button + dashed slot) */}
             <View style={styles.thumbnailsRow}>
               {photos.map((uri, idx) => (
                 <View key={uri} style={styles.thumbWrap}>
                   <Image source={{ uri }} style={styles.thumbImage} />
                   <Pressable
                     onPress={() => handleRemovePhoto(idx)}
+                    hitSlop={12}
                     accessibilityRole="button"
-                    accessibilityLabel={strings.rework.removePhoto}
+                    accessibilityLabel={strings.rework.removePhotoN(idx + 1)}
                     style={styles.removeBtn}
                   >
                     <Text style={styles.removeBtnText}>×</Text>
                   </Pressable>
                 </View>
               ))}
+              {photos.length < 3 && (
+                <View style={styles.dashedSlot}>
+                  <Text style={styles.dashedSlotText}>+</Text>
+                </View>
+              )}
             </View>
-          )}
-        </View>
 
-        {/* Section: Reasons */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{strings.rework.reasonsTitle}</Text>
-          <View style={styles.reasonsGrid}>
-            {REASON_KEYS.map((key) => {
-              const item = strings.rework.reasons[key];
-              const isSelected = selectedReasons.includes(key);
-              return (
-                <Pressable
-                  key={key}
-                  onPress={() => toggleReason(key)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: isSelected }}
-                  accessibilityLabel={item.label}
-                  style={({ pressed }) => [
-                    styles.reasonTile,
-                    isSelected && styles.reasonTileSelected,
-                    pressed && styles.reasonTilePressed,
-                  ]}
-                >
-                  <Text style={styles.reasonEmoji}>{item.emoji}</Text>
-                  <Text
-                    style={[styles.reasonLabel, isSelected && styles.reasonLabelSelected]}
-                    numberOfLines={2}
-                  >
-                    {item.label}
-                  </Text>
-                  {isSelected && (
-                    <View style={styles.checkBadge}>
-                      <Text style={styles.checkBadgeText}>✓</Text>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
+            {/* Shutter button (72px circle, centered, disabled at 3) */}
+            <Pressable
+              onPress={handleCapture}
+              disabled={photos.length >= 3 || isCapturing}
+              accessibilityRole="button"
+              accessibilityLabel={strings.rework.shutterA11y}
+              accessibilityState={{ disabled: photos.length >= 3 || isCapturing }}
+              style={({ pressed }) => [
+                styles.shutterBtn,
+                (photos.length >= 3 || isCapturing) && styles.shutterDisabled,
+                pressed && styles.shutterPressed,
+              ]}
+            >
+              <View style={styles.shutterInner} />
+            </Pressable>
+
+            {/* Counter text */}
+            <Text style={styles.counterText}>{strings.rework.photosCount(photos.length)}</Text>
+
+            {/* Primary button */}
+            <AppButton
+              title={photos.length === 0 ? strings.rework.takeAPhoto : strings.rework.next}
+              size="lg"
+              disabled={photos.length === 0}
+              onPress={() => setStep(2)}
+              accessibilityLabel={photos.length === 0 ? strings.rework.takeAPhoto : strings.rework.next}
+            />
           </View>
         </View>
+      </Screen>
+    );
+  }
 
-        {/* Section: Note */}
-        <View style={styles.section}>
-          <TextInput
-            value={note}
-            onChangeText={setNote}
-            placeholder={strings.rework.notePlaceholder}
-            placeholderTextColor={styles.placeholderText.color}
-            style={styles.noteInput}
-            returnKeyType="done"
-            maxLength={200}
-            accessibilityLabel="Rework note"
-          />
+  // Step 2: What's wrong (reasons selection, note, submit)
+  return (
+    <Screen
+      header={
+        <ScreenHeader
+          back
+          onBack={() => setStep(1)}
+          title={unitCode}
+          right={<Text style={styles.stepIndicator}>{strings.rework.stepTwoOfTwo}</Text>}
+        />
+      }
+      footer={
+        <AppButton
+          title={selectedReasons.length === 0 ? strings.rework.chooseWhatsWrong : strings.rework.sendToRework}
+          size="lg"
+          disabled={!canSubmit}
+          loading={flagRework.isPending}
+          onPress={handleSubmit}
+          accessibilityLabel={
+            selectedReasons.length === 0 ? strings.rework.chooseWhatsWrong : strings.rework.sendToRework
+          }
+        />
+      }
+    >
+      {errorMsg && (
+        <View style={styles.bannerWrap}>
+          <Banner kind="danger" text={errorMsg} />
         </View>
-      </ScrollView>
+      )}
+
+      {/* Photos summary: thumbnails row (tap any -> back to step 1) */}
+      <View style={styles.summarySection}>
+        <View style={styles.summaryRow}>
+          {photos.map((uri, idx) => (
+            <Pressable
+              key={uri}
+              onPress={() => setStep(1)}
+              accessibilityRole="button"
+              accessibilityLabel={`${strings.rework.tapToEditPhotos} (${idx + 1})`}
+              style={styles.summaryThumbWrap}
+            >
+              <Image source={{ uri }} style={styles.summaryThumbImage} />
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {/* Reasons: 2-column grid */}
+      <View style={styles.reasonsSection}>
+        <Text style={styles.reasonsTitle}>{strings.rework.reasonsTitle}</Text>
+        <View style={styles.reasonsGrid}>
+          {REASON_KEYS.map((key) => {
+            const item = strings.rework.reasons[key];
+            const isSelected = selectedReasons.includes(key);
+            return (
+              <Pressable
+                key={key}
+                onPress={() => toggleReason(key)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isSelected }}
+                accessibilityLabel={item.label}
+                style={({ pressed }) => [
+                  styles.reasonTile,
+                  isSelected && styles.reasonTileSelected,
+                  pressed && styles.reasonTilePressed,
+                ]}
+              >
+                <Text style={styles.reasonEmoji}>{item.emoji}</Text>
+                <Text
+                  style={[styles.reasonLabel, isSelected && styles.reasonLabelSelected]}
+                  numberOfLines={2}
+                >
+                  {item.label}
+                </Text>
+                {isSelected && (
+                  <View style={styles.checkBadge}>
+                    <Text style={styles.checkBadgeText}>✓</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* Note: optional single-line TextInput with label */}
+      <View style={styles.noteSection}>
+        <Text style={styles.noteLabel}>{strings.rework.noteLabel}</Text>
+        <TextInput
+          value={note}
+          onChangeText={setNote}
+          placeholder={strings.rework.notePlaceholder}
+          placeholderTextColor={styles.placeholderText.color}
+          style={styles.noteInput}
+          returnKeyType="done"
+          maxLength={200}
+          numberOfLines={1}
+          accessibilityLabel={strings.rework.noteLabel}
+        />
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create((theme) => ({
-  scrollContent: {
-    padding: theme.spacing.md,
-    gap: theme.spacing.lg,
+  cameraBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: theme.colors.cameraBg,
+  },
+  cameraView: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  overlayContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  topBar: (insets: EdgeInsets) => ({
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 56 + insets.top,
+    paddingTop: insets.top,
+    paddingLeft: insets.left + theme.spacing.sm,
+    paddingRight: insets.right + theme.spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: theme.colors.overlay,
+    zIndex: 10,
+  }),
+  topBarBtn: {
+    minHeight: theme.touch.min,
+    minWidth: theme.touch.min,
+    justifyContent: "center",
+  },
+  topBarBackText: {
+    ...theme.text.bodyMed,
+    color: theme.colors.overlayText,
+  },
+  topBarUnitCode: {
+    ...theme.text.code,
+    color: theme.colors.overlayText,
+    textAlign: "center",
+    flex: 1,
+  },
+  topBarStepWrap: {
+    minWidth: theme.touch.min,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  topBarStepText: {
+    ...theme.text.bodyMed,
+    color: theme.colors.overlayTextMuted,
+  },
+  bottomPanel: (insets: EdgeInsets) => ({
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingTop: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: Math.max(insets.bottom, theme.spacing.md),
+    backgroundColor: theme.colors.overlaySurface,
+    gap: theme.spacing.md,
+    zIndex: 10,
+  }),
+  thumbnailsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  },
+  thumbWrap: {
+    position: "relative",
+    width: 56,
+    height: 56,
+    borderRadius: theme.radius.md,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: theme.colors.overlayBorder,
+  },
+  thumbImage: {
+    width: "100%",
+    height: "100%",
+  },
+  removeBtn: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    width: 24,
+    height: 24,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.overlaySurface,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  removeBtnText: {
+    ...theme.text.small,
+    color: theme.colors.overlayText,
+    lineHeight: 16,
+    textAlign: "center",
+  },
+  dashedSlot: {
+    width: 56,
+    height: 56,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.overlayBorder,
+    borderStyle: "dashed",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: theme.colors.overlay,
+  },
+  dashedSlotText: {
+    ...theme.text.heading,
+    color: theme.colors.overlayTextMuted,
+  },
+  shutterBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: theme.radius.pill,
+    borderWidth: 4,
+    borderColor: theme.colors.overlayBorder,
+    backgroundColor: theme.colors.overlaySurface,
+    justifyContent: "center",
+    alignItems: "center",
+    alignSelf: "center",
+  },
+  shutterDisabled: {
+    opacity: 0.35,
+  },
+  shutterPressed: {
+    opacity: 0.75,
+  },
+  shutterInner: {
+    width: 54,
+    height: 54,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.overlayText,
+  },
+  counterText: {
+    ...theme.text.bodyMed,
+    color: theme.colors.overlayText,
+    textAlign: "center",
+  },
+  stepIndicator: {
+    ...theme.text.bodyMed,
+    color: theme.colors.textMuted,
+    paddingRight: theme.spacing.xs,
+  },
+  summarySection: {
+    gap: theme.spacing.xs,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+  },
+  summaryThumbWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: theme.radius.md,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  summaryThumbImage: {
+    width: "100%",
+    height: "100%",
+  },
+  reasonsSection: {
+    gap: theme.spacing.sm,
+  },
+  reasonsTitle: {
+    ...theme.text.heading,
+    color: theme.colors.text,
+  },
+  reasonsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: theme.spacing.sm,
+    justifyContent: "space-between",
+  },
+  reasonTile: {
+    flexBasis: "48%",
+    minHeight: 96,
+    padding: theme.spacing.sm,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    gap: theme.spacing.xs,
+  },
+  reasonTileSelected: {
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.accentSoft,
+    borderWidth: 2,
+  },
+  reasonTilePressed: {
+    opacity: 0.8,
+  },
+  reasonEmoji: {
+    ...theme.text.emoji,
+    textAlign: "center",
+  },
+  reasonLabel: {
+    ...theme.text.bodyMed,
+    color: theme.colors.text,
+    textAlign: "center",
+  },
+  reasonLabelSelected: {
+    color: theme.colors.text,
+  },
+  checkBadge: {
+    position: "absolute",
+    top: theme.spacing.xs,
+    right: theme.spacing.xs,
+    width: 20,
+    height: 20,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.accent,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkBadgeText: {
+    ...theme.text.caption,
+    color: theme.colors.accentFg,
+  },
+  noteSection: {
+    gap: theme.spacing.xs,
+  },
+  noteLabel: {
+    ...theme.text.small,
+    color: theme.colors.textMuted,
+  },
+  noteInput: {
+    minHeight: theme.touch.min,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    color: theme.colors.text,
+    ...theme.text.body,
+  },
+  placeholderText: {
+    color: theme.colors.textMuted,
   },
   permContent: {
     width: "100%",
@@ -258,150 +585,5 @@ const styles = StyleSheet.create((theme) => ({
   },
   bannerWrap: {
     width: "100%",
-  },
-  section: {
-    gap: theme.spacing.sm,
-  },
-  sectionTitle: {
-    ...theme.text.heading,
-    color: theme.colors.text,
-  },
-  cameraBox: {
-    width: "100%",
-    height: 220,
-    borderRadius: theme.radius.md,
-    overflow: "hidden",
-    backgroundColor: theme.colors.cameraBg,
-    position: "relative",
-  },
-  camera: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  shutterOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "flex-end",
-    alignItems: "center",
-    paddingBottom: theme.spacing.sm,
-  },
-  shutterBtn: {
-    width: 64,
-    height: 64,
-    borderRadius: theme.radius.pill,
-    borderWidth: 4,
-    borderColor: theme.colors.overlayBorder,
-    backgroundColor: theme.colors.overlaySurface,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  shutterDisabled: {
-    opacity: 0.4,
-  },
-  shutterPressed: {
-    opacity: 0.8,
-  },
-  shutterInner: {
-    width: 48,
-    height: 48,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.overlayText,
-  },
-  thumbnailsRow: {
-    flexDirection: "row",
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.xs,
-  },
-  thumbWrap: {
-    position: "relative",
-    width: 72,
-    height: 72,
-    borderRadius: theme.radius.md,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  thumbImage: {
-    width: "100%",
-    height: "100%",
-  },
-  removeBtn: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    width: theme.touch.min,
-    height: theme.touch.min,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.overlaySurface,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  removeBtnText: {
-    ...theme.text.heading,
-    color: theme.colors.overlayText,
-    lineHeight: 20,
-  },
-  reasonsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: theme.spacing.sm,
-  },
-  reasonTile: {
-    width: "48%",
-    minHeight: 64,
-    padding: theme.spacing.sm,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.xs,
-    position: "relative",
-  },
-  reasonTileSelected: {
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.accentSoft,
-    borderWidth: 2,
-  },
-  reasonTilePressed: {
-    opacity: 0.8,
-  },
-  reasonEmoji: {
-    fontSize: 24,
-    lineHeight: 28,
-  },
-  reasonLabel: {
-    ...theme.text.small,
-    color: theme.colors.text,
-    flex: 1,
-  },
-  reasonLabelSelected: {
-    ...theme.text.bodyMed,
-    color: theme.colors.text,
-  },
-  checkBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.accent,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkBadgeText: {
-    ...theme.text.caption,
-    color: theme.colors.accentFg,
-  },
-  noteInput: {
-    minHeight: theme.touch.min,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    color: theme.colors.text,
-    ...theme.text.body,
-  },
-  placeholderText: {
-    color: theme.colors.textMuted,
   },
 }));

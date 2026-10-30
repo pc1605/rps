@@ -7,19 +7,21 @@ type Props = {
   title?: string;
   subtitle?: string;
   back?: boolean | string;
+  onBack?: () => void;
+  onPress?: () => void;
   right?: ReactNode;
   large?: boolean;
 };
 
 /** Standard 56px top bar. `large` = big title below (home-style). */
-export function ScreenHeader({ title, subtitle, back, right, large }: Props) {
+export function ScreenHeader({ title, subtitle, back, onBack, onPress, right, large }: Props) {
   const router = useRouter();
   return (
     <View>
       <View style={styles.bar}>
         {back ? (
           <Pressable
-            onPress={() => router.back()}
+            onPress={onBack ?? onPress ?? (() => router.back())}
             hitSlop={8}
             style={styles.iconBtn}
             accessibilityRole="button"
