@@ -2,7 +2,7 @@ import { batchCodeOf, UNIT_CODE_RE } from "@rps/shared";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Pressable, Text, View } from "react-native";
 import { type EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
@@ -14,16 +14,23 @@ import { useAuth } from "../../features/auth/store";
 import { useMyBatches, useScanUnit } from "../../features/batches/hooks";
 import { ApiError } from "../../lib/api-client";
 import { feedback as triggerFeedback } from "../../lib/feedback";
+import { strings } from "../../lib/strings";
 import { useOnline } from "../../lib/use-online";
 
 type FlashState =
   | { kind: "ok"; code: string }
   | { kind: "dup"; code: string }
   | { kind: "quota"; mine: number; target: number }
-  | { kind: "err"; msg: string };
+  | { kind: "err"; msg: string }
+  | { kind: "in_rework"; code: string }
+  | { kind: "written_off" }
+  | { kind: "sent" };
 
 export default function ScanScreen() {
-  const { batchId } = useLocalSearchParams<{ batchId: string }>();
+  const { batchId, reworkSent } = useLocalSearchParams<{
+    batchId: string;
+    reworkSent?: string;
+  }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
@@ -35,6 +42,7 @@ export default function ScanScreen() {
   const batch = batches?.find((b) => b.id === batchId);
   const [batchCode] = useState(batch?.batch_code ?? "");
   const isStitcher = worker?.station === "stitcher";
+  const isPacker = worker?.station === "packer";
 
   const [progress, setProgress] = useState({
     done: (isStitcher ? batch?.units_stitched : batch?.units_packed) ?? 0,
@@ -43,9 +51,21 @@ export default function ScanScreen() {
     target: batch?.my_target_qty ?? null,
   });
   const [flash, setFlash] = useState<FlashState | null>(null);
+  const [inspectUnit, setInspectUnit] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [torch, setTorch] = useState(false);
   const lock = useRef(false);
+
+  useEffect(() => {
+    if (reworkSent === "true") {
+      router.setParams({ reworkSent: undefined });
+      setFlash({ kind: "sent" });
+      lock.current = false;
+      setTimeout(() => {
+        setFlash(null);
+      }, 1400);
+    }
+  }, [reworkSent, router]);
 
   // --- permission states ---
   if (!permission) {
@@ -91,7 +111,13 @@ export default function ScanScreen() {
   const flashAndUnlock = (fb: FlashState) => {
     setFlash(fb);
 
-    triggerFeedback(fb.kind);
+    if (fb.kind === "in_rework") {
+      triggerFeedback("dup");
+    } else if (fb.kind === "written_off") {
+      triggerFeedback("err");
+    } else {
+      triggerFeedback(fb.kind);
+    }
 
     try {
       if (fb.kind === "ok") {
@@ -102,6 +128,10 @@ export default function ScanScreen() {
         AccessibilityInfo.announceForAccessibility("Your share is complete");
       } else if (fb.kind === "err") {
         AccessibilityInfo.announceForAccessibility(`Error: ${fb.msg}`);
+      } else if (fb.kind === "in_rework") {
+        AccessibilityInfo.announceForAccessibility(`${strings.scanner.inRework}: ${fb.code}`);
+      } else if (fb.kind === "written_off") {
+        AccessibilityInfo.announceForAccessibility(strings.scanner.writtenOff);
       }
     } catch {
       // Ignore a11y failure
@@ -111,6 +141,56 @@ export default function ScanScreen() {
       setFlash(null);
       lock.current = false;
     }, 1400);
+  };
+
+  const executeScan = (code: string) => {
+    scanUnit.mutate(code, {
+      onSuccess: (res) => {
+        setProgress((p) => ({
+          ...p,
+          done: res.done_count,
+          total: res.total_units,
+          mine: res.already_done ? p.mine : p.mine + 1,
+        }));
+        if (res.phase_completed || res.batch_completed) {
+          triggerFeedback("ok");
+          try {
+            AccessibilityInfo.announceForAccessibility(
+              isStitcher ? "Stitching complete" : `${batchCode} complete`,
+            );
+          } catch {
+            // Ignore a11y failure
+          }
+          setDone(true);
+          return;
+        }
+        flashAndUnlock(
+          res.already_done ? { kind: "dup", code: res.unit_code } : { kind: "ok", code: res.unit_code },
+        );
+      },
+      onError: (e) => {
+        if (e instanceof ApiError && e.code === "in_rework") {
+          flashAndUnlock({ kind: "in_rework", code });
+          return;
+        }
+        if (e instanceof ApiError && e.code === "written_off") {
+          flashAndUnlock({ kind: "written_off" });
+          return;
+        }
+        if (e instanceof ApiError && e.code === "quota_reached") {
+          flashAndUnlock({
+            kind: "quota",
+            mine: progress.mine,
+            target: progress.target ?? progress.mine,
+          });
+          return;
+        }
+        flashAndUnlock({
+          kind: "err",
+          msg: e instanceof ApiError ? e.message : "Scan failed — try again",
+        });
+      },
+    });
   };
 
   const handleScanned = ({ data }: { data: string }) => {
@@ -138,45 +218,36 @@ export default function ScanScreen() {
       return;
     }
 
-    scanUnit.mutate(code, {
-      onSuccess: (res) => {
-        setProgress((p) => ({
-          ...p,
-          done: res.done_count,
-          total: res.total_units,
-          mine: res.already_done ? p.mine : p.mine + 1,
-        }));
-        if (res.phase_completed || res.batch_completed) {
-          triggerFeedback("ok");
-          try {
-            AccessibilityInfo.announceForAccessibility(
-              isStitcher ? "Stitching complete" : `${batchCode} complete`,
-            );
-          } catch {
-            // Ignore a11y failure
-          }
-          setDone(true);
-          return;
-        }
-        flashAndUnlock(
-          res.already_done ? { kind: "dup", code: res.unit_code } : { kind: "ok", code: res.unit_code },
-        );
-      },
-      onError: (e) => {
-        if (e instanceof ApiError && e.code === "quota_reached") {
-          flashAndUnlock({
-            kind: "quota",
-            mine: progress.mine,
-            target: progress.target ?? progress.mine,
-          });
-          return;
-        }
-        flashAndUnlock({
-          kind: "err",
-          msg: e instanceof ApiError ? e.message : "Scan failed — try again",
-        });
-      },
+    // Packer: show inspect sheet instead of immediately scanning
+    if (isPacker) {
+      setInspectUnit(code);
+      return;
+    }
+
+    executeScan(code);
+  };
+
+  const handlePack = () => {
+    if (!inspectUnit) return;
+    const code = inspectUnit;
+    setInspectUnit(null);
+    executeScan(code);
+  };
+
+  const handleNeedsRework = () => {
+    if (!inspectUnit) return;
+    const code = inspectUnit;
+    setInspectUnit(null);
+    lock.current = false;
+    router.push({
+      pathname: "/rework/new",
+      params: { unitCode: code, batchId },
     });
+  };
+
+  const handleCancelInspect = () => {
+    setInspectUnit(null);
+    lock.current = false;
   };
 
   return (
@@ -235,6 +306,41 @@ export default function ScanScreen() {
           <Text style={styles.frameHint}>Point at a unit QR label</Text>
         </View>
 
+        {/* Packer Inspect Sheet */}
+        {inspectUnit && (
+          <View style={styles.inspectSheet(insets)}>
+            <Text style={styles.inspectUnitCode}>{inspectUnit}</Text>
+            {batch && (
+              <Text style={styles.inspectModelLine}>
+                {batch.brand_name} {batch.model_name}
+                {batch.line_name ? ` · ${batch.line_name}` : ""}
+              </Text>
+            )}
+            <View style={styles.inspectActions}>
+              <AppButton
+                title={strings.inspect.pack}
+                size="lg"
+                onPress={handlePack}
+                accessibilityLabel="Pack mat"
+              />
+              <AppButton
+                title={strings.inspect.needsRework}
+                variant="danger"
+                size="lg"
+                onPress={handleNeedsRework}
+                accessibilityLabel="Needs rework"
+              />
+              <AppButton
+                title={strings.inspect.cancel}
+                variant="ghost"
+                size="md"
+                onPress={handleCancelInspect}
+                accessibilityLabel="Cancel inspect"
+              />
+            </View>
+          </View>
+        )}
+
         {/* Bottom feedback flash */}
         <View style={styles.bottomFlashWrap(insets)} pointerEvents="box-none">
           {flash && (
@@ -245,6 +351,9 @@ export default function ScanScreen() {
                 flash.kind === "dup" && styles.flashDup,
                 flash.kind === "quota" && styles.flashQuota,
                 flash.kind === "err" && styles.flashErr,
+                flash.kind === "in_rework" && styles.flashInRework,
+                flash.kind === "written_off" && styles.flashWrittenOff,
+                flash.kind === "sent" && styles.flashSent,
               ]}
             >
               <Text style={styles.flashTitle}>
@@ -252,8 +361,12 @@ export default function ScanScreen() {
                 {flash.kind === "dup" && "Already scanned"}
                 {flash.kind === "quota" && "Your share is complete ✓"}
                 {flash.kind === "err" && `✗ ${flash.msg}`}
+                {flash.kind === "in_rework" && `⏳ ${strings.scanner.inRework}`}
+                {flash.kind === "written_off" && `✗ ${strings.scanner.writtenOff}`}
+                {flash.kind === "sent" && `✓ ${strings.scanner.sentToRework}`}
               </Text>
               {flash.kind === "dup" && <Text style={styles.flashSub}>{flash.code}</Text>}
+              {flash.kind === "in_rework" && <Text style={styles.flashSub}>{flash.code}</Text>}
               {flash.kind === "quota" && (
                 <Text style={styles.flashSub}>
                   {flash.mine} / {flash.target} mats — leave the rest for your co-workers
@@ -381,6 +494,38 @@ const styles = StyleSheet.create((theme) => ({
     right: insets.right + theme.spacing.md,
     alignItems: "center",
   }),
+  inspectSheet: (insets: EdgeInsets) => ({
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radius.lg,
+    borderTopRightRadius: theme.radius.lg,
+    paddingTop: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: insets.bottom + theme.spacing.md,
+    borderTopWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    gap: theme.spacing.xs,
+  }),
+  inspectUnitCode: {
+    ...theme.text.codeLarge,
+    color: theme.colors.text,
+    textAlign: "center",
+  },
+  inspectModelLine: {
+    ...theme.text.bodyMed,
+    color: theme.colors.textMuted,
+    textAlign: "center",
+    marginBottom: theme.spacing.md,
+  },
+  inspectActions: {
+    width: "100%",
+    maxWidth: 400,
+    gap: theme.spacing.sm,
+  },
   flash: {
     width: "100%",
     maxWidth: 480,
@@ -399,6 +544,15 @@ const styles = StyleSheet.create((theme) => ({
   },
   flashErr: {
     backgroundColor: theme.colors.flash.err,
+  },
+  flashInRework: {
+    backgroundColor: theme.colors.flash.dup,
+  },
+  flashWrittenOff: {
+    backgroundColor: theme.colors.flash.err,
+  },
+  flashSent: {
+    backgroundColor: theme.colors.flash.quota,
   },
   flashTitle: {
     ...theme.text.heading,
