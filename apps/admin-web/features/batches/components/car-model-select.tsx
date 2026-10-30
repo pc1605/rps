@@ -56,7 +56,7 @@ export function CarModelSelect({ id, value, onChange }: Props) {
   const selected = models?.find((m) => m.id === value);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
           id={id}
@@ -84,7 +84,7 @@ export function CarModelSelect({ id, value, onChange }: Props) {
           filter={(itemValue, search) => (itemValue.toLowerCase().includes(search.toLowerCase()) ? 1 : 0)}
         >
           <CommandInput placeholder="Search brand, model, line or barcode…" />
-          <CommandList>
+          <CommandList className="max-h-72 overflow-y-auto overscroll-contain">
             <CommandEmpty>No item found.</CommandEmpty>
             {grouped.map(([brand, brandModels]) => (
               <CommandGroup key={brand} heading={brand}>
