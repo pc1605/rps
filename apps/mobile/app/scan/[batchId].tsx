@@ -11,6 +11,7 @@ import { Banner } from "../../components/ui/Banner";
 import { Screen } from "../../components/ui/Screen";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { useAuth } from "../../features/auth/store";
+import { peekUnit } from "../../features/batches/api";
 import { useMyBatches, useScanUnit } from "../../features/batches/hooks";
 import { useReworkReturn } from "../../features/rework/store";
 import { ApiError } from "../../lib/api-client";
@@ -25,7 +26,8 @@ type FlashState =
   | { kind: "err"; msg: string }
   | { kind: "in_rework"; code: string }
   | { kind: "written_off" }
-  | { kind: "sent" };
+  | { kind: "sent" }
+  | { kind: "checking" };
 
 export default function ScanScreen() {
   const { batchId } = useLocalSearchParams<{ batchId: string }>();
@@ -56,40 +58,45 @@ export default function ScanScreen() {
   const [torch, setTorch] = useState(false);
   const lock = useRef(false);
 
-  const flashAndUnlock = useCallback((fb: FlashState) => {
-    setFlash(fb);
+  const flashAndUnlock = useCallback(
+    (fb: FlashState) => {
+      setFlash(fb);
 
-    if (fb.kind === "in_rework") {
-      triggerFeedback("dup");
-    } else if (fb.kind === "written_off") {
-      triggerFeedback("err");
-    } else {
-      triggerFeedback(fb.kind);
-    }
-
-    try {
-      if (fb.kind === "ok") {
-        AccessibilityInfo.announceForAccessibility(`Scanned ${fb.code}`);
-      } else if (fb.kind === "dup") {
-        AccessibilityInfo.announceForAccessibility(`Already scanned ${fb.code}`);
-      } else if (fb.kind === "quota") {
-        AccessibilityInfo.announceForAccessibility("Your share is complete");
-      } else if (fb.kind === "err") {
-        AccessibilityInfo.announceForAccessibility(`Error: ${fb.msg}`);
-      } else if (fb.kind === "in_rework") {
-        AccessibilityInfo.announceForAccessibility(`${strings.scanner.inRework}: ${fb.code}`);
+      if (fb.kind === "in_rework") {
+        triggerFeedback("dup");
       } else if (fb.kind === "written_off") {
-        AccessibilityInfo.announceForAccessibility(strings.scanner.writtenOff);
+        triggerFeedback("err");
+      } else if (fb.kind !== "checking") {
+        triggerFeedback(fb.kind);
       }
-    } catch {
-      // Ignore a11y failure
-    }
 
-    setTimeout(() => {
-      setFlash(null);
-      lock.current = false;
-    }, 1400);
-  }, []);
+      try {
+        if (fb.kind === "ok") {
+          AccessibilityInfo.announceForAccessibility(`Scanned ${fb.code}`);
+        } else if (fb.kind === "dup") {
+          AccessibilityInfo.announceForAccessibility(
+            `${isPacker ? strings.scanner.alreadyPacked : "Already scanned"} ${fb.code}`,
+          );
+        } else if (fb.kind === "quota") {
+          AccessibilityInfo.announceForAccessibility("Your share is complete");
+        } else if (fb.kind === "err") {
+          AccessibilityInfo.announceForAccessibility(`Error: ${fb.msg}`);
+        } else if (fb.kind === "in_rework") {
+          AccessibilityInfo.announceForAccessibility(`${strings.scanner.inRework}: ${fb.code}`);
+        } else if (fb.kind === "written_off") {
+          AccessibilityInfo.announceForAccessibility(strings.scanner.writtenOff);
+        }
+      } catch {
+        // Ignore a11y failure
+      }
+
+      setTimeout(() => {
+        setFlash(null);
+        lock.current = false;
+      }, 1400);
+    },
+    [isPacker],
+  );
 
   // Focus effect: re-arm scanner when regaining focus and consume rework return flag
   useFocusEffect(
@@ -218,10 +225,42 @@ export default function ScanScreen() {
       return;
     }
 
-    // Packer: show inspect sheet instead of immediately scanning
+    // Packer: peek unit before showing inspect sheet
     if (isPacker) {
-      triggerFeedback("tick");
-      setInspectUnit(code);
+      setFlash({ kind: "checking" });
+      peekUnit(code)
+        .then((peek) => {
+          if (peek.can_pack) {
+            setFlash(null);
+            triggerFeedback("tick");
+            setInspectUnit(code);
+            return;
+          }
+          if (peek.reason === "already_packed") {
+            flashAndUnlock({ kind: "dup", code });
+            return;
+          }
+          if (peek.reason === "in_rework") {
+            flashAndUnlock({ kind: "in_rework", code });
+            return;
+          }
+          if (peek.reason === "written_off") {
+            flashAndUnlock({ kind: "written_off" });
+            return;
+          }
+          if (peek.reason === "wrong_phase") {
+            flashAndUnlock({ kind: "err", msg: strings.scanner.wrongPhase });
+            return;
+          }
+          if (peek.reason === "not_started") {
+            flashAndUnlock({ kind: "err", msg: strings.scanner.notStarted });
+            return;
+          }
+          flashAndUnlock({ kind: "err", msg: strings.scanner.peekFailed });
+        })
+        .catch(() => {
+          flashAndUnlock({ kind: "err", msg: strings.scanner.peekFailed });
+        });
       return;
     }
 
@@ -253,14 +292,16 @@ export default function ScanScreen() {
   return (
     <Screen edges={[]} scroll={false}>
       <StatusBar style="light" />
-      <CameraView
-        style={styles.cameraView}
-        facing="back"
-        active={isFocused}
-        enableTorch={torch}
-        barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-        onBarcodeScanned={handleScanned}
-      />
+      <View style={styles.cameraBg} />
+      {isFocused && (
+        <CameraView
+          style={styles.cameraView}
+          facing="back"
+          enableTorch={torch}
+          barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+          onBarcodeScanned={handleScanned}
+        />
+      )}
 
       {/* Overlay container with flex positioning */}
       <View style={styles.overlayContainer} pointerEvents="box-none">
@@ -355,16 +396,18 @@ export default function ScanScreen() {
                 flash.kind === "in_rework" && styles.flashInRework,
                 flash.kind === "written_off" && styles.flashWrittenOff,
                 flash.kind === "sent" && styles.flashSent,
+                flash.kind === "checking" && styles.flashChecking,
               ]}
             >
               <Text style={styles.flashTitle}>
                 {flash.kind === "ok" && `✓ ${flash.code}`}
-                {flash.kind === "dup" && "Already scanned"}
+                {flash.kind === "dup" && (isPacker ? strings.scanner.alreadyPacked : "Already scanned")}
                 {flash.kind === "quota" && "Your share is complete ✓"}
                 {flash.kind === "err" && `✗ ${flash.msg}`}
                 {flash.kind === "in_rework" && `⏳ ${strings.scanner.inRework}`}
                 {flash.kind === "written_off" && `✗ ${strings.scanner.writtenOff}`}
                 {flash.kind === "sent" && `✓ ${strings.scanner.sentToRework}`}
+                {flash.kind === "checking" && strings.scanner.checking}
               </Text>
               {flash.kind === "dup" && <Text style={styles.flashSub}>{flash.code}</Text>}
               {flash.kind === "in_rework" && <Text style={styles.flashSub}>{flash.code}</Text>}
@@ -382,6 +425,10 @@ export default function ScanScreen() {
 }
 
 const styles = StyleSheet.create((theme) => ({
+  cameraBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: theme.colors.overlay,
+  },
   cameraView: {
     ...StyleSheet.absoluteFillObject,
   },
@@ -554,6 +601,9 @@ const styles = StyleSheet.create((theme) => ({
   },
   flashSent: {
     backgroundColor: theme.colors.flash.quota,
+  },
+  flashChecking: {
+    backgroundColor: theme.colors.overlay,
   },
   flashTitle: {
     ...theme.text.heading,

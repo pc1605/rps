@@ -1,7 +1,7 @@
 import { UNIT_CODE_RE } from "@rps/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useRef, useState } from "react";
 import { AccessibilityInfo, Pressable, Text, View } from "react-native";
@@ -24,6 +24,7 @@ export default function ReworkFixScreen() {
     unitCode: string;
   }>();
   const router = useRouter();
+  const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [permission, requestPermission] = useCameraPermissions();
@@ -164,13 +165,16 @@ export default function ReworkFixScreen() {
   return (
     <Screen edges={[]} scroll={false}>
       <StatusBar style="light" />
-      <CameraView
-        style={styles.cameraView}
-        facing="back"
-        enableTorch={torch}
-        barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-        onBarcodeScanned={handleScanned}
-      />
+      <View style={styles.cameraBg} />
+      {isFocused && (
+        <CameraView
+          style={styles.cameraView}
+          facing="back"
+          enableTorch={torch}
+          barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+          onBarcodeScanned={handleScanned}
+        />
+      )}
 
       {/* Overlay container with flex positioning */}
       <View style={styles.overlayContainer} pointerEvents="box-none">
@@ -224,6 +228,10 @@ export default function ReworkFixScreen() {
 }
 
 const styles = StyleSheet.create((theme) => ({
+  cameraBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: theme.colors.overlay,
+  },
   cameraView: {
     ...StyleSheet.absoluteFillObject,
   },

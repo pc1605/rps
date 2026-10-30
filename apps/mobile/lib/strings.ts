@@ -11,6 +11,11 @@ export const strings = {
     inRework: "Waiting for rework",
     writtenOff: "Written off — keep it aside",
     sentToRework: "Sent to rework",
+    alreadyPacked: "Already packed",
+    wrongPhase: "This batch is not in packing",
+    notStarted: "Join this batch first",
+    peekFailed: "Couldn't check this mat — try again",
+    checking: "Checking…",
   },
   rework: {
     sendToRework: "Send to rework",

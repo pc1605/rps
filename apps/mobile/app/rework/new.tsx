@@ -1,6 +1,6 @@
 import type { ReworkReason } from "@rps/shared";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import { Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
@@ -23,6 +23,7 @@ export default function NewReworkScreen() {
     batchId: string;
   }>();
   const router = useRouter();
+  const isFocused = useIsFocused();
   const [permission, requestPermission] = useCameraPermissions();
   const flagRework = useFlagRework();
   const markSent = useReworkReturn((s) => s.markSent);
@@ -140,7 +141,7 @@ export default function NewReworkScreen() {
           </Text>
 
           <View style={styles.cameraBox}>
-            <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+            {isFocused && <CameraView ref={cameraRef} style={styles.camera} facing="back" />}
             <View style={styles.shutterOverlay} pointerEvents="box-none">
               <Pressable
                 onPress={handleCapture}
