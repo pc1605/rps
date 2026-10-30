@@ -26,6 +26,7 @@ func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 	api.Post("/batches", authSvc.RequireRole("owner", "supervisor"), h.Create)
 	api.Post("/worker/batches/:id/start", h.StartBatch)
 	api.Post("/worker/batches/:id/complete", h.CompleteBatch)
+	api.Get("/worker/units/:code/peek", h.PeekUnit)
 	api.Post("/worker/units/scan", h.ScanUnit)
 	api.Post("/batches/:id/stickers-printed", h.MarkStickersPrinted)
 	api.Post("/batches/:id/resolve-short", h.ResolveShort)

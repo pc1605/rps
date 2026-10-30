@@ -167,6 +167,32 @@ type scanInput struct {
 	UnitCode string `json:"unit_code"`
 }
 
+func (h *Handler) PeekUnit(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "worker" {
+		return httpx.Forbidden(c, "worker token required")
+	}
+	if auth.StationFromCtx(c) != "packer" {
+		return httpx.Forbidden(c, "only packers can peek unit")
+	}
+	unitCode := strings.TrimSpace(c.Params("code"))
+	if unitCode == "" {
+		return httpx.BadRequest(c, "unit code required")
+	}
+	wid, _ := auth.WorkerID(c)
+
+	res, err := h.svc.PeekUnit(c.Context(), unitCode, wid)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrUnitNotFound):
+			return httpx.Error(c, fiber.StatusNotFound, "unit_not_found", "unknown QR — not an RPS unit label")
+		default:
+			log.Error().Err(err).Msg("peek unit")
+			return httpx.Internal(c, "peek failed")
+		}
+	}
+	return httpx.OK(c, res)
+}
+
 func (h *Handler) ScanUnit(c *fiber.Ctx) error {
 	if auth.ActorType(c) != "worker" {
 		return httpx.Forbidden(c, "worker token required")
