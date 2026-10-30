@@ -211,7 +211,7 @@ export default function ScanScreen() {
             accessibilityState={{ selected: torch }}
             style={styles.topBarBtn}
           >
-            <Text style={styles.topBarText}>{torch ? "🔦 Torch on" : "🔦 Torch off"}</Text>
+            <Text style={styles.topBarText}>{torch ? "🔦 Torch off" : "🔦 Torch on"}</Text>
           </Pressable>
         </View>
 
