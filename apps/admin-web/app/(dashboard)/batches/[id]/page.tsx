@@ -104,6 +104,9 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
           label="packed"
           tone="text-phase-completed"
         />
+        {(batch.rework_open ?? 0) > 0 && (
+          <Stat size="sm" value={batch.rework_open ?? 0} label="in rework" tone="text-danger" />
+        )}
       </div>
 
       {/* The one thing the admin may need to do */}

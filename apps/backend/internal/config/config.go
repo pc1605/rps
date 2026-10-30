@@ -22,6 +22,8 @@ type Config struct {
 	QRHashSecret     string
 	CORSOrigins      []string
 	UploadDir        string
+	FileURLSecret    string
+	FileURLTTL       time.Duration
 }
 
 func Load() (*Config, error) {
@@ -40,6 +42,7 @@ func Load() (*Config, error) {
 		QRHashSecret:     getEnv("QR_HASH_SECRET", ""),
 		CORSOrigins:      strings.Split(getEnv("CORS_ORIGINS", "http://localhost:3000"), ","),
 		UploadDir:        getEnv("UPLOAD_DIR", "./uploads"),
+		FileURLSecret:    getEnv("FILE_URL_SECRET", ""),
 	}
 
 	accessMin, _ := strconv.Atoi(getEnv("JWT_ACCESS_TTL_MINUTES", "15"))
@@ -47,11 +50,25 @@ func Load() (*Config, error) {
 	c.JWTAccessTTL = time.Duration(accessMin) * time.Minute
 	c.JWTRefreshTTL = time.Duration(refreshDays) * 24 * time.Hour
 
+	fileTTLMin, _ := strconv.Atoi(getEnv("FILE_URL_TTL_MINUTES", "60"))
+	if fileTTLMin <= 0 {
+		fileTTLMin = 60
+	}
+	c.FileURLTTL = time.Duration(fileTTLMin) * time.Minute
+
 	if len(c.JWTAccessSecret) < 32 {
 		return nil, fmt.Errorf("JWT_ACCESS_SECRET must be at least 32 chars")
 	}
 	if len(c.JWTRefreshSecret) < 32 {
 		return nil, fmt.Errorf("JWT_REFRESH_SECRET must be at least 32 chars")
+	}
+
+	if c.FileURLSecret == "" {
+		if c.Env == "production" {
+			return nil, fmt.Errorf("FILE_URL_SECRET is required in production")
+		}
+		// Dev default derived from JWT_ACCESS_SECRET
+		c.FileURLSecret = c.JWTAccessSecret
 	}
 
 	return c, nil

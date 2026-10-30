@@ -35,7 +35,9 @@ export interface ReworkEntry {
   decided_at?: string;
   fixed_by_name?: string;
   fixed_at?: string;
+  stitcher_name?: string;
   photos: ReworkPhoto[];
+  new_batch_code?: string;
 }
 
 export interface Batch {

@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/pc1605/rps/apps/backend/internal/audit"
+	"github.com/pc1605/rps/apps/backend/internal/files"
 )
 
 var allowedReasons = map[string]bool{
@@ -190,7 +191,7 @@ func (s *Service) FlagRework(ctx context.Context, unitCode string, workerID uuid
 		`, photoID, reworkID, filename); err != nil {
 			return nil, err
 		}
-		photos = append(photos, ReworkPhoto{ID: photoID, URL: "/api/v1/files/rework/" + filename})
+		photos = append(photos, ReworkPhoto{ID: photoID, URL: "/api/v1/files/rework/" + filename + "?" + files.Sign(filename, 0)})
 	}
 
 	if _, err := tx.Exec(ctx, `UPDATE batch_units SET status = 'rework' WHERE id = $1`, unitID); err != nil {
@@ -249,7 +250,8 @@ func (s *Service) ListReworkForStitcher(ctx context.Context, stitcherID uuid.UUI
 		       rl.round, rl.reasons, rl.note, rl.route,
 		       w.name, rl.flagged_at,
 		       rl.decision, rl.decided_at,
-		       wf.name, rl.fixed_at
+		       wf.name, rl.fixed_at,
+		       ws.name
 		FROM rework_logs rl
 		JOIN batch_units bu ON bu.id = rl.unit_id
 		JOIN batches b ON b.id = rl.batch_id
@@ -258,6 +260,7 @@ func (s *Service) ListReworkForStitcher(ctx context.Context, stitcherID uuid.UUI
 		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
 		JOIN workers w ON w.id = rl.flagged_by
 		LEFT JOIN workers wf ON wf.id = rl.fixed_by
+		LEFT JOIN workers ws ON ws.id = bu.stitched_by
 		WHERE rl.route = 'stitcher' AND rl.fixed_at IS NULL AND bu.stitched_by = $1
 		ORDER BY rl.flagged_at ASC
 	`, stitcherID)
@@ -277,6 +280,7 @@ func (s *Service) ListReworkForStitcher(ctx context.Context, stitcherID uuid.UUI
 			&e.FlaggedByName, &e.FlaggedAt,
 			&e.Decision, &e.DecidedAt,
 			&fixedByName, &e.FixedAt,
+			&e.StitcherName,
 		); err != nil {
 			return nil, err
 		}
@@ -304,7 +308,8 @@ func (s *Service) ListRework(ctx context.Context, status string, route *string) 
 		       rl.round, rl.reasons, rl.note, rl.route,
 		       w.name, rl.flagged_at,
 		       rl.decision, rl.decided_at,
-		       wf.name, rl.fixed_at
+		       wf.name, rl.fixed_at,
+		       ws.name
 		FROM rework_logs rl
 		JOIN batch_units bu ON bu.id = rl.unit_id
 		JOIN batches b ON b.id = rl.batch_id
@@ -313,6 +318,7 @@ func (s *Service) ListRework(ctx context.Context, status string, route *string) 
 		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
 		JOIN workers w ON w.id = rl.flagged_by
 		LEFT JOIN workers wf ON wf.id = rl.fixed_by
+		LEFT JOIN workers ws ON ws.id = bu.stitched_by
 		WHERE 1=1
 	`
 	args := []any{}
@@ -342,6 +348,7 @@ func (s *Service) ListRework(ctx context.Context, status string, route *string) 
 			&e.FlaggedByName, &e.FlaggedAt,
 			&e.Decision, &e.DecidedAt,
 			&fixedByName, &e.FixedAt,
+			&e.StitcherName,
 		); err != nil {
 			return nil, err
 		}
@@ -566,7 +573,7 @@ func (s *Service) attachPhotos(ctx context.Context, entries []*ReworkEntry) erro
 		if entry, ok := entryMap[rwID]; ok {
 			entry.Photos = append(entry.Photos, ReworkPhoto{
 				ID:  photoID,
-				URL: "/api/v1/files/rework/" + path,
+				URL: "/api/v1/files/rework/" + path + "?" + files.Sign(path, 0),
 			})
 		}
 	}

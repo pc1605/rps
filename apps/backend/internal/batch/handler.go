@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/pc1605/rps/apps/backend/internal/auth"
+	"github.com/pc1605/rps/apps/backend/internal/files"
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
 	"github.com/rs/zerolog/log"
 )
@@ -539,11 +540,15 @@ func (h *Handler) ServeReworkFile(c *fiber.Ctx) error {
 		return httpx.BadRequest(c, "invalid file name")
 	}
 
+	if !files.Verify(name, c.Query("exp"), c.Query("sig")) {
+		return httpx.Error(c, fiber.StatusForbidden, "invalid_signature", "invalid or expired signature")
+	}
+
 	filePath := filepath.Join(h.svc.UploadDir(), "rework", name)
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return httpx.Error(c, fiber.StatusNotFound, "not_found", "file not found")
 	}
 
-	c.Set("Cache-Control", "private, max-age=86400")
+	c.Set("Cache-Control", "private, max-age=3000")
 	return c.SendFile(filePath)
 }

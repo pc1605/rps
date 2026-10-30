@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes, ChevronRight, Scissors } from "lucide-react";
+import { Boxes, ChevronRight, Scissors, Wrench } from "lucide-react";
 import Link from "next/link";
 import { Chip } from "@/components/rps/chip";
 import { EmptyState } from "@/components/rps/empty-state";
@@ -9,12 +9,13 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreateBatchDialog } from "@/features/batches/components/create-batch-dialog";
 import { Pipeline } from "@/features/batches/components/pipeline";
-import { useBatches } from "@/features/batches/hooks";
+import { useBatches, useBatchStats } from "@/features/batches/hooks";
 import { useRollsStock } from "@/features/stock/hooks";
 import { batchTone, sizeLabel } from "@/lib/tokens";
 
 export default function DashboardPage() {
   const { data: batches, isPending } = useBatches();
+  const { data: stats } = useBatchStats();
   const { data: rolls } = useRollsStock();
 
   const today = new Date().toLocaleDateString(undefined, {
@@ -27,6 +28,8 @@ export default function DashboardPage() {
     (b) => b.status === "awaiting_assignment" && b.cut_qty < b.quantity,
   );
   const lowRolls = (rolls ?? []).filter((r) => r.is_active && r.is_low);
+  const reworkNeedsDecision = stats?.rework_needs_decision ?? 0;
+  const reworkOpen = stats?.rework_open ?? 0;
 
   return (
     <div className="space-y-8">
@@ -34,8 +37,39 @@ export default function DashboardPage() {
       <Pipeline />
 
       {/* Attention — only renders when something needs the admin */}
-      {(shortCuts.length > 0 || lowRolls.length > 0) && (
+      {(reworkNeedsDecision > 0 || reworkOpen > 0 || shortCuts.length > 0 || lowRolls.length > 0) && (
         <div className="grid gap-2 sm:grid-cols-2">
+          {reworkNeedsDecision > 0 && (
+            <Link href="/rework">
+              <Card className="flex items-center gap-3 border-brand/40 bg-brand/5 p-3 hover:bg-brand/10">
+                <Wrench className="h-4 w-4 text-brand" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <div className="text-small font-medium">
+                    {reworkNeedsDecision} {reworkNeedsDecision === 1 ? "mat needs" : "mats need"} your
+                    decision
+                  </div>
+                  <div className="text-caption text-muted-foreground">
+                    Sent back from packing — review reasons and decide next step
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+              </Card>
+            </Link>
+          )}
+          {reworkOpen > 0 && (
+            <Link href="/rework">
+              <Card className="flex items-center gap-3 p-3 hover:bg-accent">
+                <Wrench className="h-4 w-4 text-danger" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <div className="text-small font-medium">
+                    {reworkOpen} {reworkOpen === 1 ? "mat" : "mats"} out for rework
+                  </div>
+                  <div className="text-caption text-muted-foreground">In stitching repair queue</div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+              </Card>
+            </Link>
+          )}
           {shortCuts.map((b) => (
             <Link key={b.id} href={`/batches/${b.id}`}>
               <Card className="flex items-center gap-3 border-brand/40 bg-brand/5 p-3 hover:bg-brand/10">
