@@ -81,6 +81,7 @@ export function PhotoLightbox({
         <div className="relative flex min-h-[320px] max-h-[75vh] w-full items-center justify-center bg-black/5 p-4 dark:bg-black/40">
           {currentPhoto ? (
             <AuthImage
+              key={currentPhoto.url}
               src={currentPhoto.url}
               alt={`${title} (${index + 1} of ${photos.length})`}
               className="max-h-[68vh] w-auto max-w-full rounded-md object-contain shadow-sm"

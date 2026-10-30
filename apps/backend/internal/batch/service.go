@@ -262,11 +262,12 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 	// Load rework entries for all units in this batch
 	reworkRows, err := s.pool.Query(ctx, `
 		SELECT rl.id, rl.unit_id, bu.unit_code, rl.batch_id, rl.round, rl.reasons, rl.note, rl.route,
-		       w.name, rl.flagged_at, rl.decision, rl.decided_at, wf.name, rl.fixed_at
+		       w.name, rl.flagged_at, rl.decision, rl.decided_at, wf.name, rl.fixed_at, ws.name
 		FROM rework_logs rl
 		JOIN batch_units bu ON bu.id = rl.unit_id
 		JOIN workers w ON w.id = rl.flagged_by
 		LEFT JOIN workers wf ON wf.id = rl.fixed_by
+		LEFT JOIN workers ws ON ws.id = bu.stitched_by
 		WHERE rl.batch_id = $1
 		ORDER BY rl.round ASC, rl.flagged_at ASC
 	`, id)
@@ -283,6 +284,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 		if err := reworkRows.Scan(
 			&e.ID, &e.UnitID, &e.UnitCode, &e.BatchID, &e.Round, &e.Reasons, &e.Note, &e.Route,
 			&e.FlaggedByName, &e.FlaggedAt, &e.Decision, &e.DecidedAt, &fixedByName, &e.FixedAt,
+			&e.StitcherName,
 		); err != nil {
 			return nil, err
 		}

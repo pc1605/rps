@@ -176,6 +176,7 @@ type ReworkEntry struct {
 	DecidedAt     *time.Time    `json:"decided_at,omitempty"`
 	FixedByName   *string       `json:"fixed_by_name,omitempty"`
 	FixedAt       *time.Time    `json:"fixed_at,omitempty"`
+	StitcherName  *string       `json:"stitcher_name,omitempty"`
 	Photos        []ReworkPhoto `json:"photos"`
 	NewBatchCode  *string       `json:"new_batch_code,omitempty"`
 }

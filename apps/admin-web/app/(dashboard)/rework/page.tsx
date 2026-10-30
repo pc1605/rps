@@ -71,7 +71,7 @@ const stitcherColumns: Column<ReworkEntry>[] = [
   {
     key: "stitcher",
     header: "Stitcher",
-    cell: (r) => <span className="text-small">{r.fixed_by_name || "—"}</span>,
+    cell: (r) => <span className="text-small">{r.stitcher_name || "—"}</span>,
   },
   {
     key: "sent_at",

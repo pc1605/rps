@@ -138,6 +138,7 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
                             aria-label={`View photo ${pIdx + 1} of round ${round.round}`}
                           >
                             <AuthImage
+                              key={photo.url}
                               src={photo.url}
                               alt={`Round ${round.round} thumbnail ${pIdx + 1}`}
                               className="h-full w-full object-cover"

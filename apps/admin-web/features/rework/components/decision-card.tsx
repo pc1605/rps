@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useBatch } from "@/features/batches/hooks";
 import { useDecideRework } from "../hooks";
 import { AuthImage } from "./auth-image";
 import { PhotoLightbox } from "./photo-lightbox";
@@ -43,10 +42,8 @@ export function DecisionCard({ entry }: { entry: ReworkEntry }) {
   const [writeOffOpen, setWriteOffOpen] = React.useState(false);
   const [writeOffNote, setWriteOffNote] = React.useState("");
 
-  const { data: batch } = useBatch(entry.batch_id);
-  const unit = batch?.units?.find((u) => u.id === entry.unit_id || u.unit_code === entry.unit_code);
-  // Disabled if batch is loaded and unit has no stitcher
-  const hasNoStitcher = Boolean(batch && !unit?.stitched_by_name && !unit?.stitched_at);
+  // Disabled if unit has no assigned stitcher
+  const hasNoStitcher = !entry.stitcher_name;
 
   const decideMutation = useDecideRework();
   const isPending = decideMutation.isPending;
@@ -83,7 +80,7 @@ export function DecisionCard({ entry }: { entry: ReworkEntry }) {
           <span>
             New batch created:{" "}
             <Link
-              href={`/batches?search=${res.new_batch_code}`}
+              href="/batches?phase=cutting"
               className="font-mono font-medium underline underline-offset-2 hover:text-brand"
             >
               {res.new_batch_code}
@@ -164,17 +161,25 @@ export function DecisionCard({ entry }: { entry: ReworkEntry }) {
           {/* Note if present */}
           {entry.note && (
             <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-small text-foreground/90">
-              <span className="text-caption font-medium uppercase tracking-wide text-muted-foreground">
-                Note:{" "}
-              </span>
+              <span className="text-caption font-medium text-muted-foreground">Note: </span>
               {entry.note}
             </div>
           )}
 
-          {/* Flagged by / at */}
-          <div className="text-caption text-muted-foreground">
-            Flagged by <span className="font-medium text-foreground">{entry.flagged_by_name}</span>{" "}
-            {entry.flagged_at && `· ${fmtStamp(entry.flagged_at)}`}
+          {/* Flagged by / at and stitcher info */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted-foreground">
+            <span>
+              Flagged by <span className="font-medium text-foreground">{entry.flagged_by_name}</span>{" "}
+              {entry.flagged_at && `· ${fmtStamp(entry.flagged_at)}`}
+            </span>
+            {entry.stitcher_name && (
+              <>
+                <span>·</span>
+                <span>
+                  Stitched by <span className="font-medium text-foreground">{entry.stitcher_name}</span>
+                </span>
+              </>
+            )}
           </div>
 
           {/* Photo thumbnails */}
@@ -189,6 +194,7 @@ export function DecisionCard({ entry }: { entry: ReworkEntry }) {
                   aria-label={`View photo ${idx + 1} of ${entry.photos.length}`}
                 >
                   <AuthImage
+                    key={photo.url}
                     src={photo.url}
                     alt={`Rework thumbnail ${idx + 1}`}
                     className="h-full w-full object-cover transition-transform group-hover:scale-105"

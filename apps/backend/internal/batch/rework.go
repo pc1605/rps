@@ -249,7 +249,8 @@ func (s *Service) ListReworkForStitcher(ctx context.Context, stitcherID uuid.UUI
 		       rl.round, rl.reasons, rl.note, rl.route,
 		       w.name, rl.flagged_at,
 		       rl.decision, rl.decided_at,
-		       wf.name, rl.fixed_at
+		       wf.name, rl.fixed_at,
+		       ws.name
 		FROM rework_logs rl
 		JOIN batch_units bu ON bu.id = rl.unit_id
 		JOIN batches b ON b.id = rl.batch_id
@@ -258,6 +259,7 @@ func (s *Service) ListReworkForStitcher(ctx context.Context, stitcherID uuid.UUI
 		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
 		JOIN workers w ON w.id = rl.flagged_by
 		LEFT JOIN workers wf ON wf.id = rl.fixed_by
+		LEFT JOIN workers ws ON ws.id = bu.stitched_by
 		WHERE rl.route = 'stitcher' AND rl.fixed_at IS NULL AND bu.stitched_by = $1
 		ORDER BY rl.flagged_at ASC
 	`, stitcherID)
@@ -277,6 +279,7 @@ func (s *Service) ListReworkForStitcher(ctx context.Context, stitcherID uuid.UUI
 			&e.FlaggedByName, &e.FlaggedAt,
 			&e.Decision, &e.DecidedAt,
 			&fixedByName, &e.FixedAt,
+			&e.StitcherName,
 		); err != nil {
 			return nil, err
 		}
@@ -304,7 +307,8 @@ func (s *Service) ListRework(ctx context.Context, status string, route *string) 
 		       rl.round, rl.reasons, rl.note, rl.route,
 		       w.name, rl.flagged_at,
 		       rl.decision, rl.decided_at,
-		       wf.name, rl.fixed_at
+		       wf.name, rl.fixed_at,
+		       ws.name
 		FROM rework_logs rl
 		JOIN batch_units bu ON bu.id = rl.unit_id
 		JOIN batches b ON b.id = rl.batch_id
@@ -313,6 +317,7 @@ func (s *Service) ListRework(ctx context.Context, status string, route *string) 
 		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
 		JOIN workers w ON w.id = rl.flagged_by
 		LEFT JOIN workers wf ON wf.id = rl.fixed_by
+		LEFT JOIN workers ws ON ws.id = bu.stitched_by
 		WHERE 1=1
 	`
 	args := []any{}
@@ -342,6 +347,7 @@ func (s *Service) ListRework(ctx context.Context, status string, route *string) 
 			&e.FlaggedByName, &e.FlaggedAt,
 			&e.Decision, &e.DecidedAt,
 			&fixedByName, &e.FixedAt,
+			&e.StitcherName,
 		); err != nil {
 			return nil, err
 		}
