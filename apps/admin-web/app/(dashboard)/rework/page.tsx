@@ -95,10 +95,10 @@ const stitcherColumns: Column<ReworkEntry>[] = [
             bg: "bg-brand/10",
           }}
         >
-          2nd time
+          Round {r.round}
         </Chip>
       ) : (
-        <span className="text-caption text-muted-foreground">Round 1</span>
+        <span className="text-caption text-muted-foreground">Round {r.round}</span>
       ),
   },
 ];
@@ -159,6 +159,7 @@ export default function ReworkPage() {
         {/* Section 1: Needs your decision */}
         <section aria-labelledby="needs-decision-heading" className="space-y-4">
           <SectionTitle
+            id="needs-decision-heading"
             aside={
               decisionItems.length > 0 && (
                 <span className="tabular text-caption font-medium text-brand">
@@ -193,6 +194,7 @@ export default function ReworkPage() {
         {/* Section 2: With stitchers */}
         <section aria-labelledby="with-stitchers-heading" className="space-y-4">
           <SectionTitle
+            id="with-stitchers-heading"
             aside={
               stitcherItems.length > 0 && (
                 <span className="tabular text-caption text-muted-foreground">

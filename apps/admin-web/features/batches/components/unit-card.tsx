@@ -92,7 +92,7 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
             </summary>
             <div className="mt-2 space-y-2">
               {reworkHistory.map((round) => {
-                const isOpen = !round.fixed_at && round.decision !== "write_off";
+                const isOpen = !round.fixed_at && (!round.decision || round.decision === "to_stitcher");
                 return (
                   <div
                     key={round.id}
@@ -102,11 +102,21 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
                     )}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-semibold text-foreground">
-                        {round.round >= 2 ? "2nd time" : `Round ${round.round}`}
-                      </span>
+                      {round.round >= 2 ? (
+                        <Chip
+                          tone={{
+                            text: "text-brand",
+                            border: "border-brand/30",
+                            bg: "bg-brand/10",
+                          }}
+                        >
+                          Round {round.round}
+                        </Chip>
+                      ) : (
+                        <span className="font-semibold text-foreground">Round {round.round}</span>
+                      )}
                       {isOpen && (
-                        <span className="rounded-sm bg-danger/10 px-1.5 py-0.5 text-[10px] font-semibold text-danger">
+                        <span className="rounded-sm bg-danger/10 px-1.5 py-0.5 text-caption font-semibold text-danger">
                           Open
                         </span>
                       )}
@@ -115,13 +125,13 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
                     {/* Reasons */}
                     <div className="flex flex-wrap gap-1">
                       {round.reasons.map((r) => (
-                        <ReasonChip key={r} reason={r} className="px-1.5 py-0 text-[11px]" />
+                        <ReasonChip key={r} reason={r} className="px-1.5 py-0" />
                       ))}
                     </div>
 
                     {/* Note if any */}
                     {round.note && (
-                      <div className="text-[11px] italic text-muted-foreground">
+                      <div className="text-caption italic text-muted-foreground">
                         &ldquo;{round.note}&rdquo;
                       </div>
                     )}
@@ -149,14 +159,14 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
                     )}
 
                     {/* Flagged info */}
-                    <div className="text-[11px] text-muted-foreground">
+                    <div className="text-caption text-muted-foreground">
                       Flagged by <span className="text-foreground">{round.flagged_by_name}</span>{" "}
                       {round.flagged_at && `· ${fmtStamp(round.flagged_at)}`}
                     </div>
 
                     {/* Decision info */}
                     {round.decision && (
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-caption text-muted-foreground">
                         Decision:{" "}
                         <span className="font-medium text-foreground">
                           {round.decision === "to_stitcher"
@@ -171,7 +181,7 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
 
                     {/* Fixed info */}
                     {round.fixed_at && (
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="text-caption text-muted-foreground">
                         Fixed by <span className="text-foreground">{round.fixed_by_name ?? "Stitcher"}</span>{" "}
                         · {fmtStamp(round.fixed_at)}
                       </div>

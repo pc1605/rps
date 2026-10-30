@@ -138,10 +138,10 @@ export function DecisionCard({ entry }: { entry: ReworkEntry }) {
                   bg: "bg-brand/10",
                 }}
               >
-                2nd time
+                Round {entry.round}
               </Chip>
             ) : (
-              <span className="text-caption text-muted-foreground">Round 1</span>
+              <span className="text-caption text-muted-foreground">Round {entry.round}</span>
             )}
           </div>
 

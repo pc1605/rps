@@ -37,17 +37,21 @@ export function PageHeader({
 }
 
 export function SectionTitle({
+  id,
   children,
   aside,
   className,
 }: {
+  id?: string;
   children: React.ReactNode;
   aside?: React.ReactNode;
   className?: string;
 }) {
   return (
     <div className={cn("mb-3 flex items-baseline justify-between gap-3", className)}>
-      <h2 className="text-h2">{children}</h2>
+      <h2 id={id} className="text-h2">
+        {children}
+      </h2>
       {aside && <div className="text-small text-muted-foreground">{aside}</div>}
     </div>
   );
