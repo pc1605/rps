@@ -36,6 +36,7 @@ export interface ReworkEntry {
   fixed_by_name?: string;
   fixed_at?: string;
   photos: ReworkPhoto[];
+  new_batch_code?: string;
 }
 
 export interface Batch {
