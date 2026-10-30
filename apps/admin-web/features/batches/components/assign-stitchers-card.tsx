@@ -104,7 +104,7 @@ function Inner({ batch }: { batch: BatchDetail }) {
           Stitching assignment
         </h2>
         {isAwaiting && (
-          <span className="font-mono text-[10px] uppercase text-amber-600 dark:text-amber-400 animate-pulse">
+          <span className="font-mono text-[10px] uppercase text-brand animate-pulse">
             Ready for stitching — assign to release
           </span>
         )}
@@ -145,10 +145,7 @@ function Inner({ batch }: { batch: BatchDetail }) {
 
       <div className="flex items-center justify-between">
         <div
-          className={cn(
-            "font-mono text-xs tabular-nums",
-            balanced ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400",
-          )}
+          className={cn("font-mono text-xs tabular-nums", balanced ? "text-phase-completed" : "text-brand")}
         >
           {ids.length
             ? `${total} / ${batch.quantity} mats assigned ${balanced ? "✓" : `· ${batch.quantity - total} left`}`

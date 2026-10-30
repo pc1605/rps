@@ -24,14 +24,27 @@ const baseColumns: Column<Batch>[] = [
     card: "title",
     cell: (b) => (
       <div>
-        <Link href={`/batches/${b.id}`} className="font-mono text-small text-brand hover:underline">
-          {b.batch_code}
-        </Link>
-        {b.status === "awaiting_assignment" && b.cut_qty < b.quantity && (
-          <span className="ml-2 text-caption text-brand" title={`${b.cut_qty} of ${b.quantity} cut`}>
-            ⚠ short
-          </span>
-        )}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Link href={`/batches/${b.id}`} className="font-mono text-small text-brand hover:underline">
+            {b.batch_code}
+          </Link>
+          {(b.rework_open ?? 0) > 0 && (
+            <Chip
+              tone={{
+                text: "text-danger",
+                border: "border-danger/30",
+                bg: "bg-danger/10",
+              }}
+            >
+              🔧 {b.rework_open}
+            </Chip>
+          )}
+          {b.status === "awaiting_assignment" && b.cut_qty < b.quantity && (
+            <span className="text-caption text-brand" title={`${b.cut_qty} of ${b.quantity} cut`}>
+              ⚠ short
+            </span>
+          )}
+        </div>
         {b.parent_batch_code && (
           <div className="text-caption text-muted-foreground">↩ from {b.parent_batch_code}</div>
         )}
