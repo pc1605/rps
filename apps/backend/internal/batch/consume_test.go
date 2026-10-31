@@ -202,7 +202,8 @@ func (f *matFixture) moves(batchID uuid.UUID, typ int) []string {
 		       m.qty::text
 		FROM material_movements m LEFT JOIN material_lots l ON l.id = m.lot_id
 		WHERE m.batch_id = $1 AND m.material_type_id = $2 AND m.kind = 'consume'
-		ORDER BY m.created_at, m.id`, batchID, typ)
+		-- one tx shares NOW(): order by draw sequence = completion, lots FIFO, shortfall last
+		ORDER BY m.created_at, (m.lot_id IS NULL), l.received_at, l.id`, batchID, typ)
 	if err != nil {
 		f.t.Fatal(err)
 	}
