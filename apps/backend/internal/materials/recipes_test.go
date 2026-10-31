@@ -49,9 +49,16 @@ func TestGroupsRecipesOverrides(t *testing.T) {
 	_, err = f.s.CreateGroup(f.ctx, GroupInput{Name: sp("T grp off " + f.sfx), IsActive: bp(false),
 		DefaultForSize: Opt[string]{Set: true, Value: sp("large")}}, f.a)
 	is(t, "inactive group as a size default", err, ErrGroupIsDefault)
+	var maxSort int
+	if err := f.pool.QueryRow(f.ctx, `SELECT MAX(sort) FROM consumption_groups`).Scan(&maxSort); err != nil {
+		t.Fatal(err)
+	}
 	spare, err := f.s.CreateGroup(f.ctx, GroupInput{Name: sp("T grp spare " + f.sfx)}, f.a)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if spare.Sort != maxSort+10 {
+		t.Errorf("group without sort: sort = %d, want %d (after the last)", spare.Sort, maxSort+10)
 	}
 	if spare, err = f.s.UpdateGroup(f.ctx, spare.ID, GroupInput{IsActive: bp(false), Name: sp("T grp spare2 " + f.sfx)}, f.a); err != nil || spare.IsActive {
 		t.Errorf("deactivate unused group: %+v, %v", spare, err)

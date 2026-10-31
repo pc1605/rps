@@ -214,16 +214,19 @@ func BuildPlan(ctx context.Context, q Querier, in PlanInput) (*Plan, error) {
 	}
 	sort.Ints(typeIDs)
 
-	type typeInfo struct{ code, name, unit string }
+	type typeInfo struct {
+		code, name, unit string
+		active           bool
+	}
 	types := map[int]typeInfo{}
-	rows, err := q.Query(ctx, `SELECT id, code, name, unit::text FROM material_types WHERE id = ANY($1)`, typeIDs)
+	rows, err := q.Query(ctx, `SELECT id, code, name, unit::text, is_active FROM material_types WHERE id = ANY($1)`, typeIDs)
 	if err != nil {
 		return nil, fmt.Errorf("plan: types: %w", err)
 	}
 	for rows.Next() {
 		var id int
 		var t typeInfo
-		if err := rows.Scan(&id, &t.code, &t.name, &t.unit); err != nil {
+		if err := rows.Scan(&id, &t.code, &t.name, &t.unit, &t.active); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -232,6 +235,19 @@ func BuildPlan(ctx context.Context, q Querier, in PlanInput) (*Plan, error) {
 	rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	// Inactive types are not planned (nor consumed) — except the batch's own roll, which was picked.
+	kept := typeIDs[:0]
+	for _, tid := range typeIDs {
+		if !types[tid].active && (rollType == nil || *rollType != tid) {
+			plan.Notes = append(plan.Notes, fmt.Sprintf("Skipped %s: material is inactive", types[tid].name))
+			continue
+		}
+		kept = append(kept, tid)
+	}
+	typeIDs = kept
+	if len(typeIDs) == 0 {
+		return plan, nil
 	}
 	variantNames := map[int]string{}
 	rows, err = q.Query(ctx, `SELECT id, name FROM material_variants WHERE material_type_id = ANY($1)`, typeIDs)

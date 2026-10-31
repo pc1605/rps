@@ -10,6 +10,7 @@ import { Stat } from "@/components/rps/stat";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AssignStitchersCard } from "@/features/batches/components/assign-stitchers-card";
+import { BatchMaterials } from "@/features/batches/components/batch-materials";
 import { BatchTimeline } from "@/features/batches/components/batch-timeline";
 import { ShortCutPanel } from "@/features/batches/components/short-cut-panel";
 import { UnitCard } from "@/features/batches/components/unit-card";
@@ -134,6 +135,8 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
           ))}
         </div>
       </section>
+
+      <BatchMaterials batchId={batch.id} />
 
       <section>
         <SectionTitle>Production timeline</SectionTitle>

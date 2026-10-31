@@ -10,6 +10,7 @@ func RegisterRoutes(api fiber.Router, svc *Service, admin fiber.Handler) {
 	api.Get("/materials/types", admin, h.ListTypes)
 	api.Post("/materials/types", admin, h.CreateType)
 	api.Patch("/materials/types/:id", admin, h.UpdateType)
+	api.Delete("/materials/types/:id", admin, h.DeleteType)
 	api.Get("/materials/types/:id/variants", admin, h.ListVariants)
 	api.Post("/materials/types/:id/variants", admin, h.CreateVariant)
 	api.Patch("/materials/variants/:id", admin, h.UpdateVariant)
@@ -27,6 +28,7 @@ func RegisterRoutes(api fiber.Router, svc *Service, admin fiber.Handler) {
 	api.Get("/consumption-groups", admin, h.ListGroups)
 	api.Post("/consumption-groups", admin, h.CreateGroup)
 	api.Patch("/consumption-groups/:id", admin, h.UpdateGroup)
+	api.Delete("/consumption-groups/:id", admin, h.DeleteGroup)
 
 	api.Get("/recipes", admin, h.RecipeGrid)
 	api.Get("/recipes/resolve", admin, h.Resolve)

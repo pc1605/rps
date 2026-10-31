@@ -8,7 +8,6 @@ import type {
   CarModel,
   CreateBatchInput,
   Phase,
-  Roll,
 } from "./types";
 
 export const batchApi = {
@@ -29,10 +28,6 @@ export const batchApi = {
   },
   carModels: async (): Promise<CarModel[]> => {
     const res = await http.get("/car-models");
-    return res.data?.data ?? res.data;
-  },
-  rolls: async (): Promise<Roll[]> => {
-    const res = await http.get("/rolls");
     return res.data?.data ?? res.data;
   },
   stats: async (): Promise<BatchStats> => {

@@ -56,15 +56,21 @@ const typeSelect = `
 	       COALESCE((SELECT (SUM(l.qty_remaining) * 1000)::bigint FROM material_lots l
 	                 WHERE l.material_type_id = t.id AND l.is_active), 0),
 	       (SELECT COUNT(*) FROM material_lots l WHERE l.material_type_id = t.id AND l.is_active),
+	       (SELECT COUNT(*) FROM recipe_lines rl WHERE rl.material_type_id = t.id),
+	       (SELECT COUNT(DISTINCT o.car_model_id) FROM car_material_overrides o WHERE o.material_type_id = t.id),
+	       EXISTS(SELECT 1 FROM material_lots l WHERE l.material_type_id = t.id)
+	         OR EXISTS(SELECT 1 FROM material_movements m WHERE m.material_type_id = t.id)
+	         OR EXISTS(SELECT 1 FROM batch_material_plan p WHERE p.material_type_id = t.id),
 	       t.created_at
 	FROM material_types t`
 
 func scanType(row pgx.Row) (*MaterialType, error) {
 	var t MaterialType
 	if err := row.Scan(&t.ID, &t.Code, &t.Name, &t.Unit, &t.HasVariants, &t.MinLevel, &t.Sort, &t.IsActive,
-		&t.StockRemaining, &t.ActiveLots, &t.CreatedAt); err != nil {
+		&t.StockRemaining, &t.ActiveLots, &t.RecipeLines, &t.OverrideCars, &t.HasHistory, &t.CreatedAt); err != nil {
 		return nil, err
 	}
+	t.Deletable = !t.HasHistory && t.RecipeLines == 0 && t.OverrideCars == 0
 	t.IsLow = t.IsActive && t.MinLevel != nil && t.StockRemaining < *t.MinLevel
 	return &t, nil
 }
@@ -118,6 +124,7 @@ func normType(in *TypeInput) error {
 	return nil
 }
 
+// CreateType: no sort given = after the last type (MAX(sort) + 10), so a new type lands at the end.
 func (s *Service) CreateType(ctx context.Context, in TypeInput, a Actor) (*MaterialType, error) {
 	if in.Code == nil || in.Name == nil || in.Unit == nil {
 		return nil, invalid("code, name and unit are required")
@@ -125,12 +132,9 @@ func (s *Service) CreateType(ctx context.Context, in TypeInput, a Actor) (*Mater
 	if err := normType(&in); err != nil {
 		return nil, err
 	}
-	hasVariants, sort, active := false, 0, true
+	hasVariants, active := false, true
 	if in.HasVariants != nil {
 		hasVariants = *in.HasVariants
-	}
-	if in.Sort != nil {
-		sort = *in.Sort
 	}
 	if in.IsActive != nil {
 		active = *in.IsActive
@@ -140,8 +144,10 @@ func (s *Service) CreateType(ctx context.Context, in TypeInput, a Actor) (*Mater
 		var id int
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO material_types (code, name, unit, has_variants, min_level, sort, is_active)
-			VALUES ($1, $2, $3::material_unit, $4, $5::bigint::numeric / 1000, $6, $7) RETURNING id`,
-			*in.Code, *in.Name, *in.Unit, hasVariants, milliArg(in.MinLevel.Value), sort, active).Scan(&id); err != nil {
+			VALUES ($1, $2, $3::material_unit, $4, $5::bigint::numeric / 1000,
+			        COALESCE($6::int, (SELECT COALESCE(MAX(sort), 0) + 10 FROM material_types)), $7)
+			RETURNING id`,
+			*in.Code, *in.Name, *in.Unit, hasVariants, milliArg(in.MinLevel.Value), in.Sort, active).Scan(&id); err != nil {
 			if isUnique(err) {
 				return fmt.Errorf("%w: material type code %q", ErrDuplicate, *in.Code)
 			}
@@ -218,6 +224,38 @@ func (s *Service) UpdateType(ctx context.Context, id int, in TypeInput, a Actor)
 		return writeAudit(ctx, tx, a, "material_type", fmt.Sprint(id), audit.ActionUpdate, before, after)
 	})
 	return out, err
+}
+
+// DeleteType removes a type nobody references (a mistake, never used). Its variants go with it —
+// they can only be referenced by lots / recipe lines / overrides / plan rows of the same type.
+// Anything with history is deactivated instead (409 type_in_use).
+func (s *Service) DeleteType(ctx context.Context, id int, a Actor) error {
+	return s.withTx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM material_types WHERE id = $1 FOR UPDATE`, id); err != nil {
+			return err
+		}
+		before, err := s.getType(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if !before.Deletable {
+			return ErrTypeInUse
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM material_variants WHERE material_type_id = $1`, id); err != nil {
+			return typeDeleteErr(err)
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM material_types WHERE id = $1`, id); err != nil {
+			return typeDeleteErr(err)
+		}
+		return writeAudit(ctx, tx, a, "material_type", fmt.Sprint(id), audit.ActionDelete, before, nil)
+	})
+}
+
+func typeDeleteErr(err error) error {
+	if isFKViolation(err) {
+		return ErrTypeInUse
+	}
+	return err
 }
 
 // ───────────────────────── variants ─────────────────────────

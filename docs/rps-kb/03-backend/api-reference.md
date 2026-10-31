@@ -56,8 +56,9 @@ Quantities are JSON numbers with ≤ 3 decimals (money ≤ 2), parsed exactly (n
 
 | Method | Path | Notes |
 |---|---|---|
-| GET/POST | `/materials/types` | rows add `stock_remaining`, `active_lots`, `is_low`. POST `{code, name, unit, has_variants?, min_level?, sort?, is_active?}` (code upper-cased) |
+| GET/POST | `/materials/types` | rows add `stock_remaining`, `active_lots`, `is_low`, `recipe_lines`, `override_cars`, `has_history` (any lot / movement / plan row), `deletable`. POST `{code, name, unit, has_variants?, min_level?, sort?, is_active?}` (code upper-cased; no `sort` = after the last type, MAX + 10) |
 | PATCH | `/materials/types/:id` | same fields (`min_level: null` clears). 409 `unit_locked` once the type has movements; `has_variants:false` → 409 `has_active_variants` / `variants_in_use` |
+| DELETE | `/materials/types/:id` | 204; only when `deletable` (variants go with it), else 409 `type_in_use` — deactivate instead. tx + audit |
 | GET/POST | `/materials/types/:id/variants` | `{name, specs (object), is_active?}`; 400 if the type has no variants |
 | PATCH | `/materials/variants/:id` | `{name?, specs?, is_active?}` |
 | GET | `/materials/lots?type_id&active&low` | lots with type, variant, colour, qty, unit, cost, supplier, `last_movement_at`. `low=true` = lots of types below `min_level` |
@@ -66,7 +67,8 @@ Quantities are JSON numbers with ≤ 3 decimals (money ≤ 2), parsed exactly (n
 | POST | `/materials/lots/:id/waste` · `/return` | `{qty > 0, reason}` → `waste` (−, ≤ remaining) / `return` (+) |
 | PATCH | `/materials/lots/:id` | `is_active, color, supplier, note, unit_cost` (null clears); `material_type_id` / `variant_id` only before any consume/waste/return (else 409 `lot_has_consumption`) — opening movements move along |
 | GET | `/materials/movements?lot_id\|type_id\|batch_id&from&to&limit&cursor` | ledger newest first with lot, type, variant, batch code, actor names; `{items, next_cursor?}` (keyset; limit ≤ 200, default 50); from/to = factory days |
-| GET/POST | `/consumption-groups` | rows add `car_count`. `{name, sort?, is_active?, default_for_size?}` — name and size default unique |
+| GET/POST | `/consumption-groups` | rows add `car_count`, `recipe_lines`, `deletable`. `{name, sort?, is_active?, default_for_size?}` — name and size default unique; no `sort` = after the last group (MAX + 10) |
+| DELETE | `/consumption-groups/:id` | 204; empty recipe headers go with it. 409 `group_in_use` (cars) · `group_is_default` · `group_has_recipes`. tx + audit |
 | PATCH | `/consumption-groups/:id` | same fields (`default_for_size: null` clears). Can't deactivate while cars use it (409 `group_in_use`) or while it's a size default (409 `group_is_default`) |
 | GET | `/recipes?product_line_id` | grid: every group with its recipe lines for the line |
 | PUT | `/recipes/:product_line_id/:group_id/lines` | body = array `[{material_type_id, variant_id?, qty_per_mat > 0}]`, full replace; creates the recipe row |

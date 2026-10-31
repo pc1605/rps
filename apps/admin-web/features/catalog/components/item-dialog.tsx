@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useGroups } from "@/features/materials/hooks";
 import { useBrands, useCreateBrand, useCreateItem, useProductLines, useUpdateItem } from "../hooks";
 import type { CarItem } from "../types";
 
@@ -52,6 +53,9 @@ function ItemForm({ item, onDone }: { item?: CarItem; onDone: () => void }) {
     item ? String(lines?.find((l) => l.code === item.line_code)?.id ?? "") : "",
   );
   const [barcode, setBarcode] = useState(item?.barcode ?? "");
+  // "" = new car: group by size (DB default); existing car: its current group.
+  const [groupId, setGroupId] = useState<string>(item ? String(item.consumption_group_id) : "");
+  const { data: groups } = useGroups();
 
   const busy = createBrand.isPending || createItem.isPending || updateItem.isPending;
   const canSave = name.trim() && (brandId || newBrand.trim()) && lineId;
@@ -72,10 +76,15 @@ function ItemForm({ item, onDone }: { item?: CarItem; onDone: () => void }) {
         barcode: barcode.trim() || undefined,
       };
       if (item) {
-        await updateItem.mutateAsync({ id: item.id, ...payload });
+        await updateItem.mutateAsync({
+          id: item.id,
+          ...payload,
+          ...(groupId ? { consumption_group_id: Number(groupId) } : {}),
+        });
         toast.success("Item updated");
       } else {
         const res = await createItem.mutateAsync(payload);
+        if (groupId) await updateItem.mutateAsync({ id: res.id, consumption_group_id: Number(groupId) });
         toast.success(`Item added · barcode ${res.barcode}`);
       }
       onDone();
@@ -180,6 +189,27 @@ function ItemForm({ item, onDone }: { item?: CarItem; onDone: () => void }) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="item-group">Consumption group</Label>
+            <Select value={groupId || "size"} onValueChange={(v) => setGroupId(v === "size" ? "" : v)}>
+              <SelectTrigger id="item-group">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {!item && <SelectItem value="size">By size (default)</SelectItem>}
+                {(groups ?? [])
+                  .filter((g) => g.is_active || String(g.id) === groupId)
+                  .map((g) => (
+                    <SelectItem key={g.id} value={String(g.id)}>
+                      {g.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <p className="text-caption text-muted-foreground">
+              Decides which recipe this car uses (with its product line).
+            </p>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="item-barcode">Barcode</Label>

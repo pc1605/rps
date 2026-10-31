@@ -39,14 +39,6 @@ export function useCarModels() {
   });
 }
 
-export function useRolls() {
-  return useQuery({
-    queryKey: ["rolls"],
-    queryFn: batchApi.rolls,
-    staleTime: 60_000,
-  });
-}
-
 export function useCreateBatch() {
   const qc = useQueryClient();
   return useMutation({

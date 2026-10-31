@@ -6904,6 +6904,31 @@
           }
         },
         {
+          "name": "Delete group \u00b7 used by a car \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code group_in_use', () => pm.expect(pm.response.json().code).to.eql('group_in_use'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/consumption-groups/{{matGroupId}}"
+          }
+        },
+        {
           "name": "Patch car \u00b7 unknown group \u2192 400",
           "event": [
             {
@@ -7481,6 +7506,173 @@
               "mode": "raw",
               "raw": "{\n  \"is_active\": false\n}"
             }
+          }
+        },
+        {
+          "name": "Delete type \u00b7 has history \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code type_in_use', () => pm.expect(pm.response.json().code).to.eql('type_in_use'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types/{{matTypeId}}"
+          }
+        },
+        {
+          "name": "Create throwaway type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('matDelTypeId', d.id);",
+                  "pm.test('fresh type is deletable', () => pm.expect(d.deletable).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\": \"pm-del-{{matSfx}}\", \"name\": \"PM delete me\", \"unit\": \"pcs\"}"
+            }
+          }
+        },
+        {
+          "name": "Delete unused type \u2192 204",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types/{{matDelTypeId}}"
+          }
+        },
+        {
+          "name": "Delete type \u00b7 gone \u2192 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types/{{matDelTypeId}}"
+          }
+        },
+        {
+          "name": "Create throwaway group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('matDelGroupId', d.id);",
+                  "pm.test('fresh group is deletable', () => pm.expect(d.deletable).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/consumption-groups",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"PM del grp {{matSfx}}\", \"sort\": 96}"
+            }
+          }
+        },
+        {
+          "name": "Delete unused group \u2192 204",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/consumption-groups/{{matDelGroupId}}"
           }
         }
       ]

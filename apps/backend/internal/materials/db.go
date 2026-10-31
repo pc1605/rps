@@ -59,6 +59,12 @@ func InsertMovement(ctx context.Context, tx pgx.Tx, m MovementInput) (uuid.UUID,
 	return id, nil
 }
 
+// isFKViolation: a row still references the one being deleted (a race past the in-use check).
+func isFKViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23503"
+}
+
 func isUnique(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"

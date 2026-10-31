@@ -17,7 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateBatch, useRolls } from "../hooks";
+import { MATERIAL_UNIT_LABEL } from "@rps/shared";
+import { useCarItems } from "@/features/catalog/hooks";
+import { useLots, useMaterialTypes, useResolve } from "@/features/materials/hooks";
+import { cn } from "@/lib/utils";
+import { useCreateBatch } from "../hooks";
 import { CarModelSelect } from "./car-model-select";
 
 export function CreateBatchDialog() {
@@ -27,7 +31,15 @@ export function CreateBatchDialog() {
   const [quantity, setQuantity] = useState<string>("");
   const [notes, setNotes] = useState("");
 
-  const { data: rolls } = useRolls();
+  // Roll = a lot of the car's sheet material (type code = product line code, migration 015).
+  const { data: cars } = useCarItems();
+  const { data: lots } = useLots({ active: true });
+  const { data: types } = useMaterialTypes();
+  const car = cars?.find((c) => c.id === carModelId);
+  const sheetTypes = new Set((types ?? []).filter((t) => t.has_variants).map((t) => t.code));
+  const rolls = (lots ?? []).filter((l) =>
+    car?.line_code ? l.type_code === car.line_code : sheetTypes.has(l.type_code),
+  );
   const createBatch = useCreateBatch();
 
   const qty = Number(quantity);
@@ -106,7 +118,10 @@ export function CreateBatchDialog() {
 
             <div className="space-y-2">
               <Label htmlFor="batch-roll">
-                Rexine roll <span className="font-normal text-muted-foreground">(optional)</span>
+                Roll{" "}
+                <span className="font-normal text-muted-foreground">
+                  (optional — otherwise oldest stock first)
+                </span>
               </Label>
               <Select value={rollId || "none"} onValueChange={(v) => setRollId(v === "none" ? "" : v)}>
                 <SelectTrigger id="batch-roll" className="w-full">
@@ -114,15 +129,22 @@ export function CreateBatchDialog() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Unassigned</SelectItem>
-                  {rolls?.map((r) => (
+                  {rolls.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
-                      <span className="font-mono">{r.roll_code}</span> · {r.color} ·{" "}
-                      <span className="tabular">{r.remaining_meters} m</span>
+                      <span className="font-mono">{r.lot_code}</span> · {r.type_name}
+                      {r.variant_name ? ` ${r.variant_name}` : ""} · {r.color} ·{" "}
+                      <span className="tabular">
+                        {r.qty_remaining} {MATERIAL_UNIT_LABEL[r.unit]}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {carModelId && qty >= 1 && (
+              <MaterialsPreview carId={Number(carModelId)} qty={qty} lotId={rollId || undefined} />
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="batch-notes">
@@ -149,5 +171,38 @@ export function CreateBatchDialog() {
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** What cutting this batch would draw right now (engine dry run) — shortfalls show before creating. */
+function MaterialsPreview({ carId, qty, lotId }: { carId: number; qty: number; lotId?: string }) {
+  const { data } = useResolve(carId, qty, lotId);
+  if (!data) return null;
+  if (data.lines.length === 0)
+    return (
+      <p className="text-caption text-muted-foreground">
+        No recipe for this car yet — materials won't be recorded.
+      </p>
+    );
+  return (
+    <div className="rounded-md border p-3">
+      <div className="mb-1.5 text-caption text-muted-foreground">Materials at cutting (if cut now)</div>
+      <ul className="space-y-1">
+        {data.lines
+          .filter((l) => l.need !== 0)
+          .map((l) => (
+            <li key={l.material_type_id} className="flex justify-between gap-3 text-small">
+              <span>
+                {l.type_name}
+                {l.variant_name && <span className="text-muted-foreground"> · {l.variant_name}</span>}
+              </span>
+              <span className={cn("tabular", (l.shortfall > 0 || l.source === "none") && "text-danger")}>
+                {l.need != null ? `${l.need} ${MATERIAL_UNIT_LABEL[l.unit]}` : "no recipe qty"}
+                {l.shortfall > 0 && ` · short ${l.shortfall}`}
+              </span>
+            </li>
+          ))}
+      </ul>
+    </div>
   );
 }

@@ -50,6 +50,10 @@ The first match wins; an override of `0` means the type isn't used (no consumpti
   the matching line pins one. Resolve the quantity with the **variant of the first lot drawn**.
 
 As built (C1b, `internal/batch/consume.go`):
+- **Inactive types are not planned:** recipe lines and overrides of an inactive type are skipped (dry run and cutting
+  alike) with a note "Skipped <type>: material is inactive" — except the batch's own roll, which was picked explicitly.
+- **Delete vs deactivate:** a type can be deleted only while nothing references it (no lot, movement, plan row, recipe
+  line or override); a group only with no cars, no recipe lines and no size default. Everything else is deactivated.
 - **Eligible lot** = active, `qty_remaining > 0`, and a quantity resolves for its variant. "Pinned" therefore means: if a
   type only has variant-specific lines/overrides (no "any"), only lots of those variants are drawn; with an "any" line,
   every lot of the type is eligible.
@@ -106,7 +110,13 @@ As built (C1b, `internal/batch/consume.go`):
 | Every active car has a recipe for its line × group | check-data #17 — **warning only** (may be non-empty until recipes are entered; consumption then plans `none`). All other check-data sections must be empty. |
 | Every car has a consumption group | `NOT NULL` + trigger: a new car without one gets the group whose `default_for_size` = its `size_class` (rename-safe) |
 
-## Compatibility until C2
+## Compatibility (C2 status)
+- C2 moved the admin to the materials API: the old Rolls UI is gone and the batch roll picker uses `/materials/lots`.
+  `/stock/rolls` and `/rolls` remain for compatibility (Postman, older clients) — candidates for removal later.
+- `batches.roll_id` was **not** renamed in C2: it's in the batch JSON the mobile app reads; rename together with the
+  C3 cutter work if wanted.
+
+### As of C1 (history)
 
 - `raw_materials` was **renamed** to `material_lots` (ids kept; `roll_code→lot_code`, `total_meters→qty_received`,
   `remaining_meters→qty_remaining`, numeric(12,3)). Existing rolls became sheet lots; type inferred from the product

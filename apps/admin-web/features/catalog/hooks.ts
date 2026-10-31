@@ -31,8 +31,14 @@ export function useCreateItem() {
 export function useUpdateItem() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...patch }: { id: number } & Partial<CarItemInput> & { is_active?: boolean }) =>
+    mutationFn: ({
+      id,
+      ...patch
+    }: { id: number } & Partial<CarItemInput> & { is_active?: boolean; consumption_group_id?: number }) =>
       catalogApi.updateItem(id, patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["car-models"] }),
+    onSuccess: () => {
+      for (const k of ["car-models", "car-overview", "consumption-groups", "resolve"])
+        qc.invalidateQueries({ queryKey: [k] });
+    },
   });
 }

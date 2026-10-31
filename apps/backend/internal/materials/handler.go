@@ -117,6 +117,17 @@ func (h *Handler) UpdateType(c *fiber.Ctx) error {
 	return httpx.OK(c, out)
 }
 
+func (h *Handler) DeleteType(c *fiber.Ctx) error {
+	id, err := intParam(c, "id")
+	if err != nil {
+		return fail(c, err, "delete material type")
+	}
+	if err := h.svc.DeleteType(c.Context(), id, actor(c)); err != nil {
+		return fail(c, err, "delete material type")
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 // ───── variants ─────
 
 func (h *Handler) ListVariants(c *fiber.Ctx) error {
@@ -321,6 +332,17 @@ func (h *Handler) UpdateGroup(c *fiber.Ctx) error {
 		return fail(c, err, "update consumption group")
 	}
 	return httpx.OK(c, out)
+}
+
+func (h *Handler) DeleteGroup(c *fiber.Ctx) error {
+	id, err := intParam(c, "id")
+	if err != nil {
+		return fail(c, err, "delete consumption group")
+	}
+	if err := h.svc.DeleteGroup(c.Context(), id, actor(c)); err != nil {
+		return fail(c, err, "delete consumption group")
+	}
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // ───── recipes & overrides ─────
