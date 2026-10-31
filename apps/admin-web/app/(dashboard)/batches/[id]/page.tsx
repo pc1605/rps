@@ -45,7 +45,6 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
     );
 
   const tone = batchTone(batch.current_phase, batch.status);
-  const stitched = batch.units.filter((u) => u.stitched_at).length;
 
   return (
     <div className="space-y-8">
@@ -92,7 +91,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
         <Stat size="sm" value={batch.cut_qty} of={batch.quantity} label="cut" tone="text-phase-cutting" />
         <Stat
           size="sm"
-          value={stitched}
+          value={batch.units_stitched ?? 0}
           of={batch.units_total}
           label="stitched"
           tone="text-phase-stitching"
@@ -104,6 +103,9 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
           label="packed"
           tone="text-phase-completed"
         />
+        {batch.units_written_off > 0 && (
+          <Stat size="sm" value={batch.units_written_off} label="written off" tone="text-danger" />
+        )}
         {(batch.rework_open ?? 0) > 0 && (
           <Stat size="sm" value={batch.rework_open ?? 0} label="in rework" tone="text-danger" />
         )}

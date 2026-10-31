@@ -71,6 +71,8 @@ export interface Batch {
   units_total: number;
   units_packed: number;
   units_stitched?: number;
+  /** Mats written off as defective — never packed, but they do not block completion. */
+  units_written_off: number;
   active_workers?: string;
   // worker-queue only (GET /worker/batches)
   joined_by_me?: boolean;
