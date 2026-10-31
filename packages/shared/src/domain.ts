@@ -136,6 +136,10 @@ export interface BatchStats {
   total_active: number;
   rework_open: number;
   rework_needs_decision: number;
+  /** Shortfall movements (consumed more than stock held) in the last 30 days. */
+  material_shortfalls_open: number;
+  /** Active material types whose active lots sum below min_level. */
+  low_stock_types: number;
 }
 
 export interface ScanResult {
