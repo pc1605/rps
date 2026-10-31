@@ -97,6 +97,7 @@ func groupDupErr(err error) error {
 	return err
 }
 
+// CreateGroup: no sort given = after the last group (MAX(sort) + 10), so a new group lands at the end.
 func (s *Service) CreateGroup(ctx context.Context, in GroupInput, a Actor) (*Group, error) {
 	if in.Name == nil {
 		return nil, invalid("name is required")
@@ -104,10 +105,7 @@ func (s *Service) CreateGroup(ctx context.Context, in GroupInput, a Actor) (*Gro
 	if err := normGroup(&in); err != nil {
 		return nil, err
 	}
-	sort, active := 0, true
-	if in.Sort != nil {
-		sort = *in.Sort
-	}
+	active := true
 	if in.IsActive != nil {
 		active = *in.IsActive
 	}
@@ -118,8 +116,10 @@ func (s *Service) CreateGroup(ctx context.Context, in GroupInput, a Actor) (*Gro
 	err := s.withTx(ctx, func(tx pgx.Tx) error {
 		var id int
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO consumption_groups (name, sort, is_active, default_for_size) VALUES ($1, $2, $3, $4::car_size) RETURNING id`,
-			*in.Name, sort, active, in.DefaultForSize.Value).Scan(&id); err != nil {
+			INSERT INTO consumption_groups (name, sort, is_active, default_for_size)
+			VALUES ($1, COALESCE($2::int, (SELECT COALESCE(MAX(sort), 0) + 10 FROM consumption_groups)), $3, $4::car_size)
+			RETURNING id`,
+			*in.Name, in.Sort, active, in.DefaultForSize.Value).Scan(&id); err != nil {
 			return groupDupErr(err)
 		}
 		g, err := s.getGroup(ctx, tx, id)

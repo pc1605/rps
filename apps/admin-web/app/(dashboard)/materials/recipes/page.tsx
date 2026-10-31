@@ -197,13 +197,19 @@ function GroupDialog({ group }: { group?: ConsumptionGroupRow }) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cg-sort">Order</Label>
+              <Label htmlFor="cg-sort">
+                Order <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
               <Input
                 id="cg-sort"
                 inputMode="numeric"
                 value={sort}
                 onChange={(e) => setSort(e.target.value.replace(/\D/g, ""))}
+                aria-describedby="cg-sort-hint"
               />
+              <p id="cg-sort-hint" className="text-caption text-muted-foreground">
+                Lower shows first. Blank = at the end.
+              </p>
             </div>
           </div>
           <div className="flex items-center justify-between rounded-md border p-3">
