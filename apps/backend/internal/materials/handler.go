@@ -384,3 +384,53 @@ func (h *Handler) PutOverrides(c *fiber.Ctx) error {
 	}
 	return httpx.OK(c, out)
 }
+
+// ───── dry run, batch materials, cutter view ─────
+
+func (h *Handler) Resolve(c *fiber.Ctx) error {
+	car, err := optIntQuery(c, "car_model_id")
+	if err != nil || car == nil {
+		return fail(c, invalid("car_model_id is required"), "resolve materials")
+	}
+	qty, err := optIntQuery(c, "quantity")
+	if err != nil || qty == nil {
+		return fail(c, invalid("quantity must be a positive number"), "resolve materials")
+	}
+	lot, err := optUUIDQuery(c, "lot_id")
+	if err != nil {
+		return fail(c, err, "resolve materials")
+	}
+	out, err := h.svc.Resolve(c.Context(), *car, *qty, lot)
+	if err != nil {
+		return fail(c, err, "resolve materials")
+	}
+	return httpx.OK(c, out)
+}
+
+func (h *Handler) BatchMaterials(c *fiber.Ctx) error {
+	id, err := uuidParam(c, "id")
+	if err != nil {
+		return fail(c, err, "load batch materials")
+	}
+	out, err := h.svc.BatchMaterials(c.Context(), id)
+	if err != nil {
+		return fail(c, err, "load batch materials")
+	}
+	return httpx.OK(c, out)
+}
+
+// MaterialsNeeded — cutter token only: what to take for the batch's remaining mats.
+func (h *Handler) MaterialsNeeded(c *fiber.Ctx) error {
+	if _, ok := auth.WorkerID(c); !ok || auth.StationFromCtx(c) != "cutter" {
+		return fail(c, ErrCutterOnly, "load materials needed")
+	}
+	id, err := uuidParam(c, "id")
+	if err != nil {
+		return fail(c, err, "load materials needed")
+	}
+	out, err := h.svc.MaterialsNeeded(c.Context(), id)
+	if err != nil {
+		return fail(c, err, "load materials needed")
+	}
+	return httpx.OK(c, out)
+}

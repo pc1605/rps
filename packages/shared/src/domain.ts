@@ -448,3 +448,86 @@ export interface CarMaterialOverrides {
   car_model_id: number;
   lines: MaterialLineRow[];
 }
+
+/** One planned take from a lot. */
+export interface PlanDraw {
+  lot_id: string;
+  lot_code: string;
+  color: string;
+  variant_id?: number;
+  variant_name?: string;
+  qty: number;
+}
+
+/** Planner outcome for one material type (engine and dry runs share it). */
+export interface PlanLineResult {
+  material_type_id: number;
+  type_code: string;
+  type_name: string;
+  unit: MaterialUnit;
+  /** Variant the quantity was resolved for (the roll's, or the first FIFO lot's). */
+  variant_id?: number;
+  variant_name?: string;
+  source: PlanSource;
+  qty_per_mat?: number; // absent when source = "none"
+  need?: number; // absent when source = "none"
+  /** Stock in the lots this type may draw from. */
+  available: number;
+  /** need − drawn; > 0 = a cut now would record a shortfall. */
+  shortfall: number;
+  draws: PlanDraw[];
+  note?: string;
+}
+
+/** GET /recipes/resolve?car_model_id&quantity&lot_id — dry run, no writes. */
+export interface MaterialsResolveResult {
+  car_model_id: number;
+  quantity: number;
+  lot_id?: string;
+  lines: PlanLineResult[];
+  /** No-recipe and shortfall messages the engine would add to the batch notes. */
+  notes: string[];
+}
+
+export interface BatchMaterialPlanRow extends Omit<BatchMaterialPlanLine, "batch_id"> {
+  type_code: string;
+  type_name: string;
+  unit: MaterialUnit;
+  variant_name?: string;
+}
+
+export interface BatchMaterialsCompletion {
+  /** Absent = rows not linked to a cutting completion. */
+  phase_log_id?: string;
+  completed_at?: string;
+  worker_name?: string;
+  mats?: number;
+  plan: BatchMaterialPlanRow[];
+  /** consume rows; lot_id absent = shortfall. */
+  movements: MaterialMovementRow[];
+}
+
+/** GET /batches/:id/materials */
+export interface BatchMaterials {
+  batch_id: string;
+  batch_code: string;
+  completions: BatchMaterialsCompletion[];
+}
+
+/** GET /worker/batches/:id/materials-needed (cutter) — for the mats still to cut. */
+export interface MaterialsNeeded {
+  batch_id: string;
+  batch_code: string;
+  /** Remaining mats to cut (0 once cutting is done). */
+  mats: number;
+  lines: {
+    material_type_id: number;
+    type_name: string;
+    unit: MaterialUnit;
+    source: PlanSource;
+    need?: number;
+    lots: { lot_code: string; color: string; width?: string; qty: number }[];
+    shortfall: number;
+  }[];
+  notes: string[];
+}
