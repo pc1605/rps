@@ -55,6 +55,8 @@ The first match wins; an override of `0` means the type isn't used (no consumpti
   pieces. Same transaction as the phase change.
 - Writes: `consume` movements (negative) per lot drawn, lot `qty_remaining` decremented, and one
   `batch_material_plan` row per type (`source`, `qty_per_mat`, `mats`, `planned_qty`, `phase_log_id`).
+  Movements and plan rows carry the cutting completion's `phase_log_id`; `uq_plan_completion_type`
+  (phase_log_id, type) makes a second run for the same completion fail → no double deduction.
 - **Never blocks the cutter.** If the lots run out, the rest is a `consume` movement with `lot_id = NULL`
   (a **shortfall**) and an admin alert. Shortfall is the only movement allowed without a lot (DB check).
 - Actual metres measured at cutting (owner Q5) will later arrive as `adjust`/`waste` against the plan (R2).
@@ -68,7 +70,7 @@ The first match wins; an override of `0` means the type isn't used (no consumpti
 | No variant on a type with `has_variants = false` | check-data #14–15 |
 | Movement type = its lot's type | check-data #16 (variant may differ: it records what was known when written) |
 | Sign by kind: receive/return > 0, consume/waste < 0, adjust ≠ 0 | CHECK `material_movements_sign` |
-| Every active car has a recipe for its line × group | check-data #17 (else consumption plans `none`) |
+| Every active car has a recipe for its line × group | check-data #17 — **warning only** (may be non-empty until recipes are entered; consumption then plans `none`). All other check-data sections must be empty. |
 | Every car has a consumption group | `NOT NULL` + trigger: a new car without one gets the group whose `default_for_size` = its `size_class` (rename-safe) |
 
 ## Compatibility until C2
