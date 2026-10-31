@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/pc1605/rps/apps/backend/internal/materials"
 	"github.com/pc1605/rps/apps/backend/internal/testutil"
 )
 
@@ -261,14 +262,14 @@ func TestConsumeOneCut(t *testing.T) {
 
 	// Roll covers the sheet type: drawn from the 60″ roll only, although S-OLD is older. 60″ line = 1.5/mat.
 	eq(t, "sheet moves", f.moves(b, f.sheet), []string{"S-ROLL:-6.000"})
-	eq(t, "sheet plan", p[f.names[f.sheet]], []planRow{{f.names[f.sheet], "60″", SourceRecipeVariant, "1.500", "6.000", ""}})
+	eq(t, "sheet plan", p[f.names[f.sheet]], []planRow{{f.names[f.sheet], "60″", materials.SourceRecipeVariant, "1.500", "6.000", ""}})
 	eq(t, "S-OLD untouched", f.remaining(f.sOld), "100.000")
 
 	// FIFO across two velcro lots: older V-A emptied, rest from V-B.
 	eq(t, "velcro moves", f.moves(b, f.velcro), []string{"V-A:-1.000", "V-B:-1.000"})
 	eq(t, "V-A", f.remaining(f.vA), "0.000")
 	eq(t, "V-B", f.remaining(f.vB), "9.000")
-	eq(t, "velcro plan source", p[f.names[f.velcro]][0].source, SourceRecipeAny)
+	eq(t, "velcro plan source", p[f.names[f.velcro]][0].source, materials.SourceRecipeAny)
 
 	// Shortfall: 3/mat × 4 = 12, lot has 1 → lot empties, ONE shortfall of 11, notes.
 	eq(t, "piping moves", f.moves(b, f.piping), []string{"P:-1.000", "SHORT:-11.000"})
@@ -281,7 +282,7 @@ func TestConsumeOneCut(t *testing.T) {
 
 	// Override 0: planned, nothing drawn.
 	eq(t, "thread moves", len(f.moves(b, f.thread)), 0)
-	eq(t, "thread plan", p[f.names[f.thread]], []planRow{{f.names[f.thread], "", SourceCarAny, "0.000", "0.000", ""}})
+	eq(t, "thread plan", p[f.names[f.thread]], []planRow{{f.names[f.thread], "", materials.SourceCarAny, "0.000", "0.000", ""}})
 
 	// Every consume row carries the completion + the cutter.
 	var missing int
@@ -309,7 +310,7 @@ func TestConsumeFIFOVariantOfFirstLot(t *testing.T) {
 	b := f.batch(f.car, 2, nil)
 	f.cut(b, 2)
 	eq(t, "sheet moves", f.moves(b, f.sheet), []string{"S-OLD:-4.000"})
-	eq(t, "sheet plan", f.plan(b)[f.names[f.sheet]], []planRow{{f.names[f.sheet], "54″", SourceRecipeAny, "2.000", "4.000", ""}})
+	eq(t, "sheet plan", f.plan(b)[f.names[f.sheet]], []planRow{{f.names[f.sheet], "54″", materials.SourceRecipeAny, "2.000", "4.000", ""}})
 }
 
 // No recipe for the car's line × group: the roll's type gets a 'none' plan row; nothing drawn.
@@ -319,7 +320,7 @@ func TestConsumeMissingRecipe(t *testing.T) {
 	f.cut(b, 3)
 	p := f.plan(b)
 	note := "No recipe quantity for " + f.names[f.sheet] + " (60″)"
-	eq(t, "plan", p, map[string][]planRow{f.names[f.sheet]: {{f.names[f.sheet], "60″", SourceNone, "", "", note}}})
+	eq(t, "plan", p, map[string][]planRow{f.names[f.sheet]: {{f.names[f.sheet], "60″", materials.SourceNone, "", "", note}}})
 	var n int
 	if err := f.pool.QueryRow(f.ctx, `SELECT COUNT(*) FROM material_movements WHERE batch_id = $1`, b).Scan(&n); err != nil {
 		t.Fatal(err)
@@ -352,7 +353,7 @@ func TestConsumeTwoCompletions(t *testing.T) {
 	sheet := f.plan(b)[f.names[f.sheet]]
 	eq(t, "sheet plan rows", len(sheet), 2)
 	for i, r := range sheet {
-		eq(t, fmt.Sprintf("sheet plan[%d]", i), r, planRow{f.names[f.sheet], "60″", SourceRecipeVariant, "1.500", "3.000", ""})
+		eq(t, fmt.Sprintf("sheet plan[%d]", i), r, planRow{f.names[f.sheet], "60″", materials.SourceRecipeVariant, "1.500", "3.000", ""})
 	}
 	eq(t, "sheet moves", f.moves(b, f.sheet), []string{"S-ROLL:-3.000", "S-ROLL:-3.000"})
 	eq(t, "roll", f.remaining(f.sRoll), "94.000")
@@ -444,4 +445,66 @@ func TestConsumeConcurrentCuts(t *testing.T) {
 	}
 	eq(t, "velcro planned", planned, "6.000") // 4 × 3 × 0.5
 	eq(t, "velcro drawn (lots + shortfall)", drawn, "6.000")
+}
+
+// The read-only planner (resolve dry run, cutter view) must predict exactly what the engine draws.
+func TestDryRunMatchesEngine(t *testing.T) {
+	f := newMatFixture(t)
+	ms := materials.NewService(f.pool)
+	b := f.batch(f.car, 4, &f.sRoll)
+
+	var movesBefore int
+	if err := f.pool.QueryRow(f.ctx, `SELECT COUNT(*) FROM material_movements`).Scan(&movesBefore); err != nil {
+		t.Fatal(err)
+	}
+	res, err := ms.Resolve(f.ctx, f.car, 4, &f.sRoll)
+	if err != nil {
+		t.Fatalf("resolve: %v", err)
+	}
+	needed, err := ms.MaterialsNeeded(f.ctx, b)
+	if err != nil {
+		t.Fatalf("materials needed: %v", err)
+	}
+	var movesAfter int
+	if err := f.pool.QueryRow(f.ctx, `SELECT COUNT(*) FROM material_movements`).Scan(&movesAfter); err != nil {
+		t.Fatal(err)
+	}
+	eq(t, "dry runs write nothing", movesAfter, movesBefore)
+	eq(t, "needed mats", needed.Mats, 4)
+	eq(t, "needed lines (thread override 0 omitted)", len(needed.Lines), 3)
+
+	predicted := map[int][]string{}
+	for _, l := range res.Lines {
+		for _, d := range l.Draws {
+			predicted[l.MaterialTypeID] = append(predicted[l.MaterialTypeID], fmt.Sprintf("%s:%s", d.LotCode, (-d.Qty).String()))
+		}
+		if l.Shortfall > 0 {
+			predicted[l.MaterialTypeID] = append(predicted[l.MaterialTypeID], "SHORT:"+(-l.Shortfall).String())
+		}
+	}
+
+	f.cut(b, 4)
+
+	bm, err := ms.BatchMaterials(f.ctx, b)
+	if err != nil {
+		t.Fatalf("batch materials: %v", err)
+	}
+	eq(t, "completions", len(bm.Completions), 1)
+	c := bm.Completions[0]
+	eq(t, "completion mats", *c.Mats, 4)
+	eq(t, "plan rows", len(c.Plan), 4)
+	actual := map[int][]string{}
+	for _, m := range c.Movements {
+		lot := "SHORT"
+		if m.LotCode != nil {
+			lot = *m.LotCode
+		}
+		actual[m.MaterialTypeID] = append(actual[m.MaterialTypeID], fmt.Sprintf("%s:%s", lot, m.Qty))
+	}
+	eq(t, "engine draws == dry-run draws", actual, predicted)
+
+	after, err := ms.MaterialsNeeded(f.ctx, b)
+	if err != nil || after.Mats != 0 || len(after.Lines) != 0 {
+		t.Errorf("after cutting: mats=%d lines=%d err=%v, want 0/0", after.Mats, len(after.Lines), err)
+	}
 }

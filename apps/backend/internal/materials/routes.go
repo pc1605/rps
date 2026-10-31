@@ -28,7 +28,12 @@ func RegisterRoutes(api fiber.Router, svc *Service, admin fiber.Handler) {
 	api.Patch("/consumption-groups/:id", admin, h.UpdateGroup)
 
 	api.Get("/recipes", admin, h.RecipeGrid)
+	api.Get("/recipes/resolve", admin, h.Resolve)
 	api.Put("/recipes/:product_line_id/:group_id/lines", admin, h.PutRecipeLines)
 	api.Get("/car-models/:id/material-overrides", admin, h.GetOverrides)
 	api.Put("/car-models/:id/material-overrides", admin, h.PutOverrides)
+
+	api.Get("/batches/:id/materials", admin, h.BatchMaterials)
+	// Worker (cutter) route — handler checks the worker token + station.
+	api.Get("/worker/batches/:id/materials-needed", h.MaterialsNeeded)
 }
