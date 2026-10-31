@@ -15,6 +15,14 @@ public. **`/healthz` lives at the app root, outside the group** — it is public
 Consequence: an unknown path under `/api/v1` returns **401 before 404** — unauthenticated callers can't probe routes.
 Don't "fix" this.
 
+## Route gating (U0 / audit G4)
+Guard only proves *some* valid token. Every admin route also carries `RequireRole("owner","supervisor")`, so a worker
+token (role = station) gets **403**: all of `/batches*`, `/rework` + `/rework/:id/decide`, catalog (`/car-models`,
+`/car-brands`, `/product-lines`, `/rolls`), `/stock/*`, `/reports/*`, `/workers*` incl. `/workers/:id/enrollment`.
+Worker routes are `/worker/*` only; their handlers check the worker token/station. `/files/rework/:name` stays public
+(HMAC-signed URL). **New admin route ⇒ add the role middleware**; the phone app must only call `/worker/*`.
+Before U0, worker tokens could read every batch, fetch any worker's badge, and create/edit car models.
+
 ## Worker enrollment
 - Admin creates worker → response includes `badge_token` once. Admin UI shows QR `RPS-ENROLL:<badge_token>` + text.
 - Any time later: Workers list → QR icon → `GET /workers/:id/enrollment` re-shows the QR (admin-only).

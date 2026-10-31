@@ -71,7 +71,7 @@ func main() {
 
 	auth.RegisterRoutes(api, authSvc)
 	batch.RegisterRoutes(api, batchSvc, authSvc)
-	reference.RegisterRoutes(api, refSvc)
+	reference.RegisterRoutes(api, refSvc, authSvc.RequireRole("owner", "supervisor"))
 	worker.RegisterRoutes(api, workerSvc, authSvc)
 	stock.RegisterRoutes(api, stockSvc, authSvc)
 	report.RegisterRoutes(api, reportSvc, authSvc)
