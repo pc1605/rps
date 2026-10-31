@@ -1,13 +1,12 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { Check, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCarItems, useProductLines } from "@/features/catalog/hooks";
-import { cn } from "@/lib/utils";
 import type { UrlState } from "../use-list-params";
 
 const ALL = "all";
@@ -25,11 +24,11 @@ function Toggle({
     <Button
       type="button"
       size="sm"
-      variant="outline"
+      variant={on ? "secondary" : "outline"}
       aria-pressed={on}
       onClick={() => onChange(!on)}
-      className={cn(on && "border-foreground/40 bg-accent text-foreground")}
     >
+      {on && <Check className="h-3.5 w-3.5" aria-hidden />}
       {children}
     </Button>
   );
