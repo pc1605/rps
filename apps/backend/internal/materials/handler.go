@@ -284,3 +284,103 @@ func (h *Handler) ListMovements(c *fiber.Ctx) error {
 	}
 	return httpx.OK(c, out)
 }
+
+// ───── consumption groups ─────
+
+func (h *Handler) ListGroups(c *fiber.Ctx) error {
+	out, err := h.svc.ListGroups(c.Context())
+	if err != nil {
+		return fail(c, err, "list consumption groups")
+	}
+	return httpx.OK(c, out)
+}
+
+func (h *Handler) CreateGroup(c *fiber.Ctx) error {
+	var in GroupInput
+	if err := body(c, &in); err != nil {
+		return fail(c, err, "create consumption group")
+	}
+	out, err := h.svc.CreateGroup(c.Context(), in, actor(c))
+	if err != nil {
+		return fail(c, err, "create consumption group")
+	}
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"data": out})
+}
+
+func (h *Handler) UpdateGroup(c *fiber.Ctx) error {
+	id, err := intParam(c, "id")
+	if err != nil {
+		return fail(c, err, "update consumption group")
+	}
+	var in GroupInput
+	if err := body(c, &in); err != nil {
+		return fail(c, err, "update consumption group")
+	}
+	out, err := h.svc.UpdateGroup(c.Context(), id, in, actor(c))
+	if err != nil {
+		return fail(c, err, "update consumption group")
+	}
+	return httpx.OK(c, out)
+}
+
+// ───── recipes & overrides ─────
+
+func (h *Handler) RecipeGrid(c *fiber.Ctx) error {
+	pl, err := optIntQuery(c, "product_line_id")
+	if err != nil || pl == nil {
+		return fail(c, invalid("product_line_id is required"), "load recipes")
+	}
+	out, err := h.svc.RecipeGrid(c.Context(), *pl)
+	if err != nil {
+		return fail(c, err, "load recipes")
+	}
+	return httpx.OK(c, out)
+}
+
+func (h *Handler) PutRecipeLines(c *fiber.Ctx) error {
+	pl, err := intParam(c, "product_line_id")
+	if err != nil {
+		return fail(c, err, "save recipe")
+	}
+	g, err := intParam(c, "group_id")
+	if err != nil {
+		return fail(c, err, "save recipe")
+	}
+	lines := []LineInput{}
+	if err := body(c, &lines); err != nil {
+		return fail(c, err, "save recipe")
+	}
+	out, err := h.svc.PutRecipeLines(c.Context(), pl, g, lines, actor(c))
+	if err != nil {
+		return fail(c, err, "save recipe")
+	}
+	return httpx.OK(c, out)
+}
+
+func (h *Handler) GetOverrides(c *fiber.Ctx) error {
+	id, err := intParam(c, "id")
+	if err != nil {
+		return fail(c, err, "load overrides")
+	}
+	out, err := h.svc.GetOverrides(c.Context(), id)
+	if err != nil {
+		return fail(c, err, "load overrides")
+	}
+	return httpx.OK(c, out)
+}
+
+func (h *Handler) PutOverrides(c *fiber.Ctx) error {
+	id, err := intParam(c, "id")
+	if err != nil {
+		return fail(c, err, "save overrides")
+	}
+	lines := []LineInput{}
+	if err := body(c, &lines); err != nil {
+		return fail(c, err, "save overrides")
+	}
+	out, err := h.svc.PutOverrides(c.Context(), id, lines, actor(c))
+	if err != nil {
+		return fail(c, err, "save overrides")
+	}
+	return httpx.OK(c, out)
+}
