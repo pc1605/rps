@@ -40,7 +40,7 @@ Before writing a migration that references an enum: `docker exec -it rps_postgre
 
 ## Test database
 `scripts/test-db.sh` (re)creates the isolated `rps_test` (migrations + seeds) and prints `TEST_DATABASE_URL`.
-DB tests, Postman (second backend on :8081 with the `RPS test` environment) and test seeds use it — never `rps`.
+DB tests, Postman (second backend on :8082 with the `RPS test` environment) and test seeds use it — never `rps`.
 Details: `testing.md` → Test database.
 
 ## Reset data

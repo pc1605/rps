@@ -5634,7 +5634,7 @@
     },
     {
       "name": "Materials (C1c)",
-      "description": "Self-contained (logs in, builds a cutter token). Run ONLY against the test backend (RPS test environment, :8081 on rps_test). Creates PM-* types/lots/groups there.",
+      "description": "Self-contained (logs in, builds a cutter token). Run ONLY against the test backend (RPS test environment, :8082 on rps_test). Creates PM-* types/lots/groups there.",
       "item": [
         {
           "name": "Setup \u00b7 admin login",
