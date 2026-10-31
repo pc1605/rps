@@ -17,6 +17,8 @@ export const catalogApi = {
     d(await http.post<Envelope<{ id: number; barcode: string }>>("/car-models", input)),
   overview: async (id: number, from: string, to: string) =>
     d(await http.get<Envelope<CarOverview>>(`/car-models/${id}/overview`, { params: { from, to } })),
-  updateItem: async (id: number, patch: Partial<CarItemInput> & { is_active?: boolean }) =>
-    d(await http.patch<Envelope<{ message: string }>>(`/car-models/${id}`, patch)),
+  updateItem: async (
+    id: number,
+    patch: Partial<CarItemInput> & { is_active?: boolean; consumption_group_id?: number },
+  ) => d(await http.patch<Envelope<{ message: string }>>(`/car-models/${id}`, patch)),
 };

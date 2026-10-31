@@ -1,7 +1,7 @@
 "use client";
 
 import type { CarOverviewBatch } from "@rps/shared";
-import { Car, Package } from "lucide-react";
+import { Car, Package, Pencil } from "lucide-react";
 import Link from "next/link";
 import { use, useState } from "react";
 import { Chip } from "@/components/rps/chip";
@@ -13,7 +13,10 @@ import { Stat } from "@/components/rps/stat";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CarMaterials } from "@/features/catalog/components/car-materials";
+import { ItemDialog } from "@/features/catalog/components/item-dialog";
 import { useCarOverview } from "@/features/catalog/hooks";
+import type { CarItem } from "@/features/catalog/types";
 import {
   type DateRange,
   defaultRange,
@@ -121,16 +124,26 @@ export default function CarPage({ params }: { params: Promise<{ id: string }> })
           </span>
         }
         actions={
-          <Chip
-            tone={
-              car.is_active
-                ? { text: "text-working", border: "border-working/30", dot: "bg-working" }
-                : { text: "text-muted-foreground", border: "border-border" }
-            }
-            dot={car.is_active}
-          >
-            {car.is_active ? "Active" : "Inactive"}
-          </Chip>
+          <>
+            <ItemDialog
+              item={{ ...car, id: car.id } as CarItem}
+              trigger={
+                <Button type="button" variant="outline">
+                  <Pencil className="h-4 w-4" aria-hidden /> Edit
+                </Button>
+              }
+            />
+            <Chip
+              tone={
+                car.is_active
+                  ? { text: "text-working", border: "border-working/30", dot: "bg-working" }
+                  : { text: "text-muted-foreground", border: "border-border" }
+              }
+              dot={car.is_active}
+            >
+              {car.is_active ? "Active" : "Inactive"}
+            </Chip>
+          </>
         }
       />
 
@@ -151,6 +164,8 @@ export default function CarPage({ params }: { params: Promise<{ id: string }> })
           <Stat size="sm" value={s.in_stock} label="in stockyard now" />
         </Card>
       </section>
+
+      <CarMaterials carId={car.id} carName={`${car.brand_name} ${car.name}`} lineId={car.product_line_id} />
 
       <section className="space-y-3">
         <SectionTitle aside={`${data.active_batches.length}`}>Active batches</SectionTitle>
