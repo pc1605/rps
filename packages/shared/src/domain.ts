@@ -295,3 +295,100 @@ export interface BatchMaterialPlanLine {
   note?: string;
   created_at: string;
 }
+
+// ───── Materials API (C1c) — response rows + inputs ─────
+
+/** GET /materials/types */
+export interface MaterialTypeRow extends Omit<MaterialType, "min_level"> {
+  min_level?: number;
+  /** Sum of active lots' qty_remaining. */
+  stock_remaining: number;
+  active_lots: number;
+  is_low: boolean;
+  created_at: string;
+}
+
+export interface MaterialVariantRow extends MaterialVariant {
+  created_at: string;
+}
+
+/** GET /materials/lots */
+export interface MaterialLotRow extends MaterialLot {
+  type_code: string;
+  type_name: string;
+  unit: MaterialUnit;
+  variant_name?: string;
+  last_movement_at?: string;
+}
+
+/** GET /materials/movements item */
+export interface MaterialMovementRow extends MaterialMovement {
+  lot_code?: string;
+  color?: string;
+  type_code: string;
+  type_name: string;
+  unit: MaterialUnit;
+  variant_name?: string;
+  batch_code?: string;
+  actor_user_name?: string;
+  actor_worker_name?: string;
+}
+
+export interface MaterialMovementPage {
+  items: MaterialMovementRow[];
+  /** Pass as ?cursor= for the next (older) page. */
+  next_cursor?: string;
+}
+
+export interface MaterialTypeInput {
+  code?: string;
+  name?: string;
+  unit?: MaterialUnit;
+  has_variants?: boolean;
+  /** null clears. */
+  min_level?: number | null;
+  sort?: number;
+  is_active?: boolean;
+}
+
+export interface MaterialVariantInput {
+  name?: string;
+  specs?: Record<string, unknown>;
+  is_active?: boolean;
+}
+
+/** POST /materials/lots (receive) */
+export interface ReceiveLotInput {
+  material_type_id: number;
+  /** Required iff the type has variants. */
+  variant_id?: number;
+  lot_code: string;
+  color: string;
+  qty: number;
+  unit_cost?: number;
+  supplier?: string;
+  note?: string;
+}
+
+/** POST /materials/lots/:id/adjust */
+export interface AdjustLotInput {
+  new_remaining: number;
+  reason: string;
+}
+
+/** POST /materials/lots/:id/waste | /return */
+export interface LotQtyReasonInput {
+  qty: number;
+  reason: string;
+}
+
+/** PATCH /materials/lots/:id — type/variant only before any consumption/waste/return. null clears. */
+export interface LotPatchInput {
+  is_active?: boolean;
+  color?: string;
+  supplier?: string | null;
+  note?: string | null;
+  unit_cost?: number | null;
+  material_type_id?: number;
+  variant_id?: number | null;
+}
