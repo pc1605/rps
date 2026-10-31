@@ -20,10 +20,3 @@ export interface CreateBatchInput {
   quantity: number;
   notes?: string;
 }
-
-export interface Roll {
-  id: string;
-  roll_code: string;
-  color: string;
-  remaining_meters: number;
-}
