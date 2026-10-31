@@ -783,6 +783,118 @@
               ]
             }
           }
+        },
+        {
+          "name": "Worker cannot read batches (G4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Worker token rejected on GET /batches (403)', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Worker cannot fetch an enrollment badge (G4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Worker token rejected on GET /workers/{{workerId}}/enrollment (403)', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workers/{{workerId}}/enrollment",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workers",
+                "{{workerId}}",
+                "enrollment"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Worker cannot create a car model (G4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Worker token rejected on POST /car-models (403)', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{workerToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/car-models",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "car-models"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
         }
       ],
       "description": "Worker station login with badge token and PIN. Prereqs: Workers (Admin) -> Create Worker. Run top to bottom to set workerToken."
@@ -3497,7 +3609,8 @@
                   "// Last 30 days, computed at run time",
                   "const to = new Date();",
                   "const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);",
-                  "const fmt = function (d) { return d.toISOString().slice(0, 10); };",
+                  "// factory days (IST, UTC+05:30) \u2014 matches backend FACTORY_TZ",
+                  "const fmt = function (d) { return new Date(d.getTime() + 330 * 60 * 1000).toISOString().slice(0, 10); };",
                   "pm.collectionVariables.set('reportFrom', fmt(from));",
                   "pm.collectionVariables.set('reportTo', fmt(to));"
                 ]

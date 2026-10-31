@@ -149,6 +149,9 @@ export default function DashboardPage() {
                       <div className="flex shrink-0 items-center gap-3">
                         <span className="tabular text-caption text-muted-foreground">
                           {b.units_packed}/{b.units_total}
+                          {b.units_written_off > 0 && (
+                            <span className="text-danger"> · {b.units_written_off} off</span>
+                          )}
                         </span>
                         <Chip tone={tone} dot>
                           {tone.label}
