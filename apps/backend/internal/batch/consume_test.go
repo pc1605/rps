@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -13,6 +12,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/pc1605/rps/apps/backend/internal/testutil"
 )
 
 // Consumption engine DB tests (C1b). Each test builds an isolated fixture — its own
@@ -38,17 +39,9 @@ const ip = "127.0.0.1"
 
 func newMatFixture(t *testing.T) *matFixture {
 	t.Helper()
-	url := os.Getenv("DATABASE_URL")
-	if url == "" {
-		t.Skip("DATABASE_URL not set")
-	}
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, url)
-	if err != nil {
-		t.Fatal(err)
-	}
+	pool := testutil.DB(t)
 	f := &matFixture{t: t, ctx: ctx, pool: pool, s: NewService(pool, t.TempDir()), names: map[int]string{}}
-	t.Cleanup(pool.Close)
 
 	one := func(dst any, q string, args ...any) {
 		t.Helper()

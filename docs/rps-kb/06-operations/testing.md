@@ -1,13 +1,32 @@
 # Testing
 
+## Test database (never `rps`)
+DB tests, Postman runs and test seeds use the isolated **`rps_test`** database — never the developer's `rps`.
+```bash
+scripts/test-db.sh                  # drop (force) → create rps_test → all migrations → seed-dev.sh rps_test
+export TEST_DATABASE_URL='postgres://rps_dev:rps_dev_password@localhost:5433/rps_test?sslmode=disable'
+cd apps/backend && go test -race ./...
+```
+- Every DB test gets its pool from `testutil.DB(t)` (`internal/testutil/db.go`): reads `TEST_DATABASE_URL` only,
+  **skips** when it's unset or unreachable, **fails** if it points at a database named `rps`, serialises DB tests
+  across packages with an advisory lock, and **fails the test if it leaves rows behind** (row counts of all domain
+  tables before vs after; `audit_log` and `batch_code_counters` excluded).
+- Tests delete what they create in FK order (movements/plan → batches (units, logs cascade) → cars → groups …).
+- The lefthook **pre-push** `go-test` sets `TEST_DATABASE_URL` to rps_test; without rps_test the DB tests skip.
+- Rows left in a dev DB by test runs from before this isolation: `scripts/cleanup-test-junk.sql` (dry run by
+  default; `psql "$DATABASE_URL" -v commit=1 -f scripts/cleanup-test-junk.sql` to apply). Run it yourself — agents don't.
+
 ## Automated Smoke Tests
 ```bash
-# Run real DB query smoke test (validates SELECT/Scan bindings, migrations, column aliases)
-cd apps/backend && set -a; source ../../.env; set +a
-go test -v ./internal/batch -run TestReadQueriesSmoke
+# Real DB query smoke test (validates SELECT/Scan bindings, migrations, column aliases) — on rps_test
+cd apps/backend && TEST_DATABASE_URL=… go test -v ./internal/batch -run TestReadQueriesSmoke
 ```
 
 ## Postman collection (`apps/backend/RPS.postman_collection.json`)
+**Run only against a second backend on rps_test:** `cd apps/backend && DATABASE_URL=<rps_test url> PORT=8081 go run ./cmd/server`,
+then select the **`RPS test`** environment (`apps/backend/RPS-test.postman_environment.json`, `baseUrl`
+`http://localhost:8081/api/v1` — environment values override the collection's `baseUrl`). Never against :8080 / `rps`.
+
 Variables: `baseUrl` (localhost:8080/api/v1), `accessToken`, `workerToken` (cutter), `stitcherToken`, `stitcher2Token`,
 `packerToken`, badge vars, `batchId`, `workerBatchId`, `scanBatchId/Code`, `stockRollId`, `reportFrom/To`.
 Convention: tests read `const responseData = pm.response.json().data`, assert `code` fields not messages (except worker-login

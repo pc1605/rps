@@ -38,6 +38,11 @@ If phones are on the same WiFi or on the laptop hotspot, skip ngrok and use the 
 Always from the **repo root** (`.env` lives there). `version` / `up` / `force N` (after a dirty failure) / `down 1`.
 Before writing a migration that references an enum: `docker exec -it rps_postgres psql -U rps_dev -d rps -c "\d <table>"`.
 
+## Test database
+`scripts/test-db.sh` (re)creates the isolated `rps_test` (migrations + seeds) and prints `TEST_DATABASE_URL`.
+DB tests, Postman (second backend on :8081 with the `RPS test` environment) and test seeds use it — never `rps`.
+Details: `testing.md` → Test database.
+
 ## Reset data
 See `02-domain/data-model.md` → Reset. Demo data: create an empty DB (`rps_demo`), run migrations, then `scripts/seed-dev.sh rps_demo`.
 
