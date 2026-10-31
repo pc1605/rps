@@ -18,6 +18,8 @@ Admin: rework badge on Packing view, rework rows in unit grid with photo thumbna
 **Open:** who photographs (packer assumed). Sticker reprint per unit lands here.
 
 ## Slice C — Materials, BOM, car-model CRUD, consumption
+> **Superseded** by the owner-agreed design in `02-domain/materials.md` (migration 015). Kept for history.
+
 - `raw_materials` → `materials(id, code, name, type enum: rexine_roll|velcro|thread|piping|other, unit enum: m|pcs|spool|kg,
   quantity numeric, min_level numeric, is_active, …)`. Existing rolls migrate as type `rexine_roll`, unit `m`.
 - `car_model_materials(car_model_id, material_type, qty_per_mat numeric)` — BOM by **type**, not specific item.

@@ -17,5 +17,8 @@
 | **Badge token** | Permanent per-worker secret used for enrollment (`workers.badge_token`). Shown as QR `RPS-ENROLL:<token>`. |
 | **Enrollment** | One-time login on a phone: badge (scan or type) + 4-digit PIN → 30-day token in SecureStore. |
 | **Rework** | (Slice B, not built) Packer rejects a mat → goes back to its stitcher with photo + reason. |
-| **BOM** | (Slice C, not built) Bill of materials per car model: material type × qty per mat. |
+| **BOM / recipe** | Quantity per mat for each material type, keyed by product line × consumption group, optionally per variant; per-car overrides. See `02-domain/materials.md`. |
+| **Material type / variant / lot** | Type = kind of input (Rexine R, Velcro…); variant = spec that changes consumption (roll width); lot = one received roll/box with colour and qty. |
+| **Consumption group** | Explicit car grouping for recipes (Small/Medium/Large, admin-editable). |
+| **Movement** | Ledger row on a lot: receive, consume, adjust, waste, return. `qty_remaining` = sum of movements. |
 | **Hard Rules** | Numbered rules from the original spec doc. Notable: #16 audit in same tx, #18 units created at batch creation. |

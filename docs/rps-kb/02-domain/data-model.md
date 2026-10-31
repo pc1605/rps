@@ -24,7 +24,7 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
 
 ### 002 — reference + batches + units
 - `car_brands(id serial, name)`; `car_models(id serial, brand_id, name, size_class small|medium|large, pieces_per_set, piece_groups jsonb)` — `piece_groups` obsolete (whole-mat stitching), safe to drop later.
-- `raw_materials(id uuid, roll_code unique, color, total_meters, remaining_meters, is_active, …)` — rolls only; Slice C generalizes to `materials`.
+- `raw_materials(id uuid, roll_code unique, color, total_meters, remaining_meters, is_active, …)` — **renamed `material_lots` in 015**; rolls only; Slice C generalizes to `materials`.
 - `batch_code_counters(year int PK, last_number int)` + `next_batch_code()` → `B-YYYY-NNN`.
 - `batches(id uuid, batch_code unique, car_model_id, roll_id nullable, quantity, current_phase batch_phase default 'cutting', status batch_status default 'pending', notes, rework_count int, created_by → users, version int, created_at, updated_at, stickers_printed_at timestamptz [006])`.
 - `batch_units(id uuid, batch_id, unit_code unique 'B-YYYY-NNN-NNN', unit_number, status default 'pending', packed_by → workers, packed_at, created_at, stitched_by → workers [005], stitched_at [005])`. **Inserted at batch creation** (Hard Rule 18) via `generate_series`.
@@ -102,6 +102,17 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
 - `idx_rework_batch (batch_id)`, `idx_rework_flagged_at (flagged_at DESC)` — rework per batch / by date.
 - `idx_batches_parent (parent_batch_id) WHERE parent_batch_id IS NOT NULL` — related (split / re-cut) batches.
 - Indexes only, no data change. Slice C1 takes 015.
+
+### 015 — materials (Slice C1a) — full design in `materials.md`
+- Enums `material_unit` (m, sqm, pcs, spool, kg), `movement_kind` (receive, consume, adjust, waste, return).
+- `material_types(id, code unique, name, unit, has_variants, min_level, sort, is_active)` — seeded REX-R, REX-87, PVC-18, PVC-21 (m, with variants).
+- `material_variants(id, material_type_id, name, specs jsonb, is_active)` — specs that change consumption (roll width), never colour. `UNIQUE(id, material_type_id)` backs composite FKs.
+- **`raw_materials` renamed `material_lots`**: `roll_code→lot_code`, `total_meters→qty_received`, `remaining_meters→qty_remaining` (numeric 12,3), + `material_type_id NOT NULL`, `variant_id`, `unit_cost`, `supplier`, `note`; `color` stays (colour is per lot). `batches.roll_id` unchanged (FK follows the rename).
+- `material_movements(id, lot_id NULL=shortfall, material_type_id, variant_id, kind, qty signed, batch_id, reason, actor_user_id, actor_worker_id, created_at)` + sign / shortfall CHECKs. Backfilled opening balance per lot.
+- `consumption_groups(id, name, sort, is_active, default_for_size car_size unique)` seeded Small/Medium/Large; `car_models.consumption_group_id NOT NULL` (backfilled from size; BEFORE INSERT trigger fills it from `default_for_size`).
+- `recipes(product_line_id × consumption_group_id unique)`, `recipe_lines(recipe_id, material_type_id, variant_id NULL=any, qty_per_mat > 0)`, `car_material_overrides(car_model_id, material_type_id, variant_id NULL=any, qty_per_mat ≥ 0)` — unique on `COALESCE(variant_id,0)`.
+- `batch_material_plan(batch_id, phase_log_id, material_type_id, variant_id, source, qty_per_mat, mats, planned_qty, note)`.
+- Down refuses once 015-era data exists (see `materials.md`).
 
 ## Key invariants
 - One open cutting log per batch; many open stitching/packing logs (one per joined worker).

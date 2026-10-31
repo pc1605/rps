@@ -28,7 +28,7 @@ Monorepo (pnpm workspace, hoisted node_modules):
 - Every mutation in a tx with `defer tx.Rollback(ctx)`; audit row in the same tx (`audit.Write`).
 - Errors are sentinels matched with `errors.Is`; handlers map them to `httpx.Error(c, status, code, msg)`; log real errors with zerolog before `httpx.Internal`.
 - SELECT columns and Scan targets must match 1:1 (most common bug here). Nullable columns → pointer fields.
-- Migrations: run from repo root: `set -a; source .env; set +a; migrate -path apps/backend/migrations -database "$DATABASE_URL" up`. Use the next free number. Enum names: `batch_phase`, `batch_status`, `unit_status`, `worker_station`, `car_size`.
+- Migrations: run from repo root: `set -a; source .env; set +a; migrate -path apps/backend/migrations -database "$DATABASE_URL" up`. Use the next free number. Enum names: `batch_phase`, `batch_status`, `unit_status`, `worker_station`, `car_size`, `material_unit`, `movement_kind`.
 - Seeds: run from repo root: `scripts/seed-dev.sh <db_name> [--force]` (database name required; `rps` requires `--force`). Chains `go run ./cmd/seed` → `seeds/01-catalog.sql` → `seeds/02-demo.sql` → `scripts/seed-uploads.sh`.
 - Photos: signed URLs (`?exp=&sig=`), public file route verifies the signature. Never require auth headers on image URLs.
 
