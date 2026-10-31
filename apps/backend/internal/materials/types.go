@@ -21,6 +21,10 @@ type MaterialType struct {
 	StockRemaining Milli     `json:"stock_remaining"` // SUM(active lots)
 	ActiveLots     int       `json:"active_lots"`
 	IsLow          bool      `json:"is_low"`
+	RecipeLines    int       `json:"recipe_lines"`  // recipe lines that use the type (any group/line)
+	OverrideCars   int       `json:"override_cars"` // cars with an override for the type
+	HasHistory     bool      `json:"has_history"`   // any lot, movement or batch plan row
+	Deletable      bool      `json:"deletable"`     // nothing references it: DELETE allowed
 	CreatedAt      time.Time `json:"created_at"`
 }
 

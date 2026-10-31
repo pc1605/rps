@@ -41,6 +41,9 @@ export const materialsApi = {
     d(await http.post("/materials/types", i)),
   updateType: async (id: number, i: MaterialTypeInput): Promise<MaterialTypeRow> =>
     d(await http.patch(`/materials/types/${id}`, i)),
+  deleteType: async (id: number): Promise<void> => {
+    await http.delete(`/materials/types/${id}`);
+  },
   variants: async (typeId: number): Promise<MaterialVariantRow[]> =>
     d(await http.get(`/materials/types/${typeId}/variants`)),
   createVariant: async (typeId: number, i: MaterialVariantInput): Promise<MaterialVariantRow> =>
@@ -72,6 +75,9 @@ export const materialsApi = {
     d(await http.post("/consumption-groups", i)),
   updateGroup: async (id: number, i: ConsumptionGroupInput): Promise<ConsumptionGroupRow> =>
     d(await http.patch(`/consumption-groups/${id}`, i)),
+  deleteGroup: async (id: number): Promise<void> => {
+    await http.delete(`/consumption-groups/${id}`);
+  },
   recipeGrid: async (productLineId: number): Promise<RecipeGrid> =>
     d(await http.get("/recipes", { params: { product_line_id: productLineId } })),
   putRecipeLines: async (

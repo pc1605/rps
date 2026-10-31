@@ -28,11 +28,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { DeleteButton, typeBlocked } from "@/features/materials/components/delete-button";
 import { parseQty } from "@/features/materials/components/lot-dialogs";
 import { MaterialsNav } from "@/features/materials/components/materials-nav";
 import {
   useCreateType,
   useCreateVariant,
+  useDeleteType,
   useMaterialTypes,
   useUpdateType,
   useUpdateVariant,
@@ -53,6 +55,7 @@ function TypeDialog({ type }: { type?: MaterialTypeRow }) {
   const [active, setActive] = useState(true);
   const create = useCreateType();
   const update = useUpdateType();
+  const del = useDeleteType();
   const min = minLevel.trim() ? parseQty(minLevel) : undefined;
   const ok = code.trim() && name.trim() && min !== null;
 
@@ -181,10 +184,34 @@ function TypeDialog({ type }: { type?: MaterialTypeRow }) {
             <Label htmlFor="mt-active">Active</Label>
             <Switch id="mt-active" checked={active} onCheckedChange={setActive} />
           </div>
+          {type?.is_active && !active && (type.recipe_lines > 0 || type.override_cars > 0) && (
+            <p className="text-caption text-muted-foreground">
+              Still used by{" "}
+              {[
+                type.recipe_lines > 0 &&
+                  `${type.recipe_lines} recipe line${type.recipe_lines === 1 ? "" : "s"}`,
+                type.override_cars > 0 &&
+                  `overrides on ${type.override_cars} car${type.override_cars === 1 ? "" : "s"}`,
+              ]
+                .filter(Boolean)
+                .join(" and ")}
+              . While inactive it's skipped at cutting — nothing is planned or drawn for it.
+            </p>
+          )}
           {minLevel && min === null && (
             <p className="text-caption text-danger">Low level: a number with at most 3 decimals.</p>
           )}
           <DialogFooter>
+            {type && (
+              <DeleteButton
+                name={type.name}
+                blocked={typeBlocked(type)}
+                onDelete={async () => {
+                  await del.mutateAsync(type.id);
+                  setOpen(false);
+                }}
+              />
+            )}
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>

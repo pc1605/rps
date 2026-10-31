@@ -56,15 +56,21 @@ const typeSelect = `
 	       COALESCE((SELECT (SUM(l.qty_remaining) * 1000)::bigint FROM material_lots l
 	                 WHERE l.material_type_id = t.id AND l.is_active), 0),
 	       (SELECT COUNT(*) FROM material_lots l WHERE l.material_type_id = t.id AND l.is_active),
+	       (SELECT COUNT(*) FROM recipe_lines rl WHERE rl.material_type_id = t.id),
+	       (SELECT COUNT(DISTINCT o.car_model_id) FROM car_material_overrides o WHERE o.material_type_id = t.id),
+	       EXISTS(SELECT 1 FROM material_lots l WHERE l.material_type_id = t.id)
+	         OR EXISTS(SELECT 1 FROM material_movements m WHERE m.material_type_id = t.id)
+	         OR EXISTS(SELECT 1 FROM batch_material_plan p WHERE p.material_type_id = t.id),
 	       t.created_at
 	FROM material_types t`
 
 func scanType(row pgx.Row) (*MaterialType, error) {
 	var t MaterialType
 	if err := row.Scan(&t.ID, &t.Code, &t.Name, &t.Unit, &t.HasVariants, &t.MinLevel, &t.Sort, &t.IsActive,
-		&t.StockRemaining, &t.ActiveLots, &t.CreatedAt); err != nil {
+		&t.StockRemaining, &t.ActiveLots, &t.RecipeLines, &t.OverrideCars, &t.HasHistory, &t.CreatedAt); err != nil {
 		return nil, err
 	}
+	t.Deletable = !t.HasHistory && t.RecipeLines == 0 && t.OverrideCars == 0
 	t.IsLow = t.IsActive && t.MinLevel != nil && t.StockRemaining < *t.MinLevel
 	return &t, nil
 }
@@ -218,6 +224,38 @@ func (s *Service) UpdateType(ctx context.Context, id int, in TypeInput, a Actor)
 		return writeAudit(ctx, tx, a, "material_type", fmt.Sprint(id), audit.ActionUpdate, before, after)
 	})
 	return out, err
+}
+
+// DeleteType removes a type nobody references (a mistake, never used). Its variants go with it —
+// they can only be referenced by lots / recipe lines / overrides / plan rows of the same type.
+// Anything with history is deactivated instead (409 type_in_use).
+func (s *Service) DeleteType(ctx context.Context, id int, a Actor) error {
+	return s.withTx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM material_types WHERE id = $1 FOR UPDATE`, id); err != nil {
+			return err
+		}
+		before, err := s.getType(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if !before.Deletable {
+			return ErrTypeInUse
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM material_variants WHERE material_type_id = $1`, id); err != nil {
+			return typeDeleteErr(err)
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM material_types WHERE id = $1`, id); err != nil {
+			return typeDeleteErr(err)
+		}
+		return writeAudit(ctx, tx, a, "material_type", fmt.Sprint(id), audit.ActionDelete, before, nil)
+	})
+}
+
+func typeDeleteErr(err error) error {
+	if isFKViolation(err) {
+		return ErrTypeInUse
+	}
+	return err
 }
 
 // ───────────────────────── variants ─────────────────────────

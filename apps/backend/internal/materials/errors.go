@@ -22,6 +22,8 @@ var (
 	ErrGroupInUse        = errors.New("cars still use this consumption group")
 	ErrGroupIsDefault    = errors.New("group is the default for a size class — move the default first")
 	ErrCutterOnly        = errors.New("cutter token required")
+	ErrTypeInUse         = errors.New("material type has lots, movements, recipes or overrides — deactivate it instead")
+	ErrGroupHasRecipes   = errors.New("consumption group still has recipe lines — clear them or deactivate it instead")
 )
 
 var statusOf = []struct {
@@ -39,6 +41,8 @@ var statusOf = []struct {
 	{ErrGroupInUse, fiber.StatusConflict, "group_in_use"},
 	{ErrGroupIsDefault, fiber.StatusConflict, "group_is_default"},
 	{ErrCutterOnly, fiber.StatusForbidden, "cutter_only"},
+	{ErrTypeInUse, fiber.StatusConflict, "type_in_use"},
+	{ErrGroupHasRecipes, fiber.StatusConflict, "group_has_recipes"},
 }
 
 // fail maps a service error to an HTTP error; unknown errors are logged and become 500.

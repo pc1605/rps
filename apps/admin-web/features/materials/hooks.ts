@@ -6,7 +6,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { type LotFilter, materialsApi, type MovementFilter } from "./api";
+import { type LotFilter, type MovementFilter, materialsApi } from "./api";
 
 // Stock changes with every cut → light polling on the stock views.
 const LIVE = { refetchInterval: 15_000, refetchOnWindowFocus: true } as const;
@@ -90,6 +90,7 @@ export const useUpdateType = () =>
   useStockMutation(({ id, ...i }: { id: number } & Parameters<typeof materialsApi.updateType>[1]) =>
     materialsApi.updateType(id, i),
   );
+export const useDeleteType = () => useStockMutation(materialsApi.deleteType);
 export const useCreateVariant = () =>
   useStockMutation(
     ({ typeId, ...i }: { typeId: number } & Parameters<typeof materialsApi.createVariant>[1]) =>
@@ -124,6 +125,8 @@ export const useUpdateGroup = () =>
       materialsApi.updateGroup(id, i),
     [["consumption-groups"], ["recipe-grid"], ["car-models"], ["car-overview"]],
   );
+export const useDeleteGroup = () =>
+  useStockMutation(materialsApi.deleteGroup, [["consumption-groups"], ["recipe-grid"]]);
 export const usePutRecipeLines = () =>
   useStockMutation(
     ({ lineId, groupId, lines }: { lineId: number; groupId: number; lines: MaterialLineInput[] }) =>

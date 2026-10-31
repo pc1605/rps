@@ -314,6 +314,14 @@ export interface MaterialTypeRow extends Omit<MaterialType, "min_level"> {
   stock_remaining: number;
   active_lots: number;
   is_low: boolean;
+  /** Recipe lines (any product line × group) that use the type. */
+  recipe_lines: number;
+  /** Cars with an override for the type. */
+  override_cars: number;
+  /** Any lot, movement or batch plan row — such a type can only be deactivated. */
+  has_history: boolean;
+  /** Nothing references it: DELETE /materials/types/:id is allowed. */
+  deletable: boolean;
   created_at: string;
 }
 
@@ -405,6 +413,10 @@ export interface LotPatchInput {
 /** GET /consumption-groups */
 export interface ConsumptionGroupRow extends ConsumptionGroup {
   car_count: number;
+  /** Lines across this group's recipes (all product lines). */
+  recipe_lines: number;
+  /** No cars, no recipe lines, not a size default: DELETE /consumption-groups/:id is allowed. */
+  deletable: boolean;
   created_at: string;
 }
 

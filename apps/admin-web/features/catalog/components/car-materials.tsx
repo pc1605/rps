@@ -194,6 +194,13 @@ export function CarMaterials({
           })}
         </Card>
       )}
+      {data && data.lines.length > 0 && data.notes.length > 0 && (
+        <ul className="space-y-0.5 text-caption text-muted-foreground">
+          {data.notes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

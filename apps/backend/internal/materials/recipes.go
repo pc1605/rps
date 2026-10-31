@@ -21,6 +21,8 @@ type Group struct {
 	IsActive       bool      `json:"is_active"`
 	DefaultForSize *string   `json:"default_for_size,omitempty"`
 	CarCount       int       `json:"car_count"`
+	RecipeLines    int       `json:"recipe_lines"` // lines across this group's recipes (all product lines)
+	Deletable      bool      `json:"deletable"`    // no cars, no recipe lines, not a size default
 	CreatedAt      time.Time `json:"created_at"`
 }
 
@@ -35,14 +37,17 @@ var sizes = map[string]bool{"small": true, "medium": true, "large": true}
 
 const groupSelect = `
 	SELECT g.id, g.name, g.sort, g.is_active, g.default_for_size::text,
-	       (SELECT COUNT(*) FROM car_models cm WHERE cm.consumption_group_id = g.id), g.created_at
+	       (SELECT COUNT(*) FROM car_models cm WHERE cm.consumption_group_id = g.id),
+	       (SELECT COUNT(*) FROM recipe_lines rl JOIN recipes r ON r.id = rl.recipe_id WHERE r.consumption_group_id = g.id),
+	       g.created_at
 	FROM consumption_groups g`
 
 func scanGroup(row pgx.Row) (*Group, error) {
 	var g Group
-	if err := row.Scan(&g.ID, &g.Name, &g.Sort, &g.IsActive, &g.DefaultForSize, &g.CarCount, &g.CreatedAt); err != nil {
+	if err := row.Scan(&g.ID, &g.Name, &g.Sort, &g.IsActive, &g.DefaultForSize, &g.CarCount, &g.RecipeLines, &g.CreatedAt); err != nil {
 		return nil, err
 	}
+	g.Deletable = g.CarCount == 0 && g.RecipeLines == 0 && g.DefaultForSize == nil
 	return &g, nil
 }
 
@@ -163,6 +168,42 @@ func (s *Service) UpdateGroup(ctx context.Context, id int, in GroupInput, a Acto
 		return writeAudit(ctx, tx, a, "consumption_group", fmt.Sprint(id), audit.ActionUpdate, before, after)
 	})
 	return out, err
+}
+
+// DeleteGroup removes a group with no cars, no recipe lines and no size default. Its empty recipe
+// headers (rows with no lines) go with it.
+func (s *Service) DeleteGroup(ctx context.Context, id int, a Actor) error {
+	return s.withTx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM consumption_groups WHERE id = $1 FOR UPDATE`, id); err != nil {
+			return err
+		}
+		before, err := s.getGroup(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		switch {
+		case before.CarCount > 0:
+			return fmt.Errorf("%w (%d cars)", ErrGroupInUse, before.CarCount)
+		case before.DefaultForSize != nil:
+			return ErrGroupIsDefault
+		case before.RecipeLines > 0:
+			return ErrGroupHasRecipes
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM recipes WHERE consumption_group_id = $1`, id); err != nil {
+			return groupDeleteErr(err)
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM consumption_groups WHERE id = $1`, id); err != nil {
+			return groupDeleteErr(err)
+		}
+		return writeAudit(ctx, tx, a, "consumption_group", fmt.Sprint(id), audit.ActionDelete, before, nil)
+	})
+}
+
+func groupDeleteErr(err error) error {
+	if isFKViolation(err) {
+		return ErrGroupInUse
+	}
+	return err
 }
 
 // ───────────────────────── recipes & overrides ─────────────────────────

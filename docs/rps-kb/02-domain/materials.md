@@ -50,6 +50,10 @@ The first match wins; an override of `0` means the type isn't used (no consumpti
   the matching line pins one. Resolve the quantity with the **variant of the first lot drawn**.
 
 As built (C1b, `internal/batch/consume.go`):
+- **Inactive types are not planned:** recipe lines and overrides of an inactive type are skipped (dry run and cutting
+  alike) with a note "Skipped <type>: material is inactive" — except the batch's own roll, which was picked explicitly.
+- **Delete vs deactivate:** a type can be deleted only while nothing references it (no lot, movement, plan row, recipe
+  line or override); a group only with no cars, no recipe lines and no size default. Everything else is deactivated.
 - **Eligible lot** = active, `qty_remaining > 0`, and a quantity resolves for its variant. "Pinned" therefore means: if a
   type only has variant-specific lines/overrides (no "any"), only lots of those variants are drawn; with an "any" line,
   every lot of the type is eligible.

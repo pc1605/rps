@@ -32,10 +32,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useProductLines } from "@/features/catalog/hooks";
+import { DeleteButton, groupBlocked } from "@/features/materials/components/delete-button";
 import { type Draft, fromDrafts, LinesEditor, toDrafts } from "@/features/materials/components/lines-editor";
 import { MaterialsNav } from "@/features/materials/components/materials-nav";
 import {
   useCreateGroup,
+  useDeleteGroup,
   useGroups,
   useMaterialTypes,
   usePutRecipeLines,
@@ -120,6 +122,7 @@ function GroupDialog({ group }: { group?: ConsumptionGroupRow }) {
   const [active, setActive] = useState(true);
   const create = useCreateGroup();
   const update = useUpdateGroup();
+  const del = useDeleteGroup();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,7 +210,23 @@ function GroupDialog({ group }: { group?: ConsumptionGroupRow }) {
             <Label htmlFor="cg-active">Active</Label>
             <Switch id="cg-active" checked={active} onCheckedChange={setActive} />
           </div>
+          {group?.is_active && !active && group.car_count > 0 && (
+            <p className="text-caption text-danger">
+              {group.car_count} car{group.car_count === 1 ? "" : "s"} still use this group — move them to
+              another group first.
+            </p>
+          )}
           <DialogFooter>
+            {group && (
+              <DeleteButton
+                name={group.name}
+                blocked={groupBlocked(group)}
+                onDelete={async () => {
+                  await del.mutateAsync(group.id);
+                  setOpen(false);
+                }}
+              />
+            )}
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>

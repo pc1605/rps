@@ -78,11 +78,12 @@ Tabs are routes: **Stock** `/materials` · **Ledger** `/materials/ledger` · **T
 - **Lot page:** Adjust (new remaining + reason) · Waste · Return · Edit (colour, supplier, cost, note, in use; material /
   width locked once the lot has consumption, waste or returns). Totals, batches, ledger.
 - **Ledger:** every movement newest first, material + date filters, shortfalls marked, lots/batches/workers linked.
-- **Types:** card per material (unit, stock, low level, active) + edit dialog; variants as chips with add/edit (name +
+- **Types:** card per material (unit, stock, low level, active) + edit dialog (Delete only when unused — else it says
+  why and points to Active; turning Active off warns about recipe lines / overrides that will be skipped); variants as chips with add/edit (name +
   width in inches → `specs.width_in`, other spec keys kept).
 - **Recipes:** product line select (`?line=`), grid material(+width) × consumption group, per-group edit dialog
   (`LinesEditor`: material, any width / specific width, qty > 0) → full replace; PLACEHOLDER warning; consumption groups
-  table + new/edit dialog.
+  table + new/edit dialog (Delete only with no cars, recipe lines or size default).
 - **Car:** item dialog has the consumption group; the car page has **Materials** (engine dry run for N mats: source,
   width, qty/mat, lots it would draw, available, shortfall) + **Edit overrides** (qty ≥ 0, 0 = not used) + Edit.
 - **Batch:** **Materials used** per cutting completion (plan × mats, source, lots drawn, shortfall). **New batch:** the
