@@ -21,15 +21,17 @@ type Handler struct{ svc *Service }
 
 func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 
-func RegisterRoutes(api fiber.Router, svc *Service) {
+// RegisterRoutes mounts the catalog routes. All are admin-only (the phone
+// app never calls them); worker tokens get 403.
+func RegisterRoutes(api fiber.Router, svc *Service, admin fiber.Handler) {
 	h := NewHandler(svc)
-	api.Get("/car-models", h.CarModels)
-	api.Post("/car-models", h.CreateCarModel)
-	api.Patch("/car-models/:id", h.UpdateCarModel)
-	api.Get("/car-brands", h.Brands)
-	api.Post("/car-brands", h.CreateBrand)
-	api.Get("/product-lines", h.ProductLines)
-	api.Get("/rolls", h.Rolls)
+	api.Get("/car-models", admin, h.CarModels)
+	api.Post("/car-models", admin, h.CreateCarModel)
+	api.Patch("/car-models/:id", admin, h.UpdateCarModel)
+	api.Get("/car-brands", admin, h.Brands)
+	api.Post("/car-brands", admin, h.CreateBrand)
+	api.Get("/product-lines", admin, h.ProductLines)
+	api.Get("/rolls", admin, h.Rolls)
 }
 
 func (h *Handler) CarModels(c *fiber.Ctx) error {
