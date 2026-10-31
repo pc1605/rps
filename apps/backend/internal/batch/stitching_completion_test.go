@@ -3,6 +3,7 @@ package batch
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -48,7 +49,23 @@ func TestStitchingCompletionRule(t *testing.T) {
 	one(`SELECT id FROM workers WHERE station='cutter' AND is_active LIMIT 1`, &cutterID)
 	one(`SELECT id FROM workers WHERE station='stitcher' AND is_active LIMIT 1`, &stitcherID)
 	one(`SELECT id FROM workers WHERE station='packer' AND is_active LIMIT 1`, &packerID)
-	one(`SELECT id FROM car_models LIMIT 1`, &carModelID)
+	// Isolated car in a consumption group with no recipe: its cut consumes no seed stock (C1b engine).
+	var groupID int
+	sfx := time.Now().UnixNano()
+	if err := pool.QueryRow(ctx, `INSERT INTO consumption_groups (name) VALUES ($1) RETURNING id`,
+		fmt.Sprintf("T stitching %d", sfx)).Scan(&groupID); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO car_models (brand_id, name, size_class, pieces_per_set, product_line_id, consumption_group_id)
+		SELECT (SELECT id FROM car_brands LIMIT 1), $1, 'medium', 4, (SELECT id FROM product_lines LIMIT 1), $2
+		RETURNING id`, fmt.Sprintf("T stitching car %d", sfx), groupID).Scan(&carModelID); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM car_models WHERE id = $1`, carModelID)
+		_, _ = pool.Exec(ctx, `DELETE FROM consumption_groups WHERE id = $1`, groupID)
+	}()
 
 	b, err := s.Create(ctx, CreateInput{CarModelID: carModelID, Quantity: 3}, adminID, "owner", ip)
 	if err != nil {
