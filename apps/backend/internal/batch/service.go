@@ -39,6 +39,9 @@ type Stats struct {
 	TotalActive         int `json:"total_active"`
 	ReworkOpen          int `json:"rework_open"`
 	ReworkNeedsDecision int `json:"rework_needs_decision"`
+	// Materials (C1b): shortfall movements in the last 30 days; active types below min_level.
+	MaterialShortfallsOpen int `json:"material_shortfalls_open"`
+	LowStockTypes          int `json:"low_stock_types"`
 }
 
 func NewService(pool *pgxpool.Pool, uploadDir string) *Service {
@@ -390,7 +393,13 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 		  COUNT(*) FILTER (WHERE status = 'completed' AND (updated_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date),
 		  COUNT(*) FILTER (WHERE status NOT IN ('completed','cancelled')),
 		  (SELECT COUNT(*) FROM rework_logs WHERE fixed_at IS NULL AND (decision IS NULL OR decision = 'to_stitcher')),
-		  (SELECT COUNT(*) FROM rework_logs WHERE route = 'admin' AND decision IS NULL)
+		  (SELECT COUNT(*) FROM rework_logs WHERE route = 'admin' AND decision IS NULL),
+		  (SELECT COUNT(*) FROM material_movements
+		    WHERE lot_id IS NULL AND created_at > NOW() - INTERVAL '30 days'),
+		  (SELECT COUNT(*) FROM material_types t
+		    WHERE t.is_active AND t.min_level IS NOT NULL
+		      AND COALESCE((SELECT SUM(l.qty_remaining) FROM material_lots l
+		                    WHERE l.material_type_id = t.id AND l.is_active), 0) < t.min_level)
 		FROM batches
 	`, factorytime.Name()).Scan(
 		&st.InCutting,
@@ -401,6 +410,8 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 		&st.TotalActive,
 		&st.ReworkOpen,
 		&st.ReworkNeedsDecision,
+		&st.MaterialShortfallsOpen,
+		&st.LowStockTypes,
 	)
 	if err != nil {
 		return nil, err
@@ -897,22 +908,29 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 	}
 
 	// Close MY open log — worker_id in the WHERE enforces the exclusive claim.
-	ct, err := tx.Exec(ctx, `
+	var logID uuid.UUID
+	err = tx.QueryRow(ctx, `
 		UPDATE phase_logs
 		SET completed_at = NOW(), quantity_completed = $1, notes = NULLIF($2,'')
 		WHERE batch_id = $3 AND phase = $4 AND completed_at IS NULL AND worker_id = $5
-	`, quantityCompleted, notes, batchID, phase, workerID)
+		RETURNING id
+	`, quantityCompleted, notes, batchID, phase, workerID).Scan(&logID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotYours // an open log exists (status=in_progress) but isn't this worker's
+	}
 	if err != nil {
 		return err
-	}
-	if ct.RowsAffected() == 0 {
-		return ErrNotYours // an open log exists (status=in_progress) but isn't this worker's
 	}
 
 	next, newStatus := nextPhase(phase)
 	if _, err := tx.Exec(ctx,
 		`UPDATE batches SET current_phase = $1, status = $2, cut_qty = cut_qty + $3, version = version + 1 WHERE id = $4`,
 		next, newStatus, quantityCompleted, batchID); err != nil {
+		return err
+	}
+
+	// Materials for exactly these pieces (materials.md). Same tx; never fails for stock problems.
+	if err := consumeForCutting(ctx, tx, batchID, logID, quantityCompleted, workerID); err != nil {
 		return err
 	}
 
