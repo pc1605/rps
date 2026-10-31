@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/features/auth/store";
+import { GlobalSearch } from "./global-search";
 import { Brand, navItems, Sidebar, SidebarNav } from "./sidebar";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -15,7 +16,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
-  const title = navItems.find((n) => pathname.startsWith(n.href))?.label ?? "RPS";
+  // Mat pages (/units) belong to Batches in the nav.
+  const navPath = pathname.startsWith("/units") ? "/batches" : pathname;
+  const title = navItems.find((n) => navPath.startsWith(n.href))?.label ?? "RPS";
 
   const signOut = async () => {
     await logout();
@@ -45,7 +48,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="text-body font-medium lg:text-muted-foreground">{title}</div>
+          <div className="hidden text-body font-medium sm:block lg:text-muted-foreground">{title}</div>
+          <GlobalSearch className="ml-2 w-full max-w-sm sm:ml-4" />
 
           <div className="ml-auto flex items-center gap-1">
             <Button

@@ -147,6 +147,8 @@ export interface BatchStats {
   material_shortfalls_open: number;
   /** Active material types whose active lots sum below min_level. */
   low_stock_types: number;
+  /** Who's working now, per phase (open logs at the batch's current phase). */
+  working: Partial<Record<Phase, string[]>>;
 }
 
 export interface ScanResult {
@@ -711,4 +713,54 @@ export interface MaterialLotDetail extends MaterialLotRow {
     drawn: number;
     created_at: string;
   }[];
+}
+
+// ───── Lists & search (U2) ─────
+
+export type BatchListView = "cutting" | "ready" | "stitching" | "packing" | "completed";
+export type BatchSort = "created" | "code" | "quantity" | "phase" | "car";
+
+/** GET /batches query params — every one is also the admin's URL state. */
+export interface BatchListParams {
+  view?: BatchListView;
+  /** Batch code, car (brand + model), product line name, or exact barcode. */
+  q?: string;
+  car_model_id?: number;
+  product_line_id?: number;
+  /** Created between factory days (inclusive). */
+  from?: string;
+  to?: string;
+  has_rework?: boolean;
+  short?: boolean;
+  sort?: BatchSort;
+  order?: "asc" | "desc";
+  page?: number;
+  /** 1–200, default 50. */
+  limit?: number;
+}
+
+/** GET /batches */
+export interface BatchPage {
+  items: Batch[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export type SearchKind = "batch" | "unit" | "car" | "worker" | "lot";
+
+export interface SearchHit {
+  kind: SearchKind;
+  /** batch/worker/lot uuid, car id, or the unit code. */
+  id: string;
+  label: string;
+  sub: string;
+}
+
+/** GET /search?q= (≥ 2 chars; ≤ 5 hits per kind) */
+export interface SearchResult {
+  q: string;
+  /** Full batch / unit / lot code or barcode match — open it directly (scanner input). */
+  exact?: SearchHit;
+  hits: SearchHit[];
 }

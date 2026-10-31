@@ -5,27 +5,20 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useBatches, useBatchStats } from "../hooks";
+import { useBatchStats } from "../hooks";
 import { batchViews } from "../views";
 
 /** The factory, left to right. Amber only where the admin is needed. */
 export function Pipeline() {
   const { data: stats, isPending } = useBatchStats();
-  const { data: batches } = useBatches();
 
   const stages = batchViews.filter((v) => v.key !== "completed");
   const done = stats?.completed_today ?? 0;
 
-  // Who's on each stage right now (names from that stage's active batches)
+  // Who's on each stage right now (from /batches/stats — no full batch list needed)
   const who = (key: string): string[] => {
-    const view = batchViews.find((v) => v.key === key);
-    if (!view) return [];
-    const names = (batches ?? [])
-      .filter(view.filter)
-      .flatMap((b) => (b.active_workers ?? "").split(","))
-      .map((s) => s.trim())
-      .filter(Boolean);
-    return Array.from(new Set(names)).slice(0, 3);
+    if (key === "ready") return [];
+    return (stats?.working?.[key as keyof typeof stats.working] ?? []).slice(0, 3);
   };
   if (isPending) return <Skeleton className="h-36 w-full" />;
 

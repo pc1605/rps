@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { BatchListParams } from "@rps/shared";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { batchApi } from "./api";
 import type { AssignmentInput, CreateBatchInput, Phase } from "./types";
 
@@ -6,7 +7,23 @@ import type { AssignmentInput, CreateBatchInput, Phase } from "./types";
 const LIVE = { refetchInterval: 10_000, refetchOnWindowFocus: true } as const;
 const LIVE_FAST = { refetchInterval: 5_000, refetchOnWindowFocus: true } as const;
 
-export const useBatches = () => useQuery({ queryKey: ["batches"], queryFn: batchApi.list, ...LIVE });
+/** A page of the batch list (U2: server-side filters, sort, paging). */
+export const useBatchPage = (params: BatchListParams) =>
+  useQuery({
+    queryKey: ["batches", params],
+    queryFn: () => batchApi.list(params),
+    placeholderData: keepPreviousData,
+    ...LIVE,
+  });
+
+export const useSearch = (q: string) =>
+  useQuery({
+    queryKey: ["search", q],
+    queryFn: () => batchApi.search(q),
+    enabled: q.trim().length >= 2,
+    staleTime: 10_000,
+    placeholderData: keepPreviousData,
+  });
 
 export const useBatch = (id: string) =>
   useQuery({ queryKey: ["batch", id], queryFn: () => batchApi.get(id), enabled: !!id, ...LIVE });

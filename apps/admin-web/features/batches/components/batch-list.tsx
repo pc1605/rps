@@ -1,8 +1,8 @@
 "use client";
 
-import { Package, Printer } from "lucide-react";
+import type { BatchSort } from "@rps/shared";
+import { ChevronLeft, ChevronRight, Package, Printer, Search } from "lucide-react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Chip } from "@/components/rps/chip";
 import { type Column, DataTable } from "@/components/rps/data-table";
@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { batchTone, sizeLabel } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
 import { batchApi } from "../api";
-import { useBatches, useMarkStickersPrinted } from "../hooks";
+import { useBatchPage, useMarkStickersPrinted } from "../hooks";
+import { PAGE_SIZE, useListParams } from "../use-list-params";
+import { BatchFilters } from "./batch-filters";
 import { generateLabelPdf } from "../label-pdf";
 import type { Batch } from "../types";
 import { batchViews } from "../views";
@@ -21,6 +23,7 @@ const baseColumns: Column<Batch>[] = [
   {
     key: "code",
     header: "Code",
+    sortKey: "code",
     width: "w-[180px]",
     card: "title",
     cell: (b) => (
@@ -55,6 +58,7 @@ const baseColumns: Column<Batch>[] = [
   {
     key: "model",
     header: "Model",
+    sortKey: "car",
     cell: (b) => (
       <div>
         <CarLink id={b.car_model_id} className="font-medium">
@@ -70,6 +74,7 @@ const baseColumns: Column<Batch>[] = [
   {
     key: "qty",
     header: "Qty",
+    sortKey: "quantity",
     align: "center",
     width: "w-[70px]",
     cell: (b) => <span className="tabular">{b.quantity}</span>,
@@ -77,6 +82,7 @@ const baseColumns: Column<Batch>[] = [
   {
     key: "phase",
     header: "Phase",
+    sortKey: "phase",
     align: "center",
     width: "w-[170px]",
     cell: (b) => {
@@ -111,6 +117,7 @@ const baseColumns: Column<Batch>[] = [
   {
     key: "created",
     header: "Created",
+    sortKey: "created",
     align: "right",
     width: "w-[110px]",
     card: "hide",
@@ -122,11 +129,19 @@ const baseColumns: Column<Batch>[] = [
   },
 ];
 
+// Default direction when a column is first sorted.
+const firstOrder: Record<BatchSort, "asc" | "desc"> = {
+  created: "desc",
+  quantity: "desc",
+  code: "asc",
+  car: "asc",
+  phase: "asc",
+};
+
 export function BatchList() {
-  const params = useSearchParams();
-  const phase = params.get("phase");
-  const view = batchViews.find((v) => v.key === phase);
-  const { data: batches, isPending, isError } = useBatches();
+  const { state, params, set, filtered } = useListParams();
+  const view = batchViews.find((v) => v.key === state.phase);
+  const { data, isPending, isError, isPlaceholderData } = useBatchPage(params);
   const markPrinted = useMarkStickersPrinted();
 
   const printStickers = async (b: Batch) => {
@@ -162,38 +177,115 @@ export function BatchList() {
     ),
   };
 
-  if (isError)
-    return <EmptyState title="Couldn't load batches" body="Check the backend is running, then reload." />;
+  const sortKey = state.sort ?? "created";
+  const order = state.order ?? (state.sort ? firstOrder[state.sort] : "desc");
+  const onSort = (key: string) => {
+    const k = key as BatchSort;
+    if (k === sortKey) set({ sort: k, order: order === "asc" ? "desc" : "asc" });
+    else set({ sort: k, order: firstOrder[k] });
+  };
 
-  const all = batches ?? [];
-  const visible = view ? all.filter(view.filter) : all;
   const columns = view?.key === "packing" ? [...baseColumns, stickerColumn] : baseColumns;
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const page = params.page ?? 1;
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const firstRow = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const lastRow = Math.min(total, page * PAGE_SIZE);
 
   return (
     <div className="space-y-3">
+      <BatchFilters state={state} set={set} filtered={filtered} />
       {view && (
         <div className="flex items-center gap-2 text-small text-muted-foreground">
           <span className={cn("h-2 w-2 rounded-full", view.dot)} aria-hidden />
-          {view.label} · <span className="tabular">{visible.length}</span>
+          {view.label} · <span className="tabular">{total}</span>
         </div>
       )}
-      <DataTable
-        rows={visible}
-        columns={columns}
-        rowKey={(b) => b.id}
-        loading={isPending}
-        empty={
-          <EmptyState
-            icon={Package}
-            title={view ? `Nothing in ${view.label.toLowerCase()}` : "No batches yet"}
-            body={
-              view
-                ? "Batches show up here as they reach this stage."
-                : "Create the first order and it appears here and on the dashboard pipeline."
+      {isError ? (
+        <EmptyState title="Couldn't load batches" body="Check the backend is running, then reload." />
+      ) : (
+        <div className={cn("transition-opacity", isPlaceholderData && "opacity-60")}>
+          <DataTable
+            rows={items}
+            columns={columns}
+            rowKey={(b) => b.id}
+            rowHref={(b) => `/batches/${b.id}`}
+            rowLabel={(b) => `Open batch ${b.batch_code}`}
+            loading={isPending}
+            sort={{ key: sortKey, order }}
+            onSort={onSort}
+            empty={
+              filtered ? (
+                <EmptyState
+                  icon={Search}
+                  title="No batches match"
+                  body="Try fewer filters or another search."
+                  action={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        set({
+                          q: undefined,
+                          car: undefined,
+                          line: undefined,
+                          from: undefined,
+                          to: undefined,
+                          rework: undefined,
+                          short: undefined,
+                        })
+                      }
+                    >
+                      Clear filters
+                    </Button>
+                  }
+                />
+              ) : (
+                <EmptyState
+                  icon={Package}
+                  title={view ? `Nothing in ${view.label.toLowerCase()}` : "No batches yet"}
+                  body={
+                    view
+                      ? "Batches show up here as they reach this stage."
+                      : "Create the first batch and it appears here and on the dashboard pipeline."
+                  }
+                />
+              )
             }
           />
-        }
-      />
+        </div>
+      )}
+      {total > PAGE_SIZE && (
+        <nav className="flex items-center justify-between gap-3" aria-label="Pagination">
+          <span className="tabular text-small text-muted-foreground">
+            {firstRow}–{lastRow} of {total}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => set({ page: page - 1 > 1 ? String(page - 1) : undefined })}
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden /> Prev
+            </Button>
+            <span className="tabular text-small">
+              {page} / {pages}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page >= pages}
+              onClick={() => set({ page: String(page + 1) })}
+            >
+              Next <ChevronRight className="h-4 w-4" aria-hidden />
+            </Button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }

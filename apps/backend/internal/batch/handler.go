@@ -7,12 +7,14 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
 	"github.com/pc1605/rps/apps/backend/internal/auth"
+	"github.com/pc1605/rps/apps/backend/internal/factorytime"
 	"github.com/pc1605/rps/apps/backend/internal/files"
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
 	"github.com/rs/zerolog/log"
@@ -51,16 +53,65 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"data": b})
 }
 
+// List — GET /batches?view&q&car_model_id&product_line_id&from&to&has_rework&short&sort&order&page&limit
+// → {items, total, page, limit}. Dates are factory days (inclusive); limit 1–200, default 50.
 func (h *Handler) List(c *fiber.Ctx) error {
-	batches, err := h.svc.List(c.Context())
+	f := ListFilter{View: c.Query("view"), Q: c.Query("q"), Sort: c.Query("sort"), Page: c.QueryInt("page", 1), Limit: c.QueryInt("limit", 50)}
+	if f.Limit < 1 || f.Limit > 200 {
+		return httpx.BadRequest(c, "limit must be 1–200")
+	}
+	if f.Page < 1 {
+		return httpx.BadRequest(c, "page must be ≥ 1")
+	}
+	switch c.Query("order", "desc") {
+	case "desc":
+		f.Desc = true
+	case "asc":
+	default:
+		return httpx.BadRequest(c, "order must be asc or desc")
+	}
+	for name, dst := range map[string]**int{"car_model_id": &f.CarModelID, "product_line_id": &f.ProductLineID} {
+		if v := c.Query(name); v != "" {
+			n, err := strconv.Atoi(v)
+			if err != nil || n <= 0 {
+				return httpx.BadRequest(c, "invalid "+name)
+			}
+			*dst = &n
+		}
+	}
+	for name, dst := range map[string]**bool{"has_rework": &f.HasRework, "short": &f.Short} {
+		if v := c.Query(name); v != "" {
+			b, err := strconv.ParseBool(v)
+			if err != nil {
+				return httpx.BadRequest(c, name+" must be true or false")
+			}
+			*dst = &b
+		}
+	}
+	if v := c.Query("from"); v != "" {
+		t, err := factorytime.ParseDay(v)
+		if err != nil {
+			return httpx.BadRequest(c, "from must be YYYY-MM-DD")
+		}
+		f.From = &t
+	}
+	if v := c.Query("to"); v != "" {
+		t, err := factorytime.ParseDay(v)
+		if err != nil {
+			return httpx.BadRequest(c, "to must be YYYY-MM-DD")
+		}
+		t = t.AddDate(0, 0, 1)
+		f.To = &t
+	}
+	page, err := h.svc.ListPage(c.Context(), f)
 	if err != nil {
+		if errors.Is(err, ErrInvalidInput) {
+			return httpx.BadRequest(c, strings.TrimPrefix(err.Error(), ErrInvalidInput.Error()+": "))
+		}
 		log.Error().Err(err).Msg("list batches")
 		return httpx.Internal(c, "failed to list batches")
 	}
-	if batches == nil {
-		batches = []Batch{}
-	}
-	return httpx.OK(c, batches)
+	return httpx.OK(c, page)
 }
 
 func (h *Handler) Get(c *fiber.Ctx) error {
@@ -562,6 +613,16 @@ func (h *Handler) UnitJourney(c *fiber.Ctx) error {
 		}
 		log.Error().Err(err).Msg("unit journey")
 		return httpx.Internal(c, "failed to load unit")
+	}
+	return httpx.OK(c, out)
+}
+
+// Search — GET /search?q= (admin): batches, mats, cars (incl. barcode), workers, lots; `exact` for a full code.
+func (h *Handler) Search(c *fiber.Ctx) error {
+	out, err := h.svc.Search(c.Context(), c.Query("q"))
+	if err != nil {
+		log.Error().Err(err).Msg("search")
+		return httpx.Internal(c, "search failed")
 	}
 	return httpx.OK(c, out)
 }

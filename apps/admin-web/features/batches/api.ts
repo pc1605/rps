@@ -1,3 +1,4 @@
+import type { BatchListParams, BatchPage, SearchResult } from "@rps/shared";
 import { http } from "@/lib/api-client";
 import type {
   AssignmentInput,
@@ -11,10 +12,13 @@ import type {
 } from "./types";
 
 export const batchApi = {
-  list: async (): Promise<Batch[]> => {
-    const res = await http.get("/batches");
-    return res.data?.data ?? res.data;
+  /** One page of batches; every param is also URL state in the admin. */
+  list: async (params: BatchListParams = {}): Promise<BatchPage> => {
+    const res = await http.get("/batches", { params });
+    return res.data.data;
   },
+  search: async (q: string): Promise<SearchResult> =>
+    (await http.get("/search", { params: { q } })).data.data,
   get: async (id: string): Promise<BatchDetail> => {
     const res = await http.get(`/batches/${id}`);
     return res.data?.data ?? res.data;

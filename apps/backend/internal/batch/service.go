@@ -42,6 +42,9 @@ type Stats struct {
 	// Materials (C1b): shortfall movements in the last 30 days; active types below min_level.
 	MaterialShortfallsOpen int `json:"material_shortfalls_open"`
 	LowStockTypes          int `json:"low_stock_types"`
+	// U2: who's working now per phase (open logs at the batch's current phase) — feeds the pipeline
+	// without loading every batch.
+	Working map[string][]string `json:"working"`
 }
 
 func NewService(pool *pgxpool.Pool, uploadDir string) *Service {
@@ -152,58 +155,13 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 	return &b, nil
 }
 
-// List returns batches with display fields + unit roll-up, newest first.
+// List returns every batch, newest first (no paging — tests and internal use; the API uses ListPage).
 func (s *Service) List(ctx context.Context) ([]Batch, error) {
-	rows, err := s.pool.Query(ctx, `
-		SELECT b.id, b.batch_code, b.car_model_id,
-		       cb.name, cm.name, cm.size_class::text, pl.code, pl.name, cm.barcode,
-		       b.roll_id, rm.lot_code,
-		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
-		       b.rework_count, b.created_by, u.name,
-		       b.version, b.created_at, b.updated_at, b.cut_qty, b.parent_batch_id, pb.batch_code, b.short_reason, b.stickers_printed_at,
-		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id),
-		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed'),
-		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.stitched_at IS NOT NULL),
-		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'defective'),
-		       (SELECT COUNT(*) FROM rework_logs rl WHERE rl.batch_id = b.id AND rl.fixed_at IS NULL AND (rl.decision IS NULL OR rl.decision = 'to_stitcher')),
-		       -- who's working right now (open logs at the current phase)
-		       (SELECT string_agg(wk.name, ', ' ORDER BY plg.started_at)
-		        FROM phase_logs plg JOIN workers wk ON wk.id = plg.worker_id
-		        WHERE plg.batch_id = b.id AND plg.phase = b.current_phase
-		          AND plg.completed_at IS NULL)
-		FROM batches b
-		JOIN car_models cm ON cm.id = b.car_model_id
-		JOIN car_brands cb ON cb.id = cm.brand_id
-		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
-		LEFT JOIN batches pb ON pb.id = b.parent_batch_id
-		JOIN users u       ON u.id = b.created_by
-		LEFT JOIN material_lots rm ON rm.id = b.roll_id
-		ORDER BY b.created_at DESC
-	`)
+	p, err := s.ListPage(ctx, ListFilter{Desc: true})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-
-	var out []Batch
-	for rows.Next() {
-		var b Batch
-		if err := rows.Scan(
-			&b.ID, &b.BatchCode, &b.CarModelID,
-			&b.BrandName, &b.ModelName, &b.SizeClass, &b.LineCode, &b.LineName, &b.Barcode,
-			&b.RollID, &b.RollCode,
-			&b.Quantity, &b.CurrentPhase, &b.Status, &b.Notes,
-			&b.ReworkCount, &b.CreatedBy, &b.CreatedByName,
-			&b.Version, &b.CreatedAt, &b.UpdatedAt,
-			&b.CutQty, &b.ParentBatchID, &b.ParentBatchCode, &b.ShortReason, &b.StickersPrintedAt,
-			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched, &b.UnitsWrittenOff, &b.ReworkOpen,
-			&b.ActiveWorkers,
-		); err != nil {
-			return nil, err
-		}
-		out = append(out, b)
-	}
-	return out, rows.Err()
+	return p.Items, nil
 }
 
 // Get returns one batch with its units.
@@ -414,6 +372,29 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 		&st.LowStockTypes,
 	)
 	if err != nil {
+		return nil, err
+	}
+	st.Working = map[string][]string{}
+	rows, err := s.pool.Query(ctx, `
+		SELECT b.current_phase::text, array_agg(DISTINCT w.name ORDER BY w.name)
+		FROM phase_logs pl
+		JOIN batches b ON b.id = pl.batch_id AND pl.phase = b.current_phase
+		JOIN workers w ON w.id = pl.worker_id
+		WHERE pl.completed_at IS NULL
+		GROUP BY 1`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var phase string
+		var names []string
+		if err := rows.Scan(&phase, &names); err != nil {
+			return nil, err
+		}
+		st.Working[phase] = names
+	}
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	return &st, nil

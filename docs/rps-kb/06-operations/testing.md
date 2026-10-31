@@ -47,6 +47,10 @@ Folders and run order:
    `npx -y newman@6.2.1 run apps/backend/RPS.postman_collection.json -e apps/backend/RPS-test.postman_environment.json --folder "Materials (C1c)"`
 9. **Entity pages (U1)** — worker detail/summary/history, busy-deactivate 409, throwaway packer: edit, reset PIN,
    login with it, deactivate → its token 401, reactivate; unit journey, car overview, lot detail; main 4xx. Same command with `--folder "Entity pages (U1)"`.
+10. **Lists & search (U2)** — read-only: paging, views, sort, filters, `q` (no wildcard), 400s; search exact batch /
+    mat, worker hit, 1-char empty; `stats.working`. Self-contained (logs in).
+Folders that need earlier ones in the same run: **Batches** needs `--folder "Auth" --folder "Cars & Reference"`
+before it (each Newman run starts with empty variables).
 
 Use **Collection Runner → Run folder** to avoid ordering mistakes. Re-runs create "PM …" workers; clear with the reset SQL.
 

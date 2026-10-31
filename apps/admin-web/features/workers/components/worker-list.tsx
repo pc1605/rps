@@ -92,6 +92,8 @@ export function WorkerList() {
       rows={workers ?? []}
       columns={columns}
       rowKey={(w) => w.id}
+      rowHref={(w) => `/workers/${w.id}`}
+      rowLabel={(w) => `Open ${w.name}`}
       loading={isPending}
       empty={
         <EmptyState

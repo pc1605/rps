@@ -278,6 +278,8 @@ export function WorkerHistory({ worker }: { worker: WorkerDetail }) {
           rows={rows}
           columns={historyColumns}
           rowKey={(h) => h.phase_log_id}
+          rowHref={(h) => `/batches/${h.batch_id}`}
+          rowLabel={(h) => `Open batch ${h.batch_code}`}
           loading={q.isPending}
           empty={
             <EmptyState
