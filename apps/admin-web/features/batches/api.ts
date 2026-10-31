@@ -1,5 +1,14 @@
 import { http } from "@/lib/api-client";
-import type { AssignmentInput, Batch, BatchDetail, CarModel, CreateBatchInput, Phase, Roll } from "./types";
+import type {
+  AssignmentInput,
+  Batch,
+  BatchDetail,
+  BatchStats,
+  CarModel,
+  CreateBatchInput,
+  Phase,
+  Roll,
+} from "./types";
 
 export const batchApi = {
   list: async (): Promise<Batch[]> => {
@@ -22,7 +31,7 @@ export const batchApi = {
     const res = await http.get("/rolls");
     return res.data?.data ?? res.data;
   },
-  stats: async () => {
+  stats: async (): Promise<BatchStats> => {
     const res = await http.get("/batches/stats");
     return res.data?.data ?? res.data;
   },
