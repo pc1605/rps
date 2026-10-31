@@ -39,6 +39,9 @@ type Stats struct {
 	TotalActive         int `json:"total_active"`
 	ReworkOpen          int `json:"rework_open"`
 	ReworkNeedsDecision int `json:"rework_needs_decision"`
+	// Materials (C1b): shortfall movements in the last 30 days; active types below min_level.
+	MaterialShortfallsOpen int `json:"material_shortfalls_open"`
+	LowStockTypes          int `json:"low_stock_types"`
 }
 
 func NewService(pool *pgxpool.Pool, uploadDir string) *Service {
@@ -81,7 +84,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 		if err != nil {
 			return nil, fmt.Errorf("%w: bad roll_id", ErrInvalidInput)
 		}
-		err = tx.QueryRow(ctx, `SELECT roll_code FROM raw_materials WHERE id = $1 AND is_active`, parsed).Scan(&rollCode)
+		err = tx.QueryRow(ctx, `SELECT lot_code FROM material_lots WHERE id = $1 AND is_active`, parsed).Scan(&rollCode)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("%w: roll not found or inactive", ErrInvalidInput)
 		}
@@ -154,7 +157,7 @@ func (s *Service) List(ctx context.Context) ([]Batch, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT b.id, b.batch_code, b.car_model_id,
 		       cb.name, cm.name, cm.size_class::text, pl.code, pl.name, cm.barcode,
-		       b.roll_id, rm.roll_code,
+		       b.roll_id, rm.lot_code,
 		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
 		       b.rework_count, b.created_by, u.name,
 		       b.version, b.created_at, b.updated_at, b.cut_qty, b.parent_batch_id, pb.batch_code, b.short_reason, b.stickers_printed_at,
@@ -174,7 +177,7 @@ func (s *Service) List(ctx context.Context) ([]Batch, error) {
 		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
 		LEFT JOIN batches pb ON pb.id = b.parent_batch_id
 		JOIN users u       ON u.id = b.created_by
-		LEFT JOIN raw_materials rm ON rm.id = b.roll_id
+		LEFT JOIN material_lots rm ON rm.id = b.roll_id
 		ORDER BY b.created_at DESC
 	`)
 	if err != nil {
@@ -209,7 +212,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 	err := s.pool.QueryRow(ctx, `
 		SELECT b.id, b.batch_code, b.car_model_id,
 		       cb.name, cm.name,cm.size_class::text, pl.code, pl.name, cm.barcode,
-		       b.roll_id, rm.roll_code,
+		       b.roll_id, rm.lot_code,
 		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
 		       b.rework_count, b.created_by, u.name,
 		       b.version, b.created_at, b.updated_at,
@@ -221,7 +224,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
 		LEFT JOIN batches pb ON pb.id = b.parent_batch_id
 		JOIN users u       ON u.id = b.created_by
-		LEFT JOIN raw_materials rm ON rm.id = b.roll_id
+		LEFT JOIN material_lots rm ON rm.id = b.roll_id
 		WHERE b.id = $1
 	`, id).Scan(
 		&b.ID, &b.BatchCode, &b.CarModelID,
@@ -390,7 +393,13 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 		  COUNT(*) FILTER (WHERE status = 'completed' AND (updated_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date),
 		  COUNT(*) FILTER (WHERE status NOT IN ('completed','cancelled')),
 		  (SELECT COUNT(*) FROM rework_logs WHERE fixed_at IS NULL AND (decision IS NULL OR decision = 'to_stitcher')),
-		  (SELECT COUNT(*) FROM rework_logs WHERE route = 'admin' AND decision IS NULL)
+		  (SELECT COUNT(*) FROM rework_logs WHERE route = 'admin' AND decision IS NULL),
+		  (SELECT COUNT(*) FROM material_movements
+		    WHERE lot_id IS NULL AND created_at > NOW() - INTERVAL '30 days'),
+		  (SELECT COUNT(*) FROM material_types t
+		    WHERE t.is_active AND t.min_level IS NOT NULL
+		      AND COALESCE((SELECT SUM(l.qty_remaining) FROM material_lots l
+		                    WHERE l.material_type_id = t.id AND l.is_active), 0) < t.min_level)
 		FROM batches
 	`, factorytime.Name()).Scan(
 		&st.InCutting,
@@ -401,6 +410,8 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 		&st.TotalActive,
 		&st.ReworkOpen,
 		&st.ReworkNeedsDecision,
+		&st.MaterialShortfallsOpen,
+		&st.LowStockTypes,
 	)
 	if err != nil {
 		return nil, err
@@ -416,7 +427,7 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UU
 	rows, err := s.pool.Query(ctx, `
 		SELECT b.id, b.batch_code, b.car_model_id,
 		       cb.name, cm.name, cm.size_class::text, pl.code, pl.name, cm.barcode,
-		       b.roll_id, rm.roll_code,
+		       b.roll_id, rm.lot_code,
 		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
 		       b.rework_count, b.created_by, u.name,
 		       b.version, b.created_at, b.updated_at,
@@ -454,7 +465,7 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UU
 		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
 		LEFT JOIN batches pb ON pb.id = b.parent_batch_id
 		JOIN users u       ON u.id = b.created_by
-		LEFT JOIN raw_materials rm ON rm.id = b.roll_id
+		LEFT JOIN material_lots rm ON rm.id = b.roll_id
 		WHERE b.current_phase = $1
 		  AND b.status IN ('pending', 'in_progress')
 		  AND (
@@ -897,22 +908,29 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 	}
 
 	// Close MY open log — worker_id in the WHERE enforces the exclusive claim.
-	ct, err := tx.Exec(ctx, `
+	var logID uuid.UUID
+	err = tx.QueryRow(ctx, `
 		UPDATE phase_logs
 		SET completed_at = NOW(), quantity_completed = $1, notes = NULLIF($2,'')
 		WHERE batch_id = $3 AND phase = $4 AND completed_at IS NULL AND worker_id = $5
-	`, quantityCompleted, notes, batchID, phase, workerID)
+		RETURNING id
+	`, quantityCompleted, notes, batchID, phase, workerID).Scan(&logID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotYours // an open log exists (status=in_progress) but isn't this worker's
+	}
 	if err != nil {
 		return err
-	}
-	if ct.RowsAffected() == 0 {
-		return ErrNotYours // an open log exists (status=in_progress) but isn't this worker's
 	}
 
 	next, newStatus := nextPhase(phase)
 	if _, err := tx.Exec(ctx,
 		`UPDATE batches SET current_phase = $1, status = $2, cut_qty = cut_qty + $3, version = version + 1 WHERE id = $4`,
 		next, newStatus, quantityCompleted, batchID); err != nil {
+		return err
+	}
+
+	// Materials for exactly these pieces (materials.md). Same tx; never fails for stock problems.
+	if err := consumeForCutting(ctx, tx, batchID, logID, quantityCompleted, workerID); err != nil {
 		return err
 	}
 

@@ -36,6 +36,32 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | GET/POST/PATCH | `/stock/rolls`, `/stock/rolls/:id` | rolls with `is_low`, `batch_count`; PATCH `{remaining_meters?, is_active?}` |
 | GET | `/stock/finished` | packed units grouped by model |
 | GET | `/reports/workers?from=YYYY-MM-DD&to=YYYY-MM-DD` | dates are factory days (`FACTORY_TZ`, default Asia/Kolkata), `to` inclusive; default last 7 days incl. today; per worker `batches_done, pieces_done, avg_duration_secs, currently_working` (open claim, window-independent); sorted pieces desc. Role-guarded |
+| PATCH | `/car-models/:id` | also `consumption_group_id` (active group only); tx + audit. List returns `consumption_group_id`, `consumption_group_name` |
+
+### Materials (C1c · `internal/materials` · design `02-domain/materials.md`)
+Quantities are JSON numbers with ≤ 3 decimals (money ≤ 2), parsed exactly (no float). Errors: 400 `bad_request`,
+404 `not_found`, 409 `duplicate` / `unit_locked` / `has_active_variants` / `variants_in_use` / `lot_has_consumption` /
+`group_in_use` / `group_is_default`. Every mutation: tx + audit row; every lot quantity change is a movement.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET/POST | `/materials/types` | rows add `stock_remaining`, `active_lots`, `is_low`. POST `{code, name, unit, has_variants?, min_level?, sort?, is_active?}` (code upper-cased) |
+| PATCH | `/materials/types/:id` | same fields (`min_level: null` clears). 409 `unit_locked` once the type has movements; `has_variants:false` → 409 `has_active_variants` / `variants_in_use` |
+| GET/POST | `/materials/types/:id/variants` | `{name, specs (object), is_active?}`; 400 if the type has no variants |
+| PATCH | `/materials/variants/:id` | `{name?, specs?, is_active?}` |
+| GET | `/materials/lots?type_id&active&low` | lots with type, variant, colour, qty, unit, cost, supplier, `last_movement_at`. `low=true` = lots of types below `min_level` |
+| POST | `/materials/lots` | receive `{material_type_id, variant_id (iff has_variants), lot_code, color, qty > 0, unit_cost?, supplier?, note?}` → lot + `receive` movement |
+| POST | `/materials/lots/:id/adjust` | `{new_remaining ≥ 0, reason}` → `adjust` for the difference (400 if no change) |
+| POST | `/materials/lots/:id/waste` · `/return` | `{qty > 0, reason}` → `waste` (−, ≤ remaining) / `return` (+) |
+| PATCH | `/materials/lots/:id` | `is_active, color, supplier, note, unit_cost` (null clears); `material_type_id` / `variant_id` only before any consume/waste/return (else 409 `lot_has_consumption`) — opening movements move along |
+| GET | `/materials/movements?lot_id\|type_id\|batch_id&from&to&limit&cursor` | ledger newest first with lot, type, variant, batch code, actor names; `{items, next_cursor?}` (keyset; limit ≤ 200, default 50); from/to = factory days |
+| GET/POST | `/consumption-groups` | rows add `car_count`. `{name, sort?, is_active?, default_for_size?}` — name and size default unique |
+| PATCH | `/consumption-groups/:id` | same fields (`default_for_size: null` clears). Can't deactivate while cars use it (409 `group_in_use`) or while it's a size default (409 `group_is_default`) |
+| GET | `/recipes?product_line_id` | grid: every group with its recipe lines for the line |
+| PUT | `/recipes/:product_line_id/:group_id/lines` | body = array `[{material_type_id, variant_id?, qty_per_mat > 0}]`, full replace; creates the recipe row |
+| GET/PUT | `/car-models/:id/material-overrides` | body = array, `qty_per_mat ≥ 0` (0 = doesn't use it), full replace |
+| GET | `/recipes/resolve?car_model_id&quantity&lot_id?` | **dry run** of the engine (same planner): per type `source, variant, qty_per_mat, need, available, shortfall, draws[]`; no writes |
+| GET | `/batches/:id/materials` | plan rows + consume/shortfall movements grouped by cutting completion |
 
 All routes above require an **admin** token (`owner`/`supervisor`); worker tokens get 403 (U0 / G4).
 
@@ -48,6 +74,7 @@ All routes above require an **admin** token (`owner`/`supervisor`); worker token
 | POST | `/worker/batches/:id/complete` | `{quantity_completed, notes?}` — **cutting only**; 400 for stitching/packing |
 | GET | `/worker/units/:code/peek` | Packer inspection before pack/flag. Returns `{unit_code, batch_code, status, batch_phase, batch_status, joined, can_pack, can_rework, reason}` |
 | POST | `/worker/units/:code/rework` | Multipart form: `reasons` (`stitching_fault`, `stain`, `cutting_fault`, `material_defect`, `other`), `note?`, `photos` (1-3 images). Flags unit in rework |
+| GET | `/worker/batches/:id/materials-needed` | **cutter token only** (else 403 `cutter_only`): for the remaining mats (quantity − cut_qty, while cutting) → per type `type_name, unit, need, lots[{lot_code, color, width, qty}], shortfall`. Read-only |
 | GET | `/worker/rework` | Stitcher rework queue: lists open rework items where `route = 'stitcher'` and `stitched_by = worker_id` |
 | POST | `/worker/units/scan` | `{unit_code}` → `ScanResult`. Marks stitched / packed, or repairs rework (`rework_fixed: true`). 404 unit_not_found · 409 wrong_phase / not_started / quota_reached / in_rework / written_off / rework_pending_decision · 403 not_your_rework |
 

@@ -22,13 +22,15 @@ Monorepo (pnpm workspace, hoisted node_modules):
 3. No behaviour changes outside the task. List anything you change outside scope and why.
 4. Small, separate commits per logical step.
 5. Never log credentials (PINs, codes, tokens). Never commit `.env`.
+6. **Agents never run Postman, seeds or tests against the `rps` database.** Use the isolated `rps_test`
+   (`scripts/test-db.sh`). DB tests read `TEST_DATABASE_URL` only (via `testutil.DB(t)`), never `DATABASE_URL`.
 
 ## Backend rules
 
 - Every mutation in a tx with `defer tx.Rollback(ctx)`; audit row in the same tx (`audit.Write`).
 - Errors are sentinels matched with `errors.Is`; handlers map them to `httpx.Error(c, status, code, msg)`; log real errors with zerolog before `httpx.Internal`.
 - SELECT columns and Scan targets must match 1:1 (most common bug here). Nullable columns → pointer fields.
-- Migrations: run from repo root: `set -a; source .env; set +a; migrate -path apps/backend/migrations -database "$DATABASE_URL" up`. Use the next free number. Enum names: `batch_phase`, `batch_status`, `unit_status`, `worker_station`, `car_size`.
+- Migrations: run from repo root: `set -a; source .env; set +a; migrate -path apps/backend/migrations -database "$DATABASE_URL" up`. Use the next free number. Enum names: `batch_phase`, `batch_status`, `unit_status`, `worker_station`, `car_size`, `material_unit`, `movement_kind`.
 - Seeds: run from repo root: `scripts/seed-dev.sh <db_name> [--force]` (database name required; `rps` requires `--force`). Chains `go run ./cmd/seed` → `seeds/01-catalog.sql` → `seeds/02-demo.sql` → `scripts/seed-uploads.sh`.
 - Photos: signed URLs (`?exp=&sig=`), public file route verifies the signature. Never require auth headers on image URLs.
 
@@ -53,9 +55,13 @@ Monorepo (pnpm workspace, hoisted node_modules):
 
 ```
 pnpm typecheck && pnpm lint && pnpm format:check
-cd apps/backend && go build ./... && golangci-lint run ./... && go test ./...
+scripts/test-db.sh                       # (re)creates rps_test; prints TEST_DATABASE_URL to export
+cd apps/backend && go build ./... && golangci-lint run ./... && TEST_DATABASE_URL=… go test -race ./...
 cd apps/admin-web && pnpm build          # when admin changed
 ```
+Postman runs only against a **second backend on rps_test**:
+`cd apps/backend && DATABASE_URL=<rps_test url> PORT=8081 go run ./cmd/server`, then run the collection with the
+`RPS test` environment (`apps/backend/RPS-test.postman_environment.json`, baseUrl `http://localhost:8081/api/v1`).
 
 Then `scripts/review.sh master` and list: files changed, anything out of scope, red flags.
 

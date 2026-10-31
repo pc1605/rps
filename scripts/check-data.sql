@@ -47,3 +47,47 @@ WHERE c.year = EXTRACT(YEAR FROM NOW()) GROUP BY c.last_number HAVING c.last_num
 SELECT current_phase, status, COUNT(*) FROM batches GROUP BY 1,2 ORDER BY 1,2;
 SELECT status, COUNT(*) FROM batch_units GROUP BY 1 ORDER BY 1;
 SELECT route, decision, (fixed_at IS NULL) AS open, COUNT(*) FROM rework_logs GROUP BY 1,2,3;
+
+-- ───── materials (migration 015) ─────
+\echo '13. lot qty_remaining differs from the sum of its movements'
+SELECT l.lot_code, l.qty_remaining, COALESCE(SUM(m.qty), 0) AS ledger
+FROM material_lots l LEFT JOIN material_movements m ON m.lot_id = l.id
+GROUP BY l.id HAVING l.qty_remaining <> COALESCE(SUM(m.qty), 0);
+
+\echo '14. lot variant not of the lot''s type, or variant on a type without variants'
+SELECT l.lot_code, t.code AS lot_type, v.name AS variant, vt.code AS variant_type
+FROM material_lots l JOIN material_types t ON t.id = l.material_type_id
+JOIN material_variants v ON v.id = l.variant_id JOIN material_types vt ON vt.id = v.material_type_id
+WHERE v.material_type_id <> l.material_type_id OR NOT t.has_variants;
+
+\echo '15. recipe-line / car-override variant not of the line''s type, or on a type without variants'
+SELECT 'recipe_line' AS src, rl.id, t.code AS line_type, v.name AS variant
+FROM recipe_lines rl JOIN material_types t ON t.id = rl.material_type_id JOIN material_variants v ON v.id = rl.variant_id
+WHERE v.material_type_id <> rl.material_type_id OR NOT t.has_variants
+UNION ALL
+SELECT 'car_override', o.id, t.code, v.name
+FROM car_material_overrides o JOIN material_types t ON t.id = o.material_type_id JOIN material_variants v ON v.id = o.variant_id
+WHERE v.material_type_id <> o.material_type_id OR NOT t.has_variants;
+
+\echo '16. movement type differs from its lot''s type'
+SELECT m.id, l.lot_code, mt.code AS movement_type, lt.code AS lot_type
+FROM material_movements m JOIN material_lots l ON l.id = m.lot_id
+JOIN material_types mt ON mt.id = m.material_type_id JOIN material_types lt ON lt.id = l.material_type_id
+WHERE m.material_type_id <> l.material_type_id;
+
+\echo '17. WARNING (informational, may be non-empty): active cars with no recipe for their product line × consumption group — consumption would plan "none"'
+SELECT cb.name AS brand, cm.name AS model, pl.code AS line, g.name AS grp
+FROM car_models cm JOIN car_brands cb ON cb.id = cm.brand_id
+JOIN product_lines pl ON pl.id = cm.product_line_id JOIN consumption_groups g ON g.id = cm.consumption_group_id
+WHERE cm.is_active AND NOT EXISTS (
+  SELECT 1 FROM recipes r WHERE r.product_line_id = cm.product_line_id AND r.consumption_group_id = cm.consumption_group_id);
+
+\echo '18. coverage — materials'
+SELECT t.code, t.unit, t.has_variants,
+       (SELECT COUNT(*) FROM material_variants v WHERE v.material_type_id = t.id) AS variants,
+       (SELECT COUNT(*) FROM material_lots l WHERE l.material_type_id = t.id) AS lots,
+       (SELECT COALESCE(SUM(l.qty_remaining), 0) FROM material_lots l WHERE l.material_type_id = t.id AND l.is_active) AS remaining
+FROM material_types t ORDER BY t.sort;
+SELECT kind, COUNT(*) FROM material_movements GROUP BY 1 ORDER BY 1;
+SELECT COUNT(*) AS recipes, (SELECT COUNT(*) FROM recipe_lines) AS lines,
+       (SELECT COUNT(*) FROM car_material_overrides) AS overrides FROM recipes;

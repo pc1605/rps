@@ -19,6 +19,9 @@ export interface CarItem {
   line_name?: string;
   barcode?: string;
   is_active: boolean;
+  /** Recipe key with the product line (migration 015). */
+  consumption_group_id: number;
+  consumption_group_name: string;
 }
 export interface CarItemInput {
   brand_id: number;
