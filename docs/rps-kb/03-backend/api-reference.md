@@ -56,7 +56,7 @@ Quantities are JSON numbers with ≤ 3 decimals (money ≤ 2), parsed exactly (n
 
 | Method | Path | Notes |
 |---|---|---|
-| GET/POST | `/materials/types` | rows add `stock_remaining`, `active_lots`, `is_low`, `recipe_lines`, `override_cars`, `has_history` (any lot / movement / plan row), `deletable`. POST `{code, name, unit, has_variants?, min_level?, sort?, is_active?}` (code upper-cased) |
+| GET/POST | `/materials/types` | rows add `stock_remaining`, `active_lots`, `is_low`, `recipe_lines`, `override_cars`, `has_history` (any lot / movement / plan row), `deletable`. POST `{code, name, unit, has_variants?, min_level?, sort?, is_active?}` (code upper-cased; no `sort` = after the last type, MAX + 10) |
 | PATCH | `/materials/types/:id` | same fields (`min_level: null` clears). 409 `unit_locked` once the type has movements; `has_variants:false` → 409 `has_active_variants` / `variants_in_use` |
 | DELETE | `/materials/types/:id` | 204; only when `deletable` (variants go with it), else 409 `type_in_use` — deactivate instead. tx + audit |
 | GET/POST | `/materials/types/:id/variants` | `{name, specs (object), is_active?}`; 400 if the type has no variants |

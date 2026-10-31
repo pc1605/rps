@@ -173,7 +173,11 @@ function TypeDialog({ type }: { type?: MaterialTypeRow }) {
                 inputMode="numeric"
                 value={sort}
                 onChange={(e) => setSort(e.target.value.replace(/\D/g, ""))}
+                aria-describedby="mt-sort-hint"
               />
+              <p id="mt-sort-hint" className="text-caption text-muted-foreground">
+                Lower shows first. Blank = at the end.
+              </p>
             </div>
           </div>
           <div className="flex items-center justify-between rounded-md border p-3">

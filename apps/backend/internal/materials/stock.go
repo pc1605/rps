@@ -124,6 +124,7 @@ func normType(in *TypeInput) error {
 	return nil
 }
 
+// CreateType: no sort given = after the last type (MAX(sort) + 10), so a new type lands at the end.
 func (s *Service) CreateType(ctx context.Context, in TypeInput, a Actor) (*MaterialType, error) {
 	if in.Code == nil || in.Name == nil || in.Unit == nil {
 		return nil, invalid("code, name and unit are required")
@@ -131,12 +132,9 @@ func (s *Service) CreateType(ctx context.Context, in TypeInput, a Actor) (*Mater
 	if err := normType(&in); err != nil {
 		return nil, err
 	}
-	hasVariants, sort, active := false, 0, true
+	hasVariants, active := false, true
 	if in.HasVariants != nil {
 		hasVariants = *in.HasVariants
-	}
-	if in.Sort != nil {
-		sort = *in.Sort
 	}
 	if in.IsActive != nil {
 		active = *in.IsActive
@@ -146,8 +144,10 @@ func (s *Service) CreateType(ctx context.Context, in TypeInput, a Actor) (*Mater
 		var id int
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO material_types (code, name, unit, has_variants, min_level, sort, is_active)
-			VALUES ($1, $2, $3::material_unit, $4, $5::bigint::numeric / 1000, $6, $7) RETURNING id`,
-			*in.Code, *in.Name, *in.Unit, hasVariants, milliArg(in.MinLevel.Value), sort, active).Scan(&id); err != nil {
+			VALUES ($1, $2, $3::material_unit, $4, $5::bigint::numeric / 1000,
+			        COALESCE($6::int, (SELECT COALESCE(MAX(sort), 0) + 10 FROM material_types)), $7)
+			RETURNING id`,
+			*in.Code, *in.Name, *in.Unit, hasVariants, milliArg(in.MinLevel.Value), in.Sort, active).Scan(&id); err != nil {
 			if isUnique(err) {
 				return fmt.Errorf("%w: material type code %q", ErrDuplicate, *in.Code)
 			}

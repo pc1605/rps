@@ -103,7 +103,14 @@ func is(t *testing.T, what string, err, want error) {
 
 func TestTypesAndVariants(t *testing.T) {
 	f := newStockFx(t)
+	var maxSort int
+	if err := f.pool.QueryRow(f.ctx, `SELECT COALESCE(MAX(sort), 0) FROM material_types`).Scan(&maxSort); err != nil {
+		t.Fatal(err)
+	}
 	sheet := f.typ("SHEET", "m", true)
+	if sheet.Sort != maxSort+10 {
+		t.Errorf("type without sort: sort = %d, want %d (after the last)", sheet.Sort, maxSort+10)
+	}
 	if sheet.Code != "SHEET-"+f.sfx || sheet.Unit != "m" || !sheet.HasVariants || !sheet.IsActive {
 		t.Fatalf("created type = %+v", sheet)
 	}
