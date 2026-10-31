@@ -253,7 +253,8 @@ const historyColumns: Column<WorkerHistoryRow>[] = [
     cell: (h) => {
       const from = h.first_scan_at ?? h.started_at;
       const to = h.last_scan_at ?? h.completed_at;
-      const dur = to ? fmtDuration((new Date(to).getTime() - new Date(from).getTime()) / 1000) : null;
+      const secs = to ? (new Date(to).getTime() - new Date(from).getTime()) / 1000 : 0;
+      const dur = secs >= 60 ? fmtDuration(secs) : null; // single-scan / instant spans say nothing
       return (
         <span className="tabular text-caption text-muted-foreground">
           {fmtStamp(h.started_at)}
