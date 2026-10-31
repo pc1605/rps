@@ -36,7 +36,6 @@ type Stats struct {
 	AwaitingAssignment  int `json:"awaiting_assignment"`
 	CompletedToday      int `json:"completed_today"`
 	TotalActive         int `json:"total_active"`
-	UnitsToday          int `json:"units_today"`
 	ReworkOpen          int `json:"rework_open"`
 	ReworkNeedsDecision int `json:"rework_needs_decision"`
 }
