@@ -31,10 +31,10 @@ func NewService(pool *pgxpool.Pool) *Service {
 // List returns ALL rolls (active + finished), newest first, with low-stock flag.
 func (s *Service) List(ctx context.Context) ([]Roll, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT r.id, r.roll_code, r.color, r.total_meters, r.remaining_meters,
+		SELECT r.id, r.lot_code, r.color, r.qty_received, r.qty_remaining,
 		       r.is_active, r.received_at, r.created_at,
 		       (SELECT COUNT(*) FROM batches b WHERE b.roll_id = r.id)
-		FROM raw_materials r
+		FROM material_lots r
 		ORDER BY r.is_active DESC, r.created_at DESC
 	`)
 	if err != nil {
@@ -55,7 +55,11 @@ func (s *Service) List(ctx context.Context) ([]Roll, error) {
 	return out, rows.Err()
 }
 
-// Create records a new rexine roll arrival. remaining starts = total.
+// DefaultRollTypeCode is the material type a roll gets when the caller doesn't say (pre-C2 stock screen).
+const DefaultRollTypeCode = "REX-R"
+
+// Create records a new roll (a material lot) arrival: remaining starts = total, and a
+// 'receive' movement is written in the same tx so qty_remaining = SUM(movements).
 func (s *Service) Create(ctx context.Context, in CreateRollInput, actorID uuid.UUID, actorRole, ip string) (*Roll, error) {
 	in.RollCode = strings.TrimSpace(in.RollCode)
 	in.Color = strings.TrimSpace(in.Color)
@@ -72,12 +76,25 @@ func (s *Service) Create(ctx context.Context, in CreateRollInput, actorID uuid.U
 	}
 	defer tx.Rollback(ctx)
 
+	var typeID int
+	if in.MaterialTypeID != nil {
+		err = tx.QueryRow(ctx, `SELECT id FROM material_types WHERE id = $1 AND is_active`, *in.MaterialTypeID).Scan(&typeID)
+	} else {
+		err = tx.QueryRow(ctx, `SELECT id FROM material_types WHERE code = $1`, DefaultRollTypeCode).Scan(&typeID)
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("%w: material type not found or inactive", ErrInvalidInput)
+	}
+	if err != nil {
+		return nil, err
+	}
+
 	var r Roll
 	err = tx.QueryRow(ctx, `
-		INSERT INTO raw_materials (roll_code, color, total_meters, remaining_meters)
-		VALUES ($1, $2, $3, $3)
-		RETURNING id, roll_code, color, total_meters, remaining_meters, is_active, received_at, created_at
-	`, in.RollCode, in.Color, in.TotalMeters).Scan(
+		INSERT INTO material_lots (lot_code, color, qty_received, qty_remaining, material_type_id)
+		VALUES ($1, $2, $3, $3, $4)
+		RETURNING id, lot_code, color, qty_received, qty_remaining, is_active, received_at, created_at
+	`, in.RollCode, in.Color, in.TotalMeters, typeID).Scan(
 		&r.ID, &r.RollCode, &r.Color, &r.TotalMeters, &r.RemainingMeters,
 		&r.IsActive, &r.ReceivedAt, &r.CreatedAt,
 	)
@@ -87,6 +104,12 @@ func (s *Service) Create(ctx context.Context, in CreateRollInput, actorID uuid.U
 			return nil, ErrDuplicateCode
 		}
 		return nil, fmt.Errorf("insert roll: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO material_movements (lot_id, material_type_id, kind, qty, reason, actor_user_id, created_at)
+		VALUES ($1, $2, 'receive', $3, 'received', $4, $5)
+	`, r.ID, typeID, in.TotalMeters, actorID, r.ReceivedAt); err != nil {
+		return nil, fmt.Errorf("receive movement: %w", err)
 	}
 
 	if err := audit.Write(ctx, tx, audit.Entry{
@@ -115,11 +138,15 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, in UpdateRollInput, 
 
 	// Load current (locked) for validation + audit "before"
 	var before Roll
+	var typeID int
+	var variantID *int
 	err = tx.QueryRow(ctx, `
-		SELECT id, roll_code, color, total_meters, remaining_meters, is_active, received_at, created_at
-		FROM raw_materials WHERE id = $1 FOR UPDATE
+		SELECT id, lot_code, color, qty_received, qty_remaining, is_active, received_at, created_at,
+		       material_type_id, variant_id
+		FROM material_lots WHERE id = $1 FOR UPDATE
 	`, id).Scan(&before.ID, &before.RollCode, &before.Color, &before.TotalMeters,
-		&before.RemainingMeters, &before.IsActive, &before.ReceivedAt, &before.CreatedAt)
+		&before.RemainingMeters, &before.IsActive, &before.ReceivedAt, &before.CreatedAt,
+		&typeID, &variantID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -156,12 +183,21 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, in UpdateRollInput, 
 	}
 
 	_, err = tx.Exec(ctx, `
-		UPDATE raw_materials
-		SET color = $1, total_meters = $2, remaining_meters = $3, is_active = $4
+		UPDATE material_lots
+		SET color = $1, qty_received = $2, qty_remaining = $3, is_active = $4
 		WHERE id = $5
 	`, after.Color, after.TotalMeters, after.RemainingMeters, after.IsActive, id)
 	if err != nil {
 		return nil, err
+	}
+	// Keep the ledger true: a manual remaining correction is an 'adjust' movement for the difference.
+	// Delta computed in SQL (numeric) so float rounding can't break qty_remaining = SUM(movements).
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO material_movements (lot_id, material_type_id, variant_id, kind, qty, reason, actor_user_id)
+		SELECT $1, $2, $3, 'adjust', $4::numeric(12,3) - $5::numeric(12,3), 'manual correction (stock page)', $6
+		WHERE $4::numeric(12,3) <> $5::numeric(12,3)
+	`, id, typeID, variantID, after.RemainingMeters, before.RemainingMeters, actorID); err != nil {
+		return nil, fmt.Errorf("adjust movement: %w", err)
 	}
 
 	if err := audit.Write(ctx, tx, audit.Entry{

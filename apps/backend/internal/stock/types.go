@@ -25,6 +25,8 @@ type CreateRollInput struct {
 	RollCode    string  `json:"roll_code"`
 	Color       string  `json:"color"`
 	TotalMeters float64 `json:"total_meters"`
+	// Optional; defaults to DefaultRollTypeCode (Rexine R) until C2's receive screen.
+	MaterialTypeID *int `json:"material_type_id,omitempty"`
 }
 
 // UpdateRollInput — pointer fields: only provided ones change.

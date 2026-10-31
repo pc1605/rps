@@ -90,7 +90,7 @@ func main() {
 	}
 	fmt.Println("✓ car brands + models seeded")
 
-	// ───── Rexine rolls ─────
+	// ───── Rexine rolls (material lots of type Rexine R, migration 015) ─────
 	rolls := []struct {
 		code  string
 		color string
@@ -101,10 +101,16 @@ func main() {
 		{"R-003", "Coffee Brown", 30},
 	}
 	for _, r := range rolls {
+		// Lot + its 'receive' movement in one statement: ON CONFLICT → no row → no duplicate movement.
 		_, err = pool.Exec(ctx, `
-			INSERT INTO raw_materials (roll_code, color, total_meters, remaining_meters)
-			VALUES ($1, $2, $3, $3)
-			ON CONFLICT (roll_code) DO NOTHING
+			WITH lot AS (
+				INSERT INTO material_lots (lot_code, color, qty_received, qty_remaining, material_type_id)
+				SELECT $1, $2, $3, $3, id FROM material_types WHERE code = 'REX-R'
+				ON CONFLICT (lot_code) DO NOTHING
+				RETURNING id, material_type_id, qty_received
+			)
+			INSERT INTO material_movements (lot_id, material_type_id, kind, qty, reason)
+			SELECT id, material_type_id, 'receive', qty_received, 'seed' FROM lot
 		`, r.code, r.color, r.total)
 		if err != nil {
 			panic(err)
