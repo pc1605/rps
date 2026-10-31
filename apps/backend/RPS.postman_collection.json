@@ -4016,7 +4016,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"action\": \"recut\",\n  \"reason\": \"new material received\"\n}"
+              "raw": "{\n  \"action\": \"recut\",\n  \"reason\": \"roll_ran_out\",\n  \"note\": \"new material received\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/batches/{{shortBatchId}}/resolve-short",
@@ -4183,7 +4183,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"action\": \"split\",\n  \"reason\": \"split remaining to new batch\"\n}"
+              "raw": "{\n  \"action\": \"split\",\n  \"reason\": \"order_changed\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/batches/{{splitBatchId}}/resolve-short",
@@ -4319,6 +4319,48 @@
           }
         },
         {
+          "name": "Resolve Short \u00b7 no reason \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"reduce\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/batches/{{reduceBatchId}}/resolve-short",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "batches",
+                "{{reduceBatchId}}",
+                "resolve-short"
+              ]
+            }
+          }
+        },
+        {
           "name": "Resolve Short \u2014 Reduce",
           "event": [
             {
@@ -4349,7 +4391,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"action\": \"reduce\",\n  \"reason\": \"roll ended\"\n}"
+              "raw": "{\n  \"action\": \"reduce\",\n  \"reason\": \"material_defect\",\n  \"note\": \"roll ended\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/batches/{{reduceBatchId}}/resolve-short",

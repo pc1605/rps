@@ -766,9 +766,30 @@ const (
 	ShortRecut  ShortAction = "recut"
 )
 
+// ShortReasonLabel: the reasons a short cut can be resolved with (W5). Mirrors SHORT_REASON_LABEL in @rps/shared.
+var ShortReasonLabel = map[string]string{
+	"roll_ran_out":    "Roll ran out",
+	"material_defect": "Material defect",
+	"machine_issue":   "Machine issue",
+	"cutter_error":    "Cutter error",
+	"order_changed":   "Order changed",
+	"other":           "Other",
+}
+
 // ResolveShort is the admin's decision on a batch that came out of cutting short.
 // Allowed only while parked (awaiting_assignment) with cut_qty < quantity.
-func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action ShortAction, reason string, adminID uuid.UUID, ip string) (string, error) {
+// reason is a ShortReasonLabel code (required for every action); note is required for "other".
+func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action ShortAction, reason, note string, adminID uuid.UUID, ip string) (string, error) {
+	label, ok := ShortReasonLabel[reason]
+	if !ok {
+		return "", fmt.Errorf("%w: pick a reason for the short cut", ErrInvalidInput)
+	}
+	if reason == "other" && note == "" {
+		return "", fmt.Errorf("%w: describe the reason when it is Other", ErrInvalidInput)
+	}
+	if note != "" {
+		label += ": " + note
+	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return "", err
@@ -809,7 +830,7 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 		if _, err := tx.Exec(ctx, `DELETE FROM batch_units WHERE batch_id = $1 AND unit_number > $2`, batchID, b.CutQty); err != nil {
 			return "", err
 		}
-		note := fmt.Sprintf("Reduced from %d to %d", b.Quantity, b.CutQty)
+		msg := fmt.Sprintf("Reduced from %d to %d (%s)", b.Quantity, b.CutQty, label)
 		if action == ShortSplit {
 			if err := tx.QueryRow(ctx, `SELECT next_batch_code()`).Scan(&remainderCode); err != nil {
 				return "", err
@@ -833,14 +854,12 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 				remID, remainderCode, short); err != nil {
 				return "", fmt.Errorf("remainder units: %w", err)
 			}
-			note = fmt.Sprintf("Short cut %d of %d — remainder → %s", b.CutQty, b.Quantity, remainderCode)
-		} else if reason != "" {
-			note += " (" + reason + ")"
+			msg = fmt.Sprintf("Short cut %d of %d — remainder → %s (%s)", b.CutQty, b.Quantity, remainderCode, label)
 		}
 		if _, err := tx.Exec(ctx, `
 			UPDATE batches SET quantity = $1, short_reason = NULLIF($2,''),
 			  notes = CONCAT_WS(E'\n', NULLIF(notes,''), $3::text), version = version + 1
-			WHERE id = $4`, b.CutQty, reason, note, batchID); err != nil {
+			WHERE id = $4`, b.CutQty, label, msg, batchID); err != nil {
 			return "", err
 		}
 
@@ -849,7 +868,7 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 		if _, err := tx.Exec(ctx, `
 			UPDATE batches SET current_phase = 'cutting', status = 'pending',
 			  notes = CONCAT_WS(E'\n', NULLIF(notes,''), $1::text), version = version + 1
-			WHERE id = $2`, fmt.Sprintf("Sent back to cut remaining %d", short), batchID); err != nil {
+			WHERE id = $2`, fmt.Sprintf("Sent back to cut remaining %d (%s)", short, label), batchID); err != nil {
 			return "", err
 		}
 	default:
@@ -860,7 +879,7 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 		ActorID: adminID.String(), ActorRole: "admin",
 		EntityType: "batch", EntityID: batchID.String(),
 		Action: audit.ActionTransition,
-		After:  map[string]any{"event": "short_cut_" + string(action), "cut": b.CutQty, "quantity": b.Quantity, "remainder": remainderCode, "reason": reason},
+		After:  map[string]any{"event": "short_cut_" + string(action), "cut": b.CutQty, "quantity": b.Quantity, "remainder": remainderCode, "reason": reason, "note": note},
 		IP:     ip,
 	}); err != nil {
 		return "", err
@@ -868,6 +887,9 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 	ev := Event{BatchID: batchID, Kind: EvShortResolved, FromPhase: b.Phase, ToPhase: b.Phase,
 		FromStatus: b.Status, ToStatus: b.Status, UserID: uid(adminID),
 		Data: map[string]any{"action": action, "reason": reason, "cut": b.CutQty, "quantity": b.Quantity}}
+	if note != "" {
+		ev.Data["note"] = note
+	}
 	if action == ShortRecut {
 		ev.ToPhase, ev.ToStatus = PhaseCutting, StatusPending
 	}

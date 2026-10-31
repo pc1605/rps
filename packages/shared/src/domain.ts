@@ -6,6 +6,11 @@ export type UnitStatus = "pending" | "packed" | "defective" | "dispatched" | "re
 export type Station = "cutter" | "stitcher" | "packer";
 export type SizeClass = "small" | "medium" | "large";
 
+/** Why a short cut was resolved the way it was (W5). Required for split, reduce and re-cut. */
+export type ShortReason =
+  "roll_ran_out" | "material_defect" | "machine_issue" | "cutter_error" | "order_changed" | "other";
+export type ShortAction = "split" | "reduce" | "recut";
+
 export type ReworkReason = "stitching_fault" | "stain" | "cutting_fault" | "material_defect" | "other";
 export type ReworkRoute = "stitcher" | "admin";
 export type ReworkDecision = "to_stitcher" | "recut" | "write_off";

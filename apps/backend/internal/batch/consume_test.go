@@ -345,7 +345,7 @@ func TestConsumeTwoCompletions(t *testing.T) {
 	f := newMatFixture(t)
 	b := f.batch(f.car, 4, &f.sRoll)
 	f.cut(b, 2)
-	if _, err := f.s.ResolveShort(f.ctx, b, ShortRecut, "", f.adminID, ip); err != nil {
+	if _, err := f.s.ResolveShort(f.ctx, b, ShortRecut, "roll_ran_out", "", f.adminID, ip); err != nil {
 		t.Fatalf("recut: %v", err)
 	}
 	f.cut(b, 2)

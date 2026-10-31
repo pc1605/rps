@@ -3,6 +3,7 @@ package batch
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -76,7 +77,18 @@ func TestBatchEvents(t *testing.T) {
 	}
 	must("cut start", s.StartPhase(ctx, b.ID, cutterID, "cutter", ip))
 	must("cut complete (short)", s.CompletePhase(ctx, b.ID, cutterID, "cutter", 2, "", ip))
-	rem, err := s.ResolveShort(ctx, b.ID, ShortSplit, "roll_ran_out", adminID, ip)
+	// W5: a reason is required for every action; "other" needs a note.
+	for _, c := range []struct {
+		action       ShortAction
+		reason, note string
+	}{
+		{ShortSplit, "", ""}, {ShortRecut, "rain", ""}, {ShortReduce, "other", ""},
+	} {
+		if _, err := s.ResolveShort(ctx, b.ID, c.action, c.reason, c.note, adminID, ip); !errors.Is(err, ErrInvalidInput) {
+			t.Errorf("resolve %s with reason %q note %q: got %v, want invalid input", c.action, c.reason, c.note, err)
+		}
+	}
+	rem, err := s.ResolveShort(ctx, b.ID, ShortSplit, "roll_ran_out", "", adminID, ip)
 	must("split", err)
 	target := 2
 	must("assign", s.SetAssignments(ctx, b.ID, PhaseStitching, []AssignmentInput{{WorkerID: stitcherID, TargetQty: &target}}, adminID, ip))
