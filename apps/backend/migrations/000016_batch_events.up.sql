@@ -35,23 +35,31 @@ INSERT INTO app_settings (key, value) VALUES
   ('stuck_hours', '{"cutting": 24, "awaiting_assignment": 24, "stitching": 48, "packing": 48}');
 
 -- ───── backfill ─────
+-- backfill_batch_events(): rebuilds history for batches that have NO events yet (idempotent).
+-- Called once below for existing data, and by seeds/02-demo.sql after inserting demo batches.
+CREATE FUNCTION backfill_batch_events() RETURNS int LANGUAGE plpgsql AS $fn$
+DECLARE n int;
+BEGIN
+  CREATE TEMP TABLE _bf ON COMMIT DROP AS
+    SELECT b.id FROM batches b WHERE NOT EXISTS (SELECT 1 FROM batch_events e WHERE e.batch_id = b.id);
 
 -- created (remainders / re-cuts keep their parent)
 INSERT INTO batch_events (batch_id, at, kind, to_phase, to_status, actor_user_id, data)
 SELECT b.id, b.created_at, 'created', 'cutting', 'pending', b.created_by,
        jsonb_strip_nulls(jsonb_build_object('backfill', true, 'quantity', b.quantity, 'parent', b.parent_batch_id))
-FROM batches b;
+FROM batches b WHERE b.id IN (SELECT id FROM _bf);
 
 -- cutting: one start + one completion per cutting log
 INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, to_status, actor_worker_id, data)
 SELECT pl.batch_id, pl.started_at, 'cut_started', 'cutting', 'cutting', 'in_progress', pl.worker_id, '{"backfill": true}'
-FROM phase_logs pl WHERE pl.phase = 'cutting';
+FROM phase_logs pl WHERE pl.phase = 'cutting' AND pl.batch_id IN (SELECT id FROM _bf);
 
 -- (every cut completion parks the batch in stitching / awaiting_assignment)
 INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, to_status, actor_worker_id, data)
 SELECT pl.batch_id, pl.completed_at, 'cut_completed', 'cutting', 'stitching', 'awaiting_assignment', pl.worker_id,
        jsonb_build_object('backfill', true, 'cut', pl.quantity_completed)
-FROM phase_logs pl WHERE pl.phase = 'cutting' AND pl.completed_at IS NOT NULL;
+FROM phase_logs pl WHERE pl.phase = 'cutting' AND pl.completed_at IS NOT NULL
+  AND pl.batch_id IN (SELECT id FROM _bf);
 
 -- short-cut resolutions and assignment saves, from the audit log
 INSERT INTO batch_events (batch_id, at, kind, actor_user_id, data)
@@ -63,32 +71,40 @@ SELECT a.entity_id::uuid, a.created_at, 'short_resolved', a.actor_id,
          'cut', a.after_json->'cut', 'quantity', a.after_json->'quantity'))
 FROM audit_log a
 WHERE a.entity_type = 'batch' AND a.after_json->>'event' LIKE 'short\_cut\_%'
-  AND EXISTS (SELECT 1 FROM batches b WHERE b.id::text = a.entity_id);
+  AND a.entity_id IN (SELECT id::text FROM _bf);
 
 INSERT INTO batch_events (batch_id, at, kind, actor_user_id, data)
 SELECT a.entity_id::uuid, a.created_at, 'assigned', a.actor_id,
        jsonb_build_object('backfill', true, 'phase', a.after_json->'phase', 'workers', a.after_json->'workers')
 FROM audit_log a
 WHERE a.entity_type = 'batch' AND a.after_json->>'event' = 'assignments_set'
-  AND EXISTS (SELECT 1 FROM batches b WHERE b.id::text = a.entity_id);
+  AND a.entity_id IN (SELECT id::text FROM _bf);
 
 -- stitching / packing: first and last scan
 INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, to_status, data)
 SELECT bu.batch_id, MIN(bu.stitched_at), 'stitching_started', 'stitching', 'stitching', 'in_progress', '{"backfill": true}'
-FROM batch_units bu WHERE bu.stitched_at IS NOT NULL GROUP BY bu.batch_id;
+FROM batch_units bu WHERE bu.stitched_at IS NOT NULL AND bu.batch_id IN (SELECT id FROM _bf) GROUP BY bu.batch_id;
 
 INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, to_status, data)
 SELECT bu.batch_id, MAX(bu.stitched_at), 'stitching_completed', 'stitching', 'packing', 'pending', '{"backfill": true}'
 FROM batch_units bu JOIN batches b ON b.id = bu.batch_id
-WHERE bu.stitched_at IS NOT NULL AND b.current_phase IN ('packing', 'completed')
+WHERE bu.stitched_at IS NOT NULL AND b.current_phase IN ('packing', 'completed') AND b.id IN (SELECT id FROM _bf)
 GROUP BY bu.batch_id;
 
 INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, to_status, data)
 SELECT bu.batch_id, MIN(bu.packed_at), 'packing_started', 'packing', 'packing', 'in_progress', '{"backfill": true}'
-FROM batch_units bu WHERE bu.packed_at IS NOT NULL GROUP BY bu.batch_id;
+FROM batch_units bu WHERE bu.packed_at IS NOT NULL AND bu.batch_id IN (SELECT id FROM _bf) GROUP BY bu.batch_id;
 
 -- completed: last pack scan (or last update when nothing was packed, e.g. all written off)
 INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, to_status, data)
 SELECT b.id, COALESCE((SELECT MAX(bu.packed_at) FROM batch_units bu WHERE bu.batch_id = b.id), b.updated_at),
        'completed', 'packing', 'completed', 'completed', '{"backfill": true}'
-FROM batches b WHERE b.status = 'completed';
+FROM batches b WHERE b.status = 'completed' AND b.id IN (SELECT id FROM _bf);
+
+  SELECT COUNT(*) INTO n FROM _bf;
+  DROP TABLE _bf;
+  RETURN n;
+END
+$fn$;
+
+SELECT backfill_batch_events();
