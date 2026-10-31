@@ -8,9 +8,9 @@ export function fmtHours(h: number): string {
 export const pct = (part: number, whole: number) =>
   whole > 0 ? `${Math.round((part / whole) * 100)}%` : "—";
 
-/** Change vs the previous period: "+12%", "−8%", or "new" when it was 0. */
+/** Change vs the previous period: "+12%", "−8%"; nothing when the previous period was 0. */
 export function delta(now: number, before: number): string | undefined {
-  if (before === 0) return now > 0 ? "new" : undefined;
+  if (before === 0) return undefined;
   const d = Math.round(((now - before) / before) * 100);
   return d === 0 ? "±0%" : `${d > 0 ? "+" : "−"}${Math.abs(d)}%`;
 }

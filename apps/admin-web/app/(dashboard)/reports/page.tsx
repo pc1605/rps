@@ -67,7 +67,7 @@ export default function ReportsOverviewPage() {
     "Throughput, work in progress, stuck batches and yield.",
     <ThresholdsDialog />,
   );
-  const { data, isPending, isError } = useOverview(range.from, range.to);
+  const { data, isPending, isError, error } = useOverview(range.from, range.to);
   const { data: stuck, isPending: stuckPending } = useStuck();
 
   if (isError)
@@ -76,7 +76,7 @@ export default function ReportsOverviewPage() {
         {chrome}
         <EmptyState
           title="Couldn't load the overview"
-          body="Check the backend is running, then try another range."
+          body={error?.message ?? "Check the backend is running, then try another range."}
         />
       </div>
     );

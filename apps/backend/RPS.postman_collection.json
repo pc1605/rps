@@ -9214,6 +9214,255 @@
           }
         }
       ]
+    },
+    {
+      "name": "Reports v2 (R1)",
+      "description": "Overview, stuck, worker output, quality, stuck thresholds. Prereqs: Auth\u2192Login (admin).",
+      "item": [
+        {
+          "name": "Get settings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json().data.stuck_hours;",
+                  "pm.test('four thresholds', () => ['cutting','awaiting_assignment','stitching','packing'].forEach(k => pm.expect(s[k]).to.be.a('number')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/settings"
+          }
+        },
+        {
+          "name": "Put stuck hours \u00b7 0 \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/settings/stuck_hours",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cutting\": 0, \"awaiting_assignment\": 24, \"stitching\": 48, \"packing\": 48}"
+            }
+          }
+        },
+        {
+          "name": "Put stuck hours (defaults)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('saved', () => pm.expect(pm.response.json().data.cutting).to.eql(24));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/settings/stuck_hours",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cutting\": 24, \"awaiting_assignment\": 24, \"stitching\": 48, \"packing\": 48}"
+            }
+          }
+        },
+        {
+          "name": "Overview (last 30 days)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('30 days + 4 stages', () => { pm.expect(d.days).to.have.length(30); pm.expect(d.wip.map(w => w.stage)).to.eql(['cutting','awaiting_assignment','stitching','packing']); });",
+                  "pm.test('fpy \u2264 packed', () => pm.expect(d.fpy_first_pass).to.be.at.most(d.fpy_packed));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/reports/overview"
+          }
+        },
+        {
+          "name": "Overview \u00b7 range > 366 days \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/reports/overview?from=2024-01-01&to=2025-12-31"
+          }
+        },
+        {
+          "name": "Overview \u00b7 bad date \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/reports/overview?from=yesterday"
+          }
+        },
+        {
+          "name": "Stuck batches",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('array', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/reports/stuck"
+          }
+        },
+        {
+          "name": "Worker output",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('7-day default range + workers', () => { pm.expect(d.range.from).to.be.a('string'); pm.expect(d.workers).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/reports/worker-output"
+          }
+        },
+        {
+          "name": "Quality",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('shape', () => { pm.expect(d.by_reason).to.be.an('array'); pm.expect(d.short_cuts).to.be.an('array'); pm.expect(d.losses).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/reports/quality"
+          }
+        }
+      ]
     }
   ]
 }

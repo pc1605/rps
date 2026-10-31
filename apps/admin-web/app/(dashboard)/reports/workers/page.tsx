@@ -95,7 +95,7 @@ function columns(station: Station): Column<WorkerOutputRow>[] {
 
 export default function ReportsWorkersPage() {
   const { range, chrome } = useReportChrome("Output, pace, rework and quotas per worker.");
-  const { data, isPending, isError } = useWorkerOutput(range.from, range.to);
+  const { data, isPending, isError, error } = useWorkerOutput(range.from, range.to);
   const workers = data?.workers ?? [];
 
   return (
@@ -104,7 +104,7 @@ export default function ReportsWorkersPage() {
       {isError ? (
         <EmptyState
           title="Couldn't load the report"
-          body="Check the backend is running, then try another range."
+          body={error?.message ?? "Check the backend is running, then try another range."}
         />
       ) : (
         <>

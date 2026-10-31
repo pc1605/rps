@@ -55,7 +55,7 @@ function ReasonBars({
 
 export default function ReportsQualityPage() {
   const { range, chrome } = useReportChrome("Rework, short cuts and losses.");
-  const { data: q, isPending, isError } = useQuality(range.from, range.to);
+  const { data: q, isPending, isError, error } = useQuality(range.from, range.to);
   const shortTotal = q?.short_cuts.reduce((n, s) => n + s.count, 0) ?? 0;
   const losses = q?.losses ?? [];
   const writeOffs = losses.filter((l) => l.decision === "write_off").reduce((n, l) => n + l.count, 0);
@@ -68,7 +68,7 @@ export default function ReportsQualityPage() {
       {isError ? (
         <EmptyState
           title="Couldn't load the report"
-          body="Check the backend is running, then try another range."
+          body={error?.message ?? "Check the backend is running, then try another range."}
         />
       ) : (
         <>
