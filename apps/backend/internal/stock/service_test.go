@@ -4,28 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/pc1605/rps/apps/backend/internal/testutil"
 )
 
 // TestRollLedger pins migration 015's rule on the pre-C2 roll endpoints:
 // qty_remaining always equals SUM(material_movements.qty) for the lot.
-// Runs against DATABASE_URL (skipped otherwise); cleans up its lot.
+// Runs against TEST_DATABASE_URL (testutil.DB; skipped otherwise); cleans up its lot.
 func TestRollLedger(t *testing.T) {
-	url := os.Getenv("DATABASE_URL")
-	if url == "" {
-		t.Skip("DATABASE_URL not set")
-	}
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pool.Close()
+	pool := testutil.DB(t)
 	s := NewService(pool)
 
 	var adminID uuid.UUID

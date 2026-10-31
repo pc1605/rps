@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/pc1605/rps/apps/backend/internal/testutil"
 )
 
 // TestStitchingCompletionRule pins the rule:
@@ -22,16 +23,8 @@ import (
 // Runs against DATABASE_URL (skipped otherwise); creates one throwaway batch
 // and deletes it (children cascade).
 func TestStitchingCompletionRule(t *testing.T) {
-	url := os.Getenv("DATABASE_URL")
-	if url == "" {
-		t.Skip("DATABASE_URL not set")
-	}
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pool.Close()
+	pool := testutil.DB(t)
 
 	tempUpload := t.TempDir()
 	s := NewService(pool, tempUpload)
