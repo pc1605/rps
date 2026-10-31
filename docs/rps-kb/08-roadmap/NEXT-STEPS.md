@@ -1,42 +1,32 @@
-# RPS — status & next steps (handoff)
+## Next, in order (updated after the product audit — see docs/rps-kb/10-product-audit/audit.md)
 
-## Done (on master)
-- Core flow: batches → cutting → admin assignment gate (per-head quotas) → multi-stitcher scan-per-mat → packing → completed.
-- Short-cut policy (admin resolves: split / reduce / recut). Cars catalogue (flat items = car × size × product line, barcodes).
-- Slice B rework: packer inspect sheet (peek first) + photo capture (2-step) → routing by reason (stitcher / admin), rounds,
-  escalation on round 2, admin decisions (to stitcher / re-cut / write off), history on every mat, signed photo URLs.
-- Design system (tokens, primitives, responsive shell), a11y pass, KB (`docs/rps-kb/`).
-- Tooling: golangci-lint, Go smoke + rework tests, Biome lint, Prettier, lefthook (pre-commit format+lint, pre-push typecheck+go test), `@rps/shared`.
+| #   | Slice                     | Contains                                                                                                                                                                                                             | Depends on | Folder               |
+| --- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------- |
+| U0  | Bugs & quick fixes        | F15 stitching completion (data correctness), F04 BatchStats type, mobile queue sort, other S-effort correctness fixes                                                                                                | —          | main                 |
+| C1  | Materials backend         | C1a schema (migration 014) + shared types · C1b recipe resolution + consumption engine · C1c endpoints                                                                                                               | U0 merged  | worktree `../rps-c1` |
+| U1  | Entity pages & navigation | Worker page (current work, pipeline history, output, rework caused/fixed, enrollment QR, PIN reset, activate), Unit/Mat, Car item, Lot pages; every worker/batch/unit/car/lot name clickable everywhere; breadcrumbs | U0         | main                 |
+| U2  | Lists                     | whole-row click on every table, header search (batch code, unit code, barcode, worker, car), filters+sort in URL, server pagination for batches                                                                      | U1         | main                 |
+| C2  | Materials admin screens   | Materials (types, variants, lots, receive/adjust, movements), Recipes grid, groups + overrides in car dialog, "Materials used" on batch                                                                              | C1, U1, U2 | main                 |
+| R1  | Reports v2                | WIP ageing + stuck batches (also on dashboard), throughput, cycle time per phase, first-pass yield, worker output/hour, short-cut rate; CSV export                                                                   | U2         | main                 |
+| U3  | Workflow gaps             | edit batch before cutting, cancel after cutting, reassign mid-stitching, supervisor undo last scan                                                                                                                   | U2         | main                 |
+| C3  | Cutter materials          | "You'll need …" panel, roll QR scan at cutting start, lot QR labels                                                                                                                                                  | C2         | main                 |
+| R2  | Material reports          | consumption vs recipe, waste, cost per mat                                                                                                                                                                           | C2         | main                 |
+| E   | Hardening & deploy        | E1 security · E2 deploy · E3 EAS · E4 factory pilot                                                                                                                                                                  | U3         | main                 |
 
-## Next, in order
-1. **Add `AGENTS.md`** (this folder) to the repo root; make `CLAUDE.md` contain just: `See AGENTS.md.`
-2. **Slice C — materials & consumption (fully admin-editable)**
-   - C1 backend (precision work): material types (unit, min level, has_variants) · variants by spec (e.g. width 54″/60″) ·
-     lots = existing `raw_materials` (+ type, variant) · consumption groups (seeded Small/Medium/Large, editable, cars assigned)
-     · recipes = product line × group, lines per material (default + per-variant qty) · per-car overrides ·
-     resolution: car+variant > car > recipe+variant > recipe > none · consumption at cutting-complete (roll lot first, rest FIFO,
-     never below 0, shortfall logged, missing recipe = note, no block) · movements ledger (receive/consume/adjust/shortfall) ·
-     endpoints for all of it + resolve preview + batch materials + cutter "materials needed" + low_stock_types stat.
-     Full prompt was written in chat; key decisions are above. Split into 3 runs: schema+shared types → engine+tests → endpoints.
-   - C2 admin: Materials page (types, variants, lots, receive/adjust, movements), Recipes grid (groups × materials, per-variant columns),
-     group + overrides in car dialog, "Materials used" on batch detail, dashboard low stock.
-   - C3 mobile: cutter "You'll need …" panel; scan roll QR at cutting start (needs lot QR labels printed from Materials page).
-3. **Slice E — hardening & deploy**
-   - E1 (precision, review auth diff carefully): per-request is_active + token_version check (cached 60 s), one-time enrollment codes
-     (15 min, single use, QR `RPS-ENROLL:<code>`), login rate limits (5 PINs/worker, 20/IP per 15 min), admin PIN reset (bumps
-     token_version), admin refresh token → httpOnly cookie, production secret checks.
-   - E2 deploy: Railway (API + Postgres + volume for uploads) or VPS; Vercel (admin); domain + HTTPS; migrations on deploy; daily backups.
-   - E3 mobile: EAS Build (signing key) + EAS Update (OTA); API URL → real domain; consider portrait lock.
-   - E4 pilot: 1 week, 3–5 workers.
-4. Later: multi-language (Hindi default/fallback, phone-language detection + first-launch picker, Devanagari font, error-code messages);
-   earnings (piece rates × scans).
+Parallel rule: two agents may run at once only in separate folders (git worktree) on separate branches,
+and only when they don't touch the same files. Merge order: U0 → C1 → U1 → U2 → C2 → …
 
-## Open questions for the owner
-- Roll widths bought; metres per set on each width for one common car; do cutters know which roll they cut from?
-- Workers' languages / where they come from; who can review translations.
-- Re-cut process; is the rework photo mandatory; "quick pack" toggle wanted?; lock worker app to portrait?
-- Hosting choice + domain name.
+### Decisions taken (defaults until the owner says otherwise)
 
-## Review routine (for every agent task)
-branch → agent works → run gates yourself → `scripts/review.sh master` → read the risky diff (or have the other agent review it,
-read-only) → merge `--no-ff` → push (hooks run).
+- "Stuck" batch: no activity for 24 h in cutting, 48 h in stitching/packing (to be made configurable in R1).
+- Search covers batch code, unit code, barcode, worker name, car name.
+- Worker pages are admin-only.
+- Deferred (not over-engineering now): ⌘K palette & keyboard shortcuts, audit-log viewer, live updates (WebSocket),
+  full settings page, pagination outside the batch list.
+
+### Open owner questions (from the audit)
+
+- What happens to a stitcher's remaining quota when they're absent mid-batch?
+- Who may cancel a batch after cutting (owner only, or supervisors too)?
+- Should workers see their own output/earnings on the phone?
+- What counts as a "late" batch (due dates per order?)
