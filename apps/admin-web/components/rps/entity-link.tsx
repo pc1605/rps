@@ -68,7 +68,7 @@ export function LotLink({
   if (!id) return <span className={cn("font-mono", className)}>{children ?? code ?? "—"}</span>;
   return (
     <Link
-      href={`/stock/lots/${id}`}
+      href={`/materials/lots/${id}`}
       className={cn(base, "font-mono", className)}
       onClick={(e) => e.stopPropagation()}
     >

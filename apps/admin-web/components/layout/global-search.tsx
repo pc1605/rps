@@ -23,7 +23,7 @@ const href = (h: SearchHit) =>
     unit: `/units/${encodeURIComponent(h.id)}`,
     car: `/cars/${h.id}`,
     worker: `/workers/${h.id}`,
-    lot: `/stock/lots/${h.id}`,
+    lot: `/materials/lots/${h.id}`,
   })[h.kind];
 
 const groups: { kind: SearchKind; label: string; icon: React.ElementType }[] = [
