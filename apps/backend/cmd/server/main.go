@@ -21,6 +21,7 @@ import (
 	"github.com/pc1605/rps/apps/backend/internal/factorytime"
 	"github.com/pc1605/rps/apps/backend/internal/files"
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
+	"github.com/pc1605/rps/apps/backend/internal/materials"
 	"github.com/pc1605/rps/apps/backend/internal/reference"
 	"github.com/pc1605/rps/apps/backend/internal/report"
 	"github.com/pc1605/rps/apps/backend/internal/stock"
@@ -60,6 +61,7 @@ func main() {
 	workerSvc := worker.NewService(pool)
 	stockSvc := stock.NewService(pool)
 	reportSvc := report.NewService(pool)
+	materialsSvc := materials.NewService(pool)
 
 	// ───── HTTP app ─────
 	app := newApp(cfg)
@@ -75,6 +77,7 @@ func main() {
 	worker.RegisterRoutes(api, workerSvc, authSvc)
 	stock.RegisterRoutes(api, stockSvc, authSvc)
 	report.RegisterRoutes(api, reportSvc, authSvc)
+	materials.RegisterRoutes(api, materialsSvc, authSvc.RequireRole("owner", "supervisor"))
 
 	// ───── Lifecycle ─────
 	runServer(app, cfg)
