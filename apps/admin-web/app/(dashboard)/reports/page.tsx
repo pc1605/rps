@@ -14,7 +14,9 @@ export default function ReportsPage() {
   const { data, isPending, isError } = useWorkerReport(range.from, range.to);
 
   const workers = data?.workers ?? [];
-  const totalPieces = workers.reduce((s, w) => s + w.pieces_done, 0);
+  // Never add across stations: cut pieces, stitched mats and packed mats are different things.
+  const byStation = (station: string) =>
+    workers.filter((w) => w.station === station).reduce((s, w) => s + w.pieces_done, 0);
   const totalRuns = workers.reduce((s, w) => s + w.batches_done, 0);
   const activeNow = workers.filter((w) => w.currently_working).length;
 
@@ -25,7 +27,9 @@ export default function ReportsPage() {
       <RangePicker value={range} onChange={setRange} />
 
       <Card className="flex flex-wrap gap-x-12 gap-y-4 p-5">
-        <Stat size="sm" value={isPending ? "–" : totalPieces} label="Pieces" />
+        <Stat size="sm" value={isPending ? "–" : byStation("cutter")} label="Pieces cut" />
+        <Stat size="sm" value={isPending ? "–" : byStation("stitcher")} label="Mats stitched" />
+        <Stat size="sm" value={isPending ? "–" : byStation("packer")} label="Mats packed" />
         <Stat size="sm" value={isPending ? "–" : totalRuns} label="Phase runs" />
         <Stat
           size="sm"
