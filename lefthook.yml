@@ -16,4 +16,5 @@ pre-push:
       run: pnpm typecheck
     go-test:
       root: "apps/backend/"
-      run: go test ./...
+      # DB tests use the isolated rps_test (scripts/test-db.sh) and SKIP if it doesn't exist — never DATABASE_URL/rps.
+      run: TEST_DATABASE_URL=postgres://rps_dev:rps_dev_password@localhost:5433/rps_test?sslmode=disable go test ./...

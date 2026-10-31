@@ -172,6 +172,58 @@
     {
       "key": "reworkPhotoSig",
       "value": ""
+    },
+    {
+      "key": "matSfx",
+      "value": ""
+    },
+    {
+      "key": "matRexR",
+      "value": ""
+    },
+    {
+      "key": "matPiping",
+      "value": ""
+    },
+    {
+      "key": "matTypeId",
+      "value": ""
+    },
+    {
+      "key": "matVariantId",
+      "value": ""
+    },
+    {
+      "key": "matLotId",
+      "value": ""
+    },
+    {
+      "key": "matCursor",
+      "value": ""
+    },
+    {
+      "key": "matGroupId",
+      "value": ""
+    },
+    {
+      "key": "matCarId",
+      "value": ""
+    },
+    {
+      "key": "matCarGroup",
+      "value": ""
+    },
+    {
+      "key": "matLineId",
+      "value": ""
+    },
+    {
+      "key": "matBatchId",
+      "value": ""
+    },
+    {
+      "key": "matCutterToken",
+      "value": ""
     }
   ],
   "item": [
@@ -5575,6 +5627,1797 @@
                 "units",
                 "scan"
               ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Materials (C1c)",
+      "description": "Self-contained (logs in, builds a cutter token). Run ONLY against the test backend (RPS test environment, :8081 on rps_test). Creates PM-* types/lots/groups there.",
+      "item": [
+        {
+          "name": "Setup \u00b7 admin login",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('matSfx', String(Date.now()).slice(-9));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('accessToken', d.tokens.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@ambika.local\",\n  \"password\": \"admin123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List material types",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const id = (c) => (d.find((t) => t.code === c) || {}).id;",
+                  "pm.test('seeded types present', () => { ['REX-R','PIPING'].forEach((c) => pm.expect(id(c)).to.be.a('number')); });",
+                  "pm.collectionVariables.set('matRexR', id('REX-R')); pm.collectionVariables.set('matPiping', id('PIPING'));",
+                  "pm.test('rows carry stock', () => pm.expect(d[0]).to.have.property('stock_remaining'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types"
+          }
+        },
+        {
+          "name": "Create material type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('matTypeId', d.id);",
+                  "pm.test('code upper-cased, low (no stock)', () => { pm.expect(d.code).to.eql('PM-MAT-' + pm.collectionVariables.get('matSfx')); pm.expect(d.is_low).to.be.true; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\": \"pm-mat-{{matSfx}}\", \"name\": \"PM tape\", \"unit\": \"m\", \"has_variants\": true, \"min_level\": 100}"
+            }
+          }
+        },
+        {
+          "name": "Create type \u00b7 duplicate code \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code duplicate', () => pm.expect(pm.response.json().code).to.eql('duplicate'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\": \"PM-MAT-{{matSfx}}\", \"name\": \"dup\", \"unit\": \"m\"}"
+            }
+          }
+        },
+        {
+          "name": "Create type \u00b7 bad unit \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\": \"PM-X-{{matSfx}}\", \"name\": \"x\", \"unit\": \"litre\"}"
+            }
+          }
+        },
+        {
+          "name": "Update type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('sort saved', () => pm.expect(d.sort).to.eql(90));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types/{{matTypeId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sort\": 90\n}"
+            }
+          }
+        },
+        {
+          "name": "Create variant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('matVariantId', d.id);",
+                  "pm.test('specs object kept', () => pm.expect(d.specs.width_in).to.eql(60));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types/{{matTypeId}}/variants",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"60\u2033\",\n  \"specs\": {\n    \"width_in\": 60\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Create variant \u00b7 specs not an object \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types/{{matTypeId}}/variants",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"bad\",\n  \"specs\": [\n    1,\n    2\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "List variants",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('one variant', () => pm.expect(d.length).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types/{{matTypeId}}/variants"
+          }
+        },
+        {
+          "name": "Update variant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('specs replaced', () => pm.expect(d.specs.finish).to.eql('matte'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/variants/{{matVariantId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specs\": {\n    \"width_in\": 60,\n    \"finish\": \"matte\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Receive lot",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('matLotId', d.id);",
+                  "pm.test('qty exact', () => { pm.expect(d.qty_received).to.eql(40.5); pm.expect(d.qty_remaining).to.eql(40.5); pm.expect(d.unit_cost).to.eql(99.5); });",
+                  "pm.test('joins', () => { pm.expect(d.variant_name).to.eql('60\u2033'); pm.expect(d.last_movement_at).to.be.a('string'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"material_type_id\": {{matTypeId}}, \"variant_id\": {{matVariantId}}, \"lot_code\": \"PM-LOT-{{matSfx}}\", \"color\": \"Black\", \"qty\": 40.5, \"unit_cost\": 99.5, \"supplier\": \"PM supplier\"}"
+            }
+          }
+        },
+        {
+          "name": "Receive \u00b7 variant missing \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"material_type_id\": {{matTypeId}}, \"lot_code\": \"PM-LOT-X-{{matSfx}}\", \"color\": \"Black\", \"qty\": 1}"
+            }
+          }
+        },
+        {
+          "name": "Receive \u00b7 duplicate lot code \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code duplicate', () => pm.expect(pm.response.json().code).to.eql('duplicate'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"material_type_id\": {{matTypeId}}, \"variant_id\": {{matVariantId}}, \"lot_code\": \"PM-LOT-{{matSfx}}\", \"color\": \"Black\", \"qty\": 1}"
+            }
+          }
+        },
+        {
+          "name": "Receive \u00b7 more than 3 decimals \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"material_type_id\": {{matTypeId}}, \"variant_id\": {{matVariantId}}, \"lot_code\": \"PM-LOT-Y-{{matSfx}}\", \"color\": \"Black\", \"qty\": 1.2345}"
+            }
+          }
+        },
+        {
+          "name": "List lots (type, low)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('the received lot, flagged low (40.5 < 100)', () => { pm.expect(d.length).to.eql(1); pm.expect(d[0].lot_code).to.eql('PM-LOT-' + pm.collectionVariables.get('matSfx')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots?type_id={{matTypeId}}&low=true"
+          }
+        },
+        {
+          "name": "Adjust lot",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('remaining 39', () => pm.expect(d.qty_remaining).to.eql(39));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots/{{matLotId}}/adjust",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_remaining\": 39,\n  \"reason\": \"stock count\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Adjust \u00b7 no reason \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots/{{matLotId}}/adjust",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_remaining\": 38\n}"
+            }
+          }
+        },
+        {
+          "name": "Waste",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('remaining 37.5', () => pm.expect(d.qty_remaining).to.eql(37.5));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots/{{matLotId}}/waste",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qty\": 1.5,\n  \"reason\": \"torn edge\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Waste \u00b7 more than remaining \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots/{{matLotId}}/waste",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qty\": 999,\n  \"reason\": \"x\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Return",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('remaining 38', () => pm.expect(d.qty_remaining).to.eql(38));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots/{{matLotId}}/return",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qty\": 0.5,\n  \"reason\": \"offcut back\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Patch lot \u00b7 reclassify after waste \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code lot_has_consumption', () => pm.expect(pm.response.json().code).to.eql('lot_has_consumption'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots/{{matLotId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"variant_id\": null}"
+            }
+          }
+        },
+        {
+          "name": "Patch lot \u00b7 descriptive fields",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('note set, supplier cleared', () => { pm.expect(d.note).to.eql('PM note'); pm.expect(d.supplier).to.be.undefined; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots/{{matLotId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"PM note\",\n  \"supplier\": null\n}"
+            }
+          }
+        },
+        {
+          "name": "Movements \u00b7 page 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('newest first, 2 + cursor', () => { pm.expect(d.items.map((m) => m.kind)).to.eql(['return','waste']); pm.expect(d.next_cursor).to.be.a('string'); });",
+                  "pm.test('actor joined', () => pm.expect(d.items[0].actor_user_name).to.be.a('string'));",
+                  "pm.collectionVariables.set('matCursor', d.next_cursor);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/movements?lot_id={{matLotId}}&limit=2"
+          }
+        },
+        {
+          "name": "Movements \u00b7 page 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('adjust then receive, last page', () => { pm.expect(d.items.map((m) => m.kind)).to.eql(['adjust','receive']); pm.expect(d.next_cursor).to.be.undefined; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/movements?lot_id={{matLotId}}&limit=2&cursor={{matCursor}}"
+          }
+        },
+        {
+          "name": "Movements \u00b7 bad cursor \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/movements?cursor=nope"
+          }
+        },
+        {
+          "name": "Update type \u00b7 unit after movements \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code unit_locked', () => pm.expect(pm.response.json().code).to.eql('unit_locked'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types/{{matTypeId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit\": \"kg\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update type \u00b7 has_variants=false with active variant \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code has_active_variants', () => pm.expect(pm.response.json().code).to.eql('has_active_variants'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types/{{matTypeId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"has_variants\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "List consumption groups",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('size defaults seeded', () => pm.expect(d.filter((g) => g.default_for_size).length).to.eql(3));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/consumption-groups"
+          }
+        },
+        {
+          "name": "Create consumption group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('matGroupId', d.id);",
+                  "pm.test('no cars yet', () => pm.expect(d.car_count).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/consumption-groups",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"PM grp {{matSfx}}\", \"sort\": 95}"
+            }
+          }
+        },
+        {
+          "name": "Create group \u00b7 duplicate name \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code duplicate', () => pm.expect(pm.response.json().code).to.eql('duplicate'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/consumption-groups",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"pm GRP {{matSfx}}\"}"
+            }
+          }
+        },
+        {
+          "name": "Update group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('sort saved', () => pm.expect(d.sort).to.eql(96));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/consumption-groups/{{matGroupId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sort\": 96\n}"
+            }
+          }
+        },
+        {
+          "name": "Setup \u00b7 pick a Rexine R car + line",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const car = d.find((c) => c.line_code === 'REX-R');",
+                  "pm.collectionVariables.set('matCarId', car.id); pm.collectionVariables.set('matCarGroup', car.consumption_group_id);",
+                  "pm.test('car carries its consumption group', () => pm.expect(car.consumption_group_name).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/car-models"
+          }
+        },
+        {
+          "name": "Setup \u00b7 Rexine R product line",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('matLineId', d.find((p) => p.code === 'REX-R').id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/product-lines"
+          }
+        },
+        {
+          "name": "Put recipe lines",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('recipe created with 2 lines', () => { pm.expect(d.recipe_id).to.be.a('number'); pm.expect(d.lines.length).to.eql(2); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/recipes/{{matLineId}}/{{matGroupId}}/lines",
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"material_type_id\": {{matRexR}}, \"qty_per_mat\": 1.6}, {\"material_type_id\": {{matPiping}}, \"qty_per_mat\": 3}]"
+            }
+          }
+        },
+        {
+          "name": "Put recipe \u00b7 variant of another type \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/recipes/{{matLineId}}/{{matGroupId}}/lines",
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"material_type_id\": {{matPiping}}, \"variant_id\": {{matVariantId}}, \"qty_per_mat\": 1}]"
+            }
+          }
+        },
+        {
+          "name": "Recipe grid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const g = d.groups.find((x) => x.group.id === Number(pm.collectionVariables.get('matGroupId')));",
+                  "pm.test('grid has the group with 2 lines', () => pm.expect(g.lines.length).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/recipes?product_line_id={{matLineId}}"
+          }
+        },
+        {
+          "name": "Recipe grid \u00b7 product_line_id missing \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/recipes"
+          }
+        },
+        {
+          "name": "Patch car \u00b7 consumption group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/car-models/{{matCarId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"consumption_group_id\": {{matGroupId}}}"
+            }
+          }
+        },
+        {
+          "name": "Patch car \u00b7 unknown group \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/car-models/{{matCarId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"consumption_group_id\": 999999\n}"
+            }
+          }
+        },
+        {
+          "name": "Update group \u00b7 deactivate while used \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code group_in_use', () => pm.expect(pm.response.json().code).to.eql('group_in_use'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/consumption-groups/{{matGroupId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Put car overrides",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('one override, 0 = not used', () => { pm.expect(d.lines.length).to.eql(1); pm.expect(d.lines[0].qty_per_mat).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/car-models/{{matCarId}}/material-overrides",
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"material_type_id\": {{matPiping}}, \"qty_per_mat\": 0}]"
+            }
+          }
+        },
+        {
+          "name": "Put overrides \u00b7 negative \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/car-models/{{matCarId}}/material-overrides",
+            "body": {
+              "mode": "raw",
+              "raw": "[{\"material_type_id\": {{matPiping}}, \"qty_per_mat\": -1}]"
+            }
+          }
+        },
+        {
+          "name": "Get car overrides",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('override listed', () => pm.expect(d.lines[0].type_code).to.eql('PIPING'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/car-models/{{matCarId}}/material-overrides"
+          }
+        },
+        {
+          "name": "Resolve (dry run)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const rex = d.lines.find((l) => l.type_code === 'REX-R'); const pip = d.lines.find((l) => l.type_code === 'PIPING');",
+                  "pm.test('Rexine 1.6 \u00d7 2 = 3.2 from the recipe', () => { pm.expect(rex.source).to.eql('recipe_any'); pm.expect(rex.need).to.eql(3.2); });",
+                  "pm.test('piping override 0', () => { pm.expect(pip.source).to.eql('car_any'); pm.expect(pip.need).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/recipes/resolve?car_model_id={{matCarId}}&quantity=2"
+          }
+        },
+        {
+          "name": "Resolve \u00b7 quantity 0 \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/recipes/resolve?car_model_id={{matCarId}}&quantity=0"
+          }
+        },
+        {
+          "name": "Create batch for materials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('matBatchId', d.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"car_model_id\": {{matCarId}}, \"quantity\": 2}"
+            }
+          }
+        },
+        {
+          "name": "Cutter \u00b7 materials needed",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.get('baseUrl'); // environment (RPS test) wins over the collection value",
+                  "const admin = { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken') };",
+                  "pm.sendRequest({ url: base + '/workers', header: admin }, (e1, r1) => {",
+                  "  const cutter = r1.json().data.find((w) => w.station === 'cutter' && w.is_active);",
+                  "  pm.sendRequest({ url: base + '/workers/' + cutter.id + '/enrollment', header: admin }, (e2, r2) => {",
+                  "    pm.sendRequest({ url: base + '/worker/login', method: 'POST', header: { 'Content-Type': 'application/json' },",
+                  "      body: { mode: 'raw', raw: JSON.stringify({ badge_token: r2.json().data.badge_token, pin: '1234' }) } }, (e3, r3) => {",
+                  "      pm.collectionVariables.set('matCutterToken', r3.json().data.tokens.access_token);",
+                  "    });",
+                  "  });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('2 mats to cut; piping (override 0) omitted', () => { pm.expect(d.mats).to.eql(2); pm.expect(d.lines.map((l) => l.type_name)).to.not.include('Piping'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{matCutterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/batches/{{matBatchId}}/materials-needed"
+          }
+        },
+        {
+          "name": "Materials needed \u00b7 admin token \u2192 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code cutter_only', () => pm.expect(pm.response.json().code).to.eql('cutter_only'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/batches/{{matBatchId}}/materials-needed"
+          }
+        },
+        {
+          "name": "Admin route \u00b7 worker token \u2192 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{matCutterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/types"
+          }
+        },
+        {
+          "name": "Cutter \u00b7 start",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{matCutterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/batches/{{matBatchId}}/start"
+          }
+        },
+        {
+          "name": "Cutter \u00b7 complete 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{matCutterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/batches/{{matBatchId}}/complete",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity_completed\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "Batch materials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const c = d.completions[0];",
+                  "pm.test('one completion by the cutter, 2 mats', () => { pm.expect(d.completions.length).to.eql(1); pm.expect(c.mats).to.eql(2); });",
+                  "pm.test('Rexine drawn 3.2 in total', () => { const s = c.movements.filter((m) => m.type_code === 'REX-R').reduce((a, m) => a + m.qty, 0); pm.expect(Math.round(s * 1000)).to.eql(-3200); });",
+                  "pm.test('plan rows per type', () => pm.expect(c.plan.map((p) => p.type_code)).to.include.members(['REX-R','PIPING']));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{matBatchId}}/materials"
+          }
+        },
+        {
+          "name": "Batch materials \u00b7 unknown batch \u2192 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code not_found', () => pm.expect(pm.response.json().code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/00000000-0000-0000-0000-000000000000/materials"
+          }
+        },
+        {
+          "name": "Cleanup \u00b7 clear overrides",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/car-models/{{matCarId}}/material-overrides",
+            "body": {
+              "mode": "raw",
+              "raw": "[]"
+            }
+          }
+        },
+        {
+          "name": "Cleanup \u00b7 car back to its group",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/car-models/{{matCarId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"consumption_group_id\": {{matCarGroup}}}"
+            }
+          }
+        },
+        {
+          "name": "Cleanup \u00b7 clear PM recipe",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/recipes/{{matLineId}}/{{matGroupId}}/lines",
+            "body": {
+              "mode": "raw",
+              "raw": "[]"
+            }
+          }
+        },
+        {
+          "name": "Cleanup \u00b7 deactivate PM group (now unused)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('inactive', () => pm.expect(d.is_active).to.be.false);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/consumption-groups/{{matGroupId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}"
             }
           }
         }

@@ -97,11 +97,16 @@ BEGIN
     RAISE EXCEPTION 'demo seed: missing product line REX-R — run seeds/01-catalog.sql first';
   END IF;
 
-  SELECT id INTO v_roll_id FROM raw_materials WHERE roll_code = 'R-001' LIMIT 1;
+  SELECT id INTO v_roll_id FROM material_lots WHERE lot_code = 'R-001' LIMIT 1;
   IF v_roll_id IS NULL THEN
-    INSERT INTO raw_materials (roll_code, color, total_meters, remaining_meters)
-    VALUES ('R-001', 'Jet Black', 50.0, 40.0)
+    -- lot + ledger (migration 015): receive the roll, adjust down to what's left
+    INSERT INTO material_lots (lot_code, color, qty_received, qty_remaining, material_type_id)
+    SELECT 'R-001', 'Jet Black', 50.0, 40.0, id FROM material_types WHERE code = 'REX-R'
     RETURNING id INTO v_roll_id;
+    INSERT INTO material_movements (lot_id, material_type_id, kind, qty, reason)
+    SELECT v_roll_id, material_type_id, 'receive', 50.0, 'seed' FROM material_lots WHERE id = v_roll_id;
+    INSERT INTO material_movements (lot_id, material_type_id, kind, qty, reason)
+    SELECT v_roll_id, material_type_id, 'adjust', -10.0, 'seed' FROM material_lots WHERE id = v_roll_id;
   END IF;
 
   -- 4. Car Models (catalogue items with product line and barcode)

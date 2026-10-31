@@ -3,27 +3,19 @@ package batch
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/pc1605/rps/apps/backend/internal/testutil"
 )
 
 // Runs every read query against the real dev DB. Catches SELECT/Scan
 // mismatches, missing columns (unapplied migrations), bad aliases, and
 // NULL scanned into non-pointer fields. Skips when DATABASE_URL isn't set.
 func TestReadQueriesSmoke(t *testing.T) {
-	url := os.Getenv("DATABASE_URL")
-	if url == "" {
-		t.Skip("DATABASE_URL not set")
-	}
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pool.Close()
+	pool := testutil.DB(t)
 	s := NewService(pool, "")
 
 	list, err := s.List(ctx)

@@ -1,4 +1,13 @@
-import type { BatchStatus, Phase, ReworkReason, SizeClass, Station } from "./domain";
+import type {
+  BatchStatus,
+  MaterialUnit,
+  MovementKind,
+  Phase,
+  PlanSource,
+  ReworkReason,
+  SizeClass,
+  Station,
+} from "./domain";
 
 /** Unit QR payload, e.g. B-2026-005-003. Labels, scanner and backend must agree. */
 export const UNIT_CODE_RE = /^B-\d{4}-\d{3}-\d{3}$/;
@@ -52,6 +61,31 @@ export const REWORK_REASON_LABEL: Record<ReworkReason, string> = {
   cutting_fault: "Cutting fault",
   material_defect: "Material defect",
   other: "Other",
+};
+
+export const MATERIAL_UNIT_LABEL: Record<MaterialUnit, string> = {
+  m: "m",
+  sqm: "m²",
+  pcs: "pcs",
+  spool: "spool",
+  kg: "kg",
+};
+
+export const MOVEMENT_KIND_LABEL: Record<MovementKind, string> = {
+  receive: "Received",
+  consume: "Used",
+  adjust: "Adjusted",
+  waste: "Waste",
+  return: "Returned",
+};
+
+/** Plain-language source of a planned quantity, most specific first. */
+export const PLAN_SOURCE_LABEL: Record<PlanSource, string> = {
+  car_variant: "Car override for this width",
+  car_any: "Car override",
+  recipe_variant: "Recipe for this width",
+  recipe_any: "Recipe",
+  none: "No recipe",
 };
 
 /** API error codes (the `code` field of error responses). */
