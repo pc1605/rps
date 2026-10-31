@@ -31,6 +31,7 @@ func RegisterRoutes(api fiber.Router, svc *Service, admin fiber.Handler) {
 	api.Get("/car-models", admin, h.CarModels)
 	api.Post("/car-models", admin, h.CreateCarModel)
 	api.Patch("/car-models/:id", admin, h.UpdateCarModel)
+	api.Get("/car-models/:id/overview", admin, h.CarOverview)
 	api.Get("/car-brands", admin, h.Brands)
 	api.Post("/car-brands", admin, h.CreateBrand)
 	api.Get("/product-lines", admin, h.ProductLines)

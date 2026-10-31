@@ -88,6 +88,30 @@ func TestReadQueriesSmoke(t *testing.T) {
 		}
 	}
 
+	// U1 unit journey: a real unit resolves to its batch; unknown code → ErrUnitNotFound.
+	for _, b := range list {
+		d, err := s.Get(ctx, b.ID)
+		if err != nil || len(d.Units) == 0 {
+			continue
+		}
+		j, err := s.UnitJourney(ctx, d.Units[0].UnitCode)
+		if err != nil {
+			t.Fatalf("UnitJourney(%s): %v", d.Units[0].UnitCode, err)
+		}
+		if j.Unit.ID != d.Units[0].ID || j.Batch.ID != b.ID {
+			t.Errorf("UnitJourney(%s) = unit %s batch %s", d.Units[0].UnitCode, j.Unit.ID, j.Batch.ID)
+		}
+		for _, e := range j.Cutting {
+			if e.Phase != PhaseCutting {
+				t.Errorf("UnitJourney cutting entry with phase %s", e.Phase)
+			}
+		}
+		break
+	}
+	if _, err := s.UnitJourney(ctx, "B-0000-000-000"); !errors.Is(err, ErrUnitNotFound) {
+		t.Errorf("UnitJourney(unknown): %v", err)
+	}
+
 	// Peek query smoke: unknown unit returns ErrUnitNotFound without panic
 	if _, err := s.PeekUnit(ctx, "NONEXISTENT_UNIT_CODE", uuid.New()); !errors.Is(err, ErrUnitNotFound) {
 		t.Fatalf("PeekUnit(unknown): expected ErrUnitNotFound, got %v", err)

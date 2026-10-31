@@ -637,3 +637,78 @@ export interface WorkerUpdateInput {
   station?: Station;
   is_active?: boolean;
 }
+
+// ───── Entity pages (U1) ─────
+
+/** GET /units/:code */
+export interface UnitJourney {
+  unit: Unit;
+  batch: Batch;
+  /** The batch's cutting completions (mats aren't scanned at cutting). */
+  cutting: PhaseLogEntry[];
+}
+
+export interface CarOverviewBatch {
+  id: string;
+  batch_code: string;
+  quantity: number;
+  current_phase: Phase;
+  status: BatchStatus;
+  units_packed: number;
+  rework_open: number;
+  created_at: string;
+}
+
+/** GET /car-models/:id/overview?from&to (factory days, inclusive; default last 30) */
+export interface CarOverview {
+  car: {
+    id: number;
+    brand_name: string;
+    name: string;
+    size_class: SizeClass;
+    pieces_per_set: number;
+    product_line_id?: number;
+    line_code?: string;
+    line_name?: string;
+    barcode?: string;
+    is_active: boolean;
+    consumption_group_id: number;
+    consumption_group_name: string;
+  };
+  stats: {
+    from: string;
+    to: string;
+    stitched: number;
+    packed: number;
+    rework_rounds: number;
+    /** rounds / stitched in range × 100 */
+    rework_rate: number | null;
+    /** packed in range with no rework round / packed in range × 100 */
+    first_pass: number | null;
+    /** Mats of batches not completed/cancelled (now). */
+    in_wip: number;
+    /** Packed, not dispatched (now). */
+    in_stock: number;
+  };
+  active_batches: CarOverviewBatch[];
+  recent_completed: CarOverviewBatch[];
+}
+
+/** GET /materials/lots/:id — ledger itself: GET /materials/movements?lot_id= */
+export interface MaterialLotDetail extends MaterialLotRow {
+  consumed: number;
+  wasted: number;
+  /** Signed sum of adjustments. */
+  adjusted: number;
+  returned: number;
+  /** Batches that chose this lot as their roll or drew from it. */
+  batches: {
+    batch_id: string;
+    batch_code: string;
+    car_name: string;
+    quantity: number;
+    current_phase: Phase;
+    drawn: number;
+    created_at: string;
+  }[];
+}

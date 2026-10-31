@@ -16,6 +16,7 @@ func RegisterRoutes(api fiber.Router, svc *Service, admin fiber.Handler) {
 
 	api.Get("/materials/lots", admin, h.ListLots)
 	api.Post("/materials/lots", admin, h.Receive)
+	api.Get("/materials/lots/:id", admin, h.LotDetail)
 	api.Patch("/materials/lots/:id", admin, h.PatchLot)
 	api.Post("/materials/lots/:id/adjust", admin, h.Adjust)
 	api.Post("/materials/lots/:id/waste", admin, h.Waste)
