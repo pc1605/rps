@@ -15,6 +15,7 @@ import { useBatches, useMarkStickersPrinted } from "../hooks";
 import { generateLabelPdf } from "../label-pdf";
 import type { Batch } from "../types";
 import { batchViews } from "../views";
+import { CarLink } from "@/components/rps/entity-link";
 
 const baseColumns: Column<Batch>[] = [
   {
@@ -56,9 +57,9 @@ const baseColumns: Column<Batch>[] = [
     header: "Model",
     cell: (b) => (
       <div>
-        <div className="font-medium">
+        <CarLink id={b.car_model_id} className="font-medium">
           {b.brand_name} {b.model_name}
-        </div>
+        </CarLink>
         <div className="text-caption text-muted-foreground">
           {sizeLabel[b.size_class] ?? b.size_class}
           {b.line_name ? ` · ${b.line_name}` : ""}

@@ -23,6 +23,7 @@ import { useDecideRework } from "../hooks";
 import { RemoteImage } from "./remote-image";
 import { PhotoLightbox } from "./photo-lightbox";
 import { ReasonChip } from "./reason-chip";
+import { UnitLink, WorkerLink } from "@/components/rps/entity-link";
 
 function fmtStamp(iso?: string) {
   if (!iso) return null;
@@ -80,8 +81,8 @@ export function DecisionCard({ entry }: { entry: ReworkEntry }) {
           <span>
             New batch created:{" "}
             <Link
-              href="/batches?phase=cutting"
-              className="font-mono font-medium underline underline-offset-2 hover:text-brand"
+              href={res.new_batch_id ? `/batches/${res.new_batch_id}` : "/batches?phase=cutting"}
+              className="font-mono font-medium underline underline-offset-2"
             >
               {res.new_batch_code}
             </Link>
@@ -122,7 +123,9 @@ export function DecisionCard({ entry }: { entry: ReworkEntry }) {
         <div className="flex-1 space-y-3">
           {/* Header row: unit code, batch link, round badge */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-body font-semibold tracking-tight">{entry.unit_code}</span>
+            {entry.unit_code && (
+              <UnitLink code={entry.unit_code} className="text-body font-semibold tracking-tight" />
+            )}
             <span className="text-muted-foreground text-small">in</span>
             <Link
               href={`/batches/${entry.batch_id}`}
@@ -169,14 +172,24 @@ export function DecisionCard({ entry }: { entry: ReworkEntry }) {
           {/* Flagged by / at and stitcher info */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted-foreground">
             <span>
-              Flagged by <span className="font-medium text-foreground">{entry.flagged_by_name}</span>{" "}
+              Flagged by{" "}
+              <WorkerLink
+                id={entry.flagged_by}
+                name={entry.flagged_by_name}
+                className="font-medium text-foreground"
+              />{" "}
               {entry.flagged_at && `· ${fmtStamp(entry.flagged_at)}`}
             </span>
             {entry.stitcher_name && (
               <>
                 <span>·</span>
                 <span>
-                  Stitched by <span className="font-medium text-foreground">{entry.stitcher_name}</span>
+                  Stitched by{" "}
+                  <WorkerLink
+                    id={entry.stitcher_id}
+                    name={entry.stitcher_name}
+                    className="font-medium text-foreground"
+                  />
                 </span>
               </>
             )}

@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useSetAssignments } from "../hooks";
 import { generateLabelPdf } from "../label-pdf";
 import type { BatchDetail } from "../types";
+import { WorkerLink } from "@/components/rps/entity-link";
 
 type Draft = Record<string, number | "">; // worker_id → target (checked = present in map)
 
@@ -123,7 +124,7 @@ function Inner({ batch }: { batch: BatchDetail }) {
               )}
             >
               <Checkbox checked={checked} onCheckedChange={() => toggle(w.id)} />
-              <span className="flex-1 text-sm">{w.name}</span>
+              <WorkerLink id={w.id} name={w.name} className="flex-1 text-small" />
               {checked && (
                 <>
                   {done > 0 && <span className="font-mono text-xs text-muted-foreground">{done} done ·</span>}

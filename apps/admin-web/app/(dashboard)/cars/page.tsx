@@ -14,6 +14,7 @@ import { useCarItems, useUpdateItem } from "@/features/catalog/hooks";
 import type { CarItem } from "@/features/catalog/types";
 import { sizeLabel } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
+import { CarLink } from "@/components/rps/entity-link";
 
 const neutral = { text: "text-muted-foreground", border: "border-border" };
 
@@ -35,9 +36,9 @@ export default function CarsPage() {
       card: "title",
       cell: (i) => (
         <div className={cn(!i.is_active && "opacity-50")}>
-          <div className="font-medium">
+          <CarLink id={i.id} className="font-medium">
             {i.brand_name} {i.name}
-          </div>
+          </CarLink>
           <div className="text-caption text-muted-foreground">{i.line_name ?? "No product line"}</div>
         </div>
       ),

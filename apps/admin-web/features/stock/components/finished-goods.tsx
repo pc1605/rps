@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { sizeLabel } from "@/lib/tokens";
 import { useFinishedGoods } from "../hooks";
+import { CarLink } from "@/components/rps/entity-link";
 
 export function FinishedGoods() {
   const { data: stock, isPending, isError } = useFinishedGoods();
@@ -54,9 +55,9 @@ export function FinishedGoods() {
           <li key={s.car_model_id}>
             <Card className="flex items-center justify-between gap-4 p-4">
               <div className="min-w-0">
-                <div className="truncate font-medium">
+                <CarLink id={s.car_model_id} className="block truncate font-medium">
                   {s.brand_name} {s.model_name}
-                </div>
+                </CarLink>
                 <div className="text-caption text-muted-foreground">
                   {sizeLabel[s.size_class as keyof typeof sizeLabel] ?? s.size_class}
                   {s.line_name ? ` · ${s.line_name}` : ""}

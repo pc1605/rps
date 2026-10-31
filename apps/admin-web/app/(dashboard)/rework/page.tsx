@@ -14,6 +14,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { DecisionCard } from "@/features/rework/components/decision-card";
 import { ReasonChip } from "@/features/rework/components/reason-chip";
 import { useReworkQueue } from "@/features/rework/hooks";
+import { UnitLink, WorkerLink } from "@/components/rps/entity-link";
 
 function fmtStamp(iso?: string) {
   if (!iso) return null;
@@ -30,7 +31,7 @@ const stitcherColumns: Column<ReworkEntry>[] = [
     key: "unit_code",
     header: "Unit",
     card: "title",
-    cell: (r) => <span className="font-mono text-body font-medium">{r.unit_code}</span>,
+    cell: (r) => (r.unit_code ? <UnitLink code={r.unit_code} className="text-body font-medium" /> : "—"),
   },
   {
     key: "batch_code",
@@ -71,7 +72,7 @@ const stitcherColumns: Column<ReworkEntry>[] = [
   {
     key: "stitcher",
     header: "Stitcher",
-    cell: (r) => <span className="text-small">{r.stitcher_name || "—"}</span>,
+    cell: (r) => <WorkerLink id={r.stitcher_id} name={r.stitcher_name || "—"} className="text-small" />,
   },
   {
     key: "sent_at",
