@@ -160,7 +160,12 @@ func (s *Service) List(ctx context.Context) ([]Batch, error) {
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id),
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed'),
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.stitched_at IS NOT NULL),
-		       (SELECT COUNT(*) FROM rework_logs rl WHERE rl.batch_id = b.id AND rl.fixed_at IS NULL AND (rl.decision IS NULL OR rl.decision = 'to_stitcher'))
+		       (SELECT COUNT(*) FROM rework_logs rl WHERE rl.batch_id = b.id AND rl.fixed_at IS NULL AND (rl.decision IS NULL OR rl.decision = 'to_stitcher')),
+		       -- who's working right now (open logs at the current phase)
+		       (SELECT string_agg(wk.name, ', ' ORDER BY plg.started_at)
+		        FROM phase_logs plg JOIN workers wk ON wk.id = plg.worker_id
+		        WHERE plg.batch_id = b.id AND plg.phase = b.current_phase
+		          AND plg.completed_at IS NULL)
 		FROM batches b
 		JOIN car_models cm ON cm.id = b.car_model_id
 		JOIN car_brands cb ON cb.id = cm.brand_id
@@ -187,6 +192,7 @@ func (s *Service) List(ctx context.Context) ([]Batch, error) {
 			&b.Version, &b.CreatedAt, &b.UpdatedAt,
 			&b.CutQty, &b.ParentBatchID, &b.ParentBatchCode, &b.ShortReason, &b.StickersPrintedAt,
 			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched, &b.ReworkOpen,
+			&b.ActiveWorkers,
 		); err != nil {
 			return nil, err
 		}

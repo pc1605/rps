@@ -32,6 +32,19 @@ func TestReadQueriesSmoke(t *testing.T) {
 	}
 	t.Logf("List: %d batches", len(list))
 
+	// D1: admin List must carry active_workers exactly when open logs exist at the current phase.
+	for _, b := range list {
+		var open int
+		if err := pool.QueryRow(ctx, `
+			SELECT COUNT(*) FROM phase_logs
+			WHERE batch_id = $1 AND phase = $2 AND completed_at IS NULL`, b.ID, b.CurrentPhase).Scan(&open); err != nil {
+			t.Fatal(err)
+		}
+		if has := b.ActiveWorkers != nil && *b.ActiveWorkers != ""; has != (open > 0) {
+			t.Errorf("List(%s): active_workers=%v but %d open logs", b.BatchCode, b.ActiveWorkers, open)
+		}
+	}
+
 	if _, err := s.GetStats(ctx); err != nil {
 		t.Fatalf("GetStats: %v", err)
 	}
