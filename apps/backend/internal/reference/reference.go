@@ -6,10 +6,13 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 
+	"github.com/pc1605/rps/apps/backend/internal/audit"
+	"github.com/pc1605/rps/apps/backend/internal/auth"
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
 )
 
@@ -37,10 +40,12 @@ func RegisterRoutes(api fiber.Router, svc *Service, admin fiber.Handler) {
 func (h *Handler) CarModels(c *fiber.Ctx) error {
 	rows, err := h.svc.pool.Query(c.Context(), `
 		SELECT cm.id, cb.name, cm.name, cm.size_class::text, cm.pieces_per_set,
-		       pln.code, pln.name, cm.barcode, cm.is_active                     -- ① column added
+		       pln.code, pln.name, cm.barcode, cm.is_active,                    -- ① column added
+		       cm.consumption_group_id, cg.name
 		FROM car_models cm
 		JOIN car_brands cb ON cb.id = cm.brand_id
 		LEFT JOIN product_lines pln ON pln.id = cm.product_line_id
+		JOIN consumption_groups cg ON cg.id = cm.consumption_group_id
 		ORDER BY cb.name, cm.name, cm.size_class, pln.code
 	`)
 	if err != nil {
@@ -59,12 +64,15 @@ func (h *Handler) CarModels(c *fiber.Ctx) error {
 		LineName     *string `json:"line_name,omitempty"`
 		Barcode      *string `json:"barcode,omitempty"`
 		IsActive     bool    `json:"is_active"`
+		// Recipe key with the product line (migration 015).
+		ConsumptionGroupID   int    `json:"consumption_group_id"`
+		ConsumptionGroupName string `json:"consumption_group_name"`
 	}
 	out := []model{}
 	for rows.Next() {
 		var m model
 		if err := rows.Scan(&m.ID, &m.BrandName, &m.Name, &m.SizeClass, &m.PiecesPerSet,
-			&m.LineCode, &m.LineName, &m.Barcode, &m.IsActive); err != nil {
+			&m.LineCode, &m.LineName, &m.Barcode, &m.IsActive, &m.ConsumptionGroupID, &m.ConsumptionGroupName); err != nil {
 			log.Error().Err(err).Msg("scan car model")
 			return httpx.Internal(c, "scan error")
 		}
@@ -223,6 +231,8 @@ type carModelInput struct {
 	ProductLineID *int    `json:"product_line_id"`
 	Barcode       *string `json:"barcode"` // empty/omitted on create → generated
 	IsActive      *bool   `json:"is_active"`
+	// PATCH only: must be an active consumption group.
+	ConsumptionGroupID *int `json:"consumption_group_id"`
 }
 
 func (h *Handler) CreateCarModel(c *fiber.Ctx) error {
@@ -290,7 +300,34 @@ func (h *Handler) UpdateCarModel(c *fiber.Ctx) error {
 		t := strings.TrimSpace(*in.Name)
 		name = &t
 	}
-	ct, err := h.svc.pool.Exec(c.Context(), `
+	ctx := c.Context()
+	tx, err := h.svc.pool.Begin(ctx)
+	if err != nil {
+		return httpx.Internal(c, "failed to update item")
+	}
+	defer tx.Rollback(ctx)
+
+	if in.ConsumptionGroupID != nil {
+		var active bool
+		err := tx.QueryRow(ctx, `SELECT is_active FROM consumption_groups WHERE id = $1`, *in.ConsumptionGroupID).Scan(&active)
+		if errors.Is(err, pgx.ErrNoRows) || (err == nil && !active) {
+			return httpx.BadRequest(c, "consumption_group_id must be an active consumption group")
+		}
+		if err != nil {
+			log.Error().Err(err).Msg("check consumption group")
+			return httpx.Internal(c, "failed to update item")
+		}
+	}
+	var before map[string]any
+	if err := tx.QueryRow(ctx, `SELECT to_jsonb(cm) FROM car_models cm WHERE id = $1 FOR UPDATE`, id).Scan(&before); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return httpx.Error(c, fiber.StatusNotFound, "not_found", "item not found")
+		}
+		log.Error().Err(err).Msg("load car model")
+		return httpx.Internal(c, "failed to update item")
+	}
+	var after map[string]any
+	err = tx.QueryRow(ctx, `
 		UPDATE car_models SET
 		  brand_id        = COALESCE($1, brand_id),
 		  name            = COALESCE($2, name),
@@ -298,9 +335,11 @@ func (h *Handler) UpdateCarModel(c *fiber.Ctx) error {
 		  pieces_per_set  = COALESCE($4, pieces_per_set),
 		  product_line_id = COALESCE($5, product_line_id),
 		  barcode         = COALESCE($6, barcode),
-		  is_active       = COALESCE($7, is_active)
+		  is_active       = COALESCE($7, is_active),
+		  consumption_group_id = COALESCE($9, consumption_group_id)
 		WHERE id = $8
-	`, in.BrandID, name, in.SizeClass, in.PiecesPerSet, in.ProductLineID, bc, in.IsActive, id)
+		RETURNING to_jsonb(car_models)
+	`, in.BrandID, name, in.SizeClass, in.PiecesPerSet, in.ProductLineID, bc, in.IsActive, id, in.ConsumptionGroupID).Scan(&after)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -309,8 +348,16 @@ func (h *Handler) UpdateCarModel(c *fiber.Ctx) error {
 		log.Error().Err(err).Msg("update car model")
 		return httpx.Internal(c, "failed to update item")
 	}
-	if ct.RowsAffected() == 0 {
-		return httpx.Error(c, fiber.StatusNotFound, "not_found", "item not found")
+	uid, _ := auth.UserID(c)
+	if err := audit.Write(ctx, tx, audit.Entry{
+		ActorID: uid.String(), ActorRole: auth.RoleFromCtx(c), EntityType: "car_model", EntityID: fmt.Sprint(id),
+		Action: audit.ActionUpdate, Before: before, After: after, IP: c.IP(),
+	}); err != nil {
+		log.Error().Err(err).Msg("audit car model")
+		return httpx.Internal(c, "failed to update item")
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return httpx.Internal(c, "failed to update item")
 	}
 	return httpx.OK(c, fiber.Map{"message": "item updated"})
 }

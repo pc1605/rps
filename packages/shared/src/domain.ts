@@ -392,3 +392,59 @@ export interface LotPatchInput {
   material_type_id?: number;
   variant_id?: number | null;
 }
+
+/** GET /consumption-groups */
+export interface ConsumptionGroupRow extends ConsumptionGroup {
+  car_count: number;
+  created_at: string;
+}
+
+export interface ConsumptionGroupInput {
+  name?: string;
+  sort?: number;
+  /** Deactivating fails (409) while cars use the group or it is a size default. */
+  is_active?: boolean;
+  /** null clears. */
+  default_for_size?: SizeClass | null;
+}
+
+/** A recipe line or car override as returned by the API (names joined in). */
+export interface MaterialLineRow {
+  id: number;
+  material_type_id: number;
+  type_code: string;
+  type_name: string;
+  unit: MaterialUnit;
+  variant_id?: number;
+  variant_name?: string;
+  qty_per_mat: number;
+}
+
+/** PUT /recipes/:product_line_id/:group_id/lines and PUT /car-models/:id/material-overrides body item. */
+export interface MaterialLineInput {
+  material_type_id: number;
+  /** Absent = any variant. */
+  variant_id?: number;
+  /** Recipes: > 0. Overrides: ≥ 0 (0 = this car doesn't use it). */
+  qty_per_mat: number;
+}
+
+export interface RecipeGridGroup {
+  group: ConsumptionGroupRow;
+  /** Absent when no recipe exists yet for this line × group. */
+  recipe_id?: number;
+  note?: string;
+  lines: MaterialLineRow[];
+}
+
+/** GET /recipes?product_line_id= */
+export interface RecipeGrid {
+  product_line: { id: number; code: string; name: string };
+  groups: RecipeGridGroup[];
+}
+
+/** GET/PUT /car-models/:id/material-overrides */
+export interface CarMaterialOverrides {
+  car_model_id: number;
+  lines: MaterialLineRow[];
+}

@@ -22,4 +22,13 @@ func RegisterRoutes(api fiber.Router, svc *Service, admin fiber.Handler) {
 	api.Post("/materials/lots/:id/return", admin, h.Return)
 
 	api.Get("/materials/movements", admin, h.ListMovements)
+
+	api.Get("/consumption-groups", admin, h.ListGroups)
+	api.Post("/consumption-groups", admin, h.CreateGroup)
+	api.Patch("/consumption-groups/:id", admin, h.UpdateGroup)
+
+	api.Get("/recipes", admin, h.RecipeGrid)
+	api.Put("/recipes/:product_line_id/:group_id/lines", admin, h.PutRecipeLines)
+	api.Get("/car-models/:id/material-overrides", admin, h.GetOverrides)
+	api.Put("/car-models/:id/material-overrides", admin, h.PutOverrides)
 }
