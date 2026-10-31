@@ -29,15 +29,20 @@ export interface ReworkEntry {
   reasons: ReworkReason[];
   note?: string;
   route: ReworkRoute;
+  flagged_by: string;
   flagged_by_name: string;
   flagged_at: string;
   decision?: ReworkDecision;
   decided_at?: string;
+  fixed_by?: string;
   fixed_by_name?: string;
   fixed_at?: string;
+  stitcher_id?: string;
   stitcher_name?: string;
   photos: ReworkPhoto[];
   new_batch_code?: string;
+  /** Set on a recut decision: the new 1-mat batch. */
+  new_batch_id?: string;
 }
 
 export interface Batch {
@@ -90,8 +95,10 @@ export interface Unit {
   status: UnitStatus;
   created_at: string;
   stitched_at?: string;
+  stitched_by?: string;
   stitched_by_name?: string;
   packed_at?: string;
+  packed_by?: string;
   packed_by_name?: string;
   rework?: ReworkEntry[];
 }
@@ -530,4 +537,103 @@ export interface MaterialsNeeded {
     shortfall: number;
   }[];
   notes: string[];
+}
+
+// ───── Worker page (U1) ─────
+
+/** GET /workers/:id */
+export interface WorkerDetail extends Worker {
+  open_claims: {
+    batch_id: string;
+    batch_code: string;
+    car_name: string;
+    phase: Phase;
+    started_at: string;
+    my_done: number;
+    target_qty?: number;
+  }[];
+  /** Assigned at the batch's current phase but not joined yet. */
+  assigned: {
+    batch_id: string;
+    batch_code: string;
+    car_name: string;
+    phase: Phase;
+    target_qty?: number;
+    my_done: number;
+  }[];
+  /** Open rework rounds on mats this worker stitched. */
+  open_rework: {
+    id: string;
+    unit_code: string;
+    batch_id: string;
+    batch_code: string;
+    round: number;
+    reasons: ReworkReason[];
+    flagged_at: string;
+    awaiting_decision: boolean;
+  }[];
+}
+
+export interface WorkerDayOutput {
+  day: string; // YYYY-MM-DD (factory time)
+  mats: number;
+  first_at?: string;
+  last_at?: string;
+  /** Stitch/pack: first → last scan; cutting: Σ(complete − start). */
+  active_seconds: number;
+}
+
+/** GET /workers/:id/summary?from&to (factory days, inclusive; default last 14) */
+export interface WorkerSummary {
+  worker_id: string;
+  station: Station;
+  from: string;
+  to: string;
+  unit: "pieces cut" | "mats stitched" | "mats packed";
+  total: number;
+  today: number;
+  last_7_days: number;
+  mats_per_hour?: number;
+  days: WorkerDayOutput[];
+  /** Stitchers: rounds flagged on their mats in range; rate = rounds / mats stitched in range. */
+  rework_caused?: {
+    rounds: number;
+    rate_pct: number | null;
+    by_reason: Partial<Record<ReworkReason, number>>;
+  };
+  rework_fixed?: { count: number; median_turnaround_secs?: number };
+  /** Packers: rounds they flagged in range. */
+  flagged?: number;
+}
+
+export interface WorkerHistoryRow {
+  phase_log_id: string;
+  batch_id: string;
+  batch_code: string;
+  car_model_id: number;
+  car_name: string;
+  phase: Phase;
+  started_at: string;
+  completed_at?: string;
+  /** Cutting: pieces reported; stitching/packing: mats this worker scanned. */
+  mats: number;
+  target_qty?: number;
+  first_scan_at?: string;
+  last_scan_at?: string;
+  rework_caused: number;
+}
+
+/** GET /workers/:id/history?limit&cursor */
+export interface WorkerHistoryPage {
+  items: WorkerHistoryRow[];
+  next_cursor?: string;
+}
+
+/** PATCH /workers/:id — station change / deactivation → 409 worker_busy while the worker has open work. */
+export interface WorkerUpdateInput {
+  name?: string;
+  /** "" clears. */
+  phone?: string;
+  station?: Station;
+  is_active?: boolean;
 }

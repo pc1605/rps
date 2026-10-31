@@ -236,6 +236,7 @@ func (s *Service) FlagRework(ctx context.Context, unitCode string, workerID uuid
 		Reasons:       reasons,
 		Note:          note,
 		Route:         route,
+		FlaggedBy:     workerID,
 		FlaggedByName: workerName,
 		FlaggedAt:     now,
 		Photos:        photos,
@@ -248,10 +249,10 @@ func (s *Service) ListReworkForStitcher(ctx context.Context, stitcherID uuid.UUI
 		SELECT rl.id, rl.unit_id, bu.unit_code, rl.batch_id, b.batch_code,
 		       cb.name, cm.name, cm.size_class::text, pl.name,
 		       rl.round, rl.reasons, rl.note, rl.route,
-		       w.name, rl.flagged_at,
+		       w.name, rl.flagged_by, rl.flagged_at,
 		       rl.decision, rl.decided_at,
-		       wf.name, rl.fixed_at,
-		       ws.name
+		       wf.name, rl.fixed_by, rl.fixed_at,
+		       ws.name, bu.stitched_by
 		FROM rework_logs rl
 		JOIN batch_units bu ON bu.id = rl.unit_id
 		JOIN batches b ON b.id = rl.batch_id
@@ -277,10 +278,10 @@ func (s *Service) ListReworkForStitcher(ctx context.Context, stitcherID uuid.UUI
 			&e.ID, &e.UnitID, &e.UnitCode, &e.BatchID, &e.BatchCode,
 			&e.BrandName, &e.ModelName, &e.SizeClass, &e.LineName,
 			&e.Round, &e.Reasons, &e.Note, &e.Route,
-			&e.FlaggedByName, &e.FlaggedAt,
+			&e.FlaggedByName, &e.FlaggedBy, &e.FlaggedAt,
 			&e.Decision, &e.DecidedAt,
-			&fixedByName, &e.FixedAt,
-			&e.StitcherName,
+			&fixedByName, &e.FixedBy, &e.FixedAt,
+			&e.StitcherName, &e.StitcherID,
 		); err != nil {
 			return nil, err
 		}
@@ -306,10 +307,10 @@ func (s *Service) ListRework(ctx context.Context, status string, route *string) 
 		SELECT rl.id, rl.unit_id, bu.unit_code, rl.batch_id, b.batch_code,
 		       cb.name, cm.name, cm.size_class::text, pl.name,
 		       rl.round, rl.reasons, rl.note, rl.route,
-		       w.name, rl.flagged_at,
+		       w.name, rl.flagged_by, rl.flagged_at,
 		       rl.decision, rl.decided_at,
-		       wf.name, rl.fixed_at,
-		       ws.name
+		       wf.name, rl.fixed_by, rl.fixed_at,
+		       ws.name, bu.stitched_by
 		FROM rework_logs rl
 		JOIN batch_units bu ON bu.id = rl.unit_id
 		JOIN batches b ON b.id = rl.batch_id
@@ -345,10 +346,10 @@ func (s *Service) ListRework(ctx context.Context, status string, route *string) 
 			&e.ID, &e.UnitID, &e.UnitCode, &e.BatchID, &e.BatchCode,
 			&e.BrandName, &e.ModelName, &e.SizeClass, &e.LineName,
 			&e.Round, &e.Reasons, &e.Note, &e.Route,
-			&e.FlaggedByName, &e.FlaggedAt,
+			&e.FlaggedByName, &e.FlaggedBy, &e.FlaggedAt,
 			&e.Decision, &e.DecidedAt,
-			&fixedByName, &e.FixedAt,
-			&e.StitcherName,
+			&fixedByName, &e.FixedBy, &e.FixedAt,
+			&e.StitcherName, &e.StitcherID,
 		); err != nil {
 			return nil, err
 		}
@@ -391,6 +392,7 @@ func (s *Service) DecideRework(ctx context.Context, reworkID uuid.UUID, decision
 		origNote      *string
 		flaggedAt     time.Time
 		flaggedByName string
+		flaggedBy     uuid.UUID
 		unitCode      string
 		stitchedBy    *uuid.UUID
 		batchCode     string
@@ -400,7 +402,7 @@ func (s *Service) DecideRework(ctx context.Context, reworkID uuid.UUID, decision
 
 	err = tx.QueryRow(ctx, `
 		SELECT rl.unit_id, rl.batch_id, rl.route, rl.decision, rl.fixed_at,
-		       rl.round, rl.reasons, rl.note, rl.flagged_at, w.name,
+		       rl.round, rl.reasons, rl.note, rl.flagged_at, w.name, rl.flagged_by,
 		       bu.unit_code, bu.stitched_by,
 		       b.batch_code, b.car_model_id, b.roll_id
 		FROM rework_logs rl
@@ -410,7 +412,7 @@ func (s *Service) DecideRework(ctx context.Context, reworkID uuid.UUID, decision
 		WHERE rl.id = $1 FOR UPDATE OF rl, bu, b
 	`, reworkID).Scan(
 		&unitID, &batchID, &route, &currDecision, &fixedAt,
-		&round, &reasons, &origNote, &flaggedAt, &flaggedByName,
+		&round, &reasons, &origNote, &flaggedAt, &flaggedByName, &flaggedBy,
 		&unitCode, &stitchedBy,
 		&batchCode, &carModelID, &rollID,
 	)
@@ -428,6 +430,7 @@ func (s *Service) DecideRework(ctx context.Context, reworkID uuid.UUID, decision
 
 	now := time.Now().UTC()
 	var newBatchCode *string
+	var newBatchIDOut *uuid.UUID
 
 	switch decision {
 	case "to_stitcher":
@@ -488,6 +491,7 @@ func (s *Service) DecideRework(ctx context.Context, reworkID uuid.UUID, decision
 		`, newBatchID, code); err != nil {
 			return nil, fmt.Errorf("create recut units: %w", err)
 		}
+		newBatchIDOut = &newBatchID
 		if _, err := completePackingIfDone(ctx, tx, batchID); err != nil {
 			return nil, err
 		}
@@ -530,11 +534,14 @@ func (s *Service) DecideRework(ctx context.Context, reworkID uuid.UUID, decision
 		Reasons:       reasons,
 		Note:          origNote,
 		Route:         updatedRoute,
+		FlaggedBy:     flaggedBy,
 		FlaggedByName: flaggedByName,
 		FlaggedAt:     flaggedAt,
+		StitcherID:    stitchedBy,
 		Decision:      &decision,
 		DecidedAt:     &now,
 		NewBatchCode:  newBatchCode,
+		NewBatchID:    newBatchIDOut,
 		Photos:        []ReworkPhoto{},
 	}
 	_ = s.attachPhotos(ctx, []*ReworkEntry{entry})

@@ -86,7 +86,9 @@ type Unit struct {
 	PackedAt       *time.Time    `json:"packed_at,omitempty"`
 	CreatedAt      time.Time     `json:"created_at"`
 	StitchedAt     *time.Time    `json:"stitched_at,omitempty"`
+	StitchedBy     *uuid.UUID    `json:"stitched_by,omitempty"`
 	StitchedByName *string       `json:"stitched_by_name,omitempty"`
+	PackedBy       *uuid.UUID    `json:"packed_by,omitempty"`
 	PackedByName   *string       `json:"packed_by_name,omitempty"`
 	Rework         []ReworkEntry `json:"rework"`
 }
@@ -172,15 +174,19 @@ type ReworkEntry struct {
 	Reasons       []string      `json:"reasons"`
 	Note          *string       `json:"note,omitempty"`
 	Route         string        `json:"route"`
+	FlaggedBy     uuid.UUID     `json:"flagged_by"`
 	FlaggedByName string        `json:"flagged_by_name"`
 	FlaggedAt     time.Time     `json:"flagged_at"`
 	Decision      *string       `json:"decision,omitempty"`
 	DecidedAt     *time.Time    `json:"decided_at,omitempty"`
+	FixedBy       *uuid.UUID    `json:"fixed_by,omitempty"`
 	FixedByName   *string       `json:"fixed_by_name,omitempty"`
 	FixedAt       *time.Time    `json:"fixed_at,omitempty"`
+	StitcherID    *uuid.UUID    `json:"stitcher_id,omitempty"`
 	StitcherName  *string       `json:"stitcher_name,omitempty"`
 	Photos        []ReworkPhoto `json:"photos"`
 	NewBatchCode  *string       `json:"new_batch_code,omitempty"`
+	NewBatchID    *uuid.UUID    `json:"new_batch_id,omitempty"`
 }
 
 // UnitPeek is the lightweight check result for packers before showing the inspect sheet.

@@ -49,8 +49,13 @@ func (s *Service) Guard() fiber.Handler {
 			return c.Next()
 		}
 
-		// Then worker token
+		// Then worker token — refused once the worker is deactivated (U1: deactivate takes effect
+		// immediately, not at the 30-day token expiry).
 		if wc, err := s.ParseWorkerToken(tokenStr); err == nil {
+			var active bool
+			if err := s.pool.QueryRow(c.Context(), `SELECT is_active FROM workers WHERE id = $1`, wc.WorkerID).Scan(&active); err != nil || !active {
+				return httpx.Unauthorized(c, "worker deactivated — ask your admin")
+			}
 			c.Locals("worker_id", wc.WorkerID)
 			c.Locals("station", wc.Station)
 			c.Locals("role", wc.Station) // station acts as role for workers
