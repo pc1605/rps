@@ -48,6 +48,11 @@ DECLARE
   v_yr          INT := EXTRACT(YEAR FROM NOW())::INT;
 BEGIN
 
+  -- 0. Empty DB guard
+  IF (SELECT COUNT(*) FROM batches) > 0 THEN
+    RAISE EXCEPTION 'demo seed: database already has batches — use an empty database (scripts/seed-dev.sh <new_db_name>)';
+  END IF;
+
   -- 1. Owner Account Lookup / Fallback
   SELECT id INTO v_owner_id FROM users WHERE role = 'owner' LIMIT 1;
   IF v_owner_id IS NULL THEN
@@ -144,9 +149,6 @@ BEGIN
   IF v_ertiga_id IS NULL THEN
     RAISE EXCEPTION 'demo seed: missing Ertiga 2018 · Rexine (R) — run seeds/01-catalog.sql first';
   END IF;
-
-  -- Clean out previous demo seed batches if present to keep rerun idempotent
-  DELETE FROM batches WHERE batch_code IN ('B-2026-001','B-2026-002','B-2026-003','B-2026-004','B-2026-005','B-2026-006','B-2026-007');
 
   -- ────────────────────────────────────────────────────────────────────────────
   -- BATCH 1: Pending Cutting (Qty 4)

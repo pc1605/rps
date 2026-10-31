@@ -9,5 +9,4 @@ INSERT INTO product_lines (code, name) VALUES
 
 -- one item = car + size + line; barcode (from 008) stays on this row
 ALTER TABLE car_models ADD COLUMN product_line_id INT REFERENCES product_lines(id);
-ALTER TABLE car_models DROP CONSTRAINT IF EXISTS car_models_brand_id_name_key;
-CREATE UNIQUE INDEX uq_car_models_item ON car_models (brand_id, lower(name), size_class, product_line_id);
+CREATE UNIQUE INDEX uq_car_models_item ON car_models (brand_id, lower(name), size_class, product_line_id);  

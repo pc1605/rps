@@ -93,6 +93,10 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
   - `path TEXT NOT NULL` (filename in `$UPLOAD_DIR/rework/`)
   - `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
 
+### 013 — car_models_drop_name_unique
+- `ALTER TABLE car_models DROP CONSTRAINT IF EXISTS car_models_brand_id_name_key;`
+  Allows multiple product lines per car model name (superseded by `uq_car_models_item` from migration 009: `brand_id, lower(name), size_class, product_line_id`).
+
 ## Key invariants
 - One open cutting log per batch; many open stitching/packing logs (one per joined worker).
 - `phase_logs.quantity_completed` for stitching/packing = that worker's scan count, set when the phase auto-completes.
@@ -116,5 +120,5 @@ TRUNCATE phase_logs, batch_units, batches, audit_log, batch_assignments, rework_
 DELETE FROM batch_code_counters;
 DELETE FROM workers WHERE name LIKE 'PM %' OR name LIKE 'Postman%';"
 ```
-Workers, users, car models, rolls survive. Run `scripts/seed-dev.sh` (or `seeds/02-demo.sql` followed by `./scripts/seed-uploads.sh`) to re-seed realistic multi-phase demo data.
+Workers, users, car models, rolls survive. Run `scripts/seed-dev.sh rps --force` (or `seeds/02-demo.sql` followed by `./scripts/seed-uploads.sh`) to re-seed realistic multi-phase demo data.
 

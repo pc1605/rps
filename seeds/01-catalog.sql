@@ -16,10 +16,7 @@ INSERT INTO car_brands (name)
 SELECT b FROM (VALUES ('Maruti Suzuki'),('Hyundai'),('Tata'),('Mahindra'),('KIA'),('Renault')) AS v(b)
 WHERE NOT EXISTS (SELECT 1 FROM car_brands cb WHERE lower(cb.name)=lower(v.b));
 
--- 3. Drop legacy constraint if present (migration 009 established uq_car_models_item)
-ALTER TABLE car_models DROP CONSTRAINT IF EXISTS car_models_brand_id_name_key;
-
--- 4. Give existing seeded rows (no line yet) a default line so nothing is orphaned
+-- 3. Give existing seeded rows (no line yet) a default line so nothing is orphaned
 UPDATE car_models SET product_line_id = (SELECT id FROM product_lines WHERE code='REX-R')
 WHERE product_line_id IS NULL;
 

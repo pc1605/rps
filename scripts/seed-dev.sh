@@ -8,7 +8,21 @@ set -euo pipefail
 # 3. Demo batches across realistic lifecycle states via seeds/02-demo.sql
 # 4. Rework placeholder image via scripts/seed-uploads.sh
 
-DB_NAME="${1:-rps}"
+if [ $# -lt 1 ]; then
+  echo "Error: database name is required." >&2
+  echo "usage: scripts/seed-dev.sh <db_name> [--force]" >&2
+  exit 1
+fi
+
+DB_NAME="$1"
+FORCE_FLAG="${2:-}"
+
+if [ "$DB_NAME" = "rps" ] && [ "$FORCE_FLAG" != "--force" ]; then
+  echo "Error: Refusing to seed default 'rps' database without --force flag." >&2
+  echo "usage: scripts/seed-dev.sh <db_name> [--force]" >&2
+  exit 1
+fi
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 BASE_URL="${DATABASE_URL:-}"
@@ -22,6 +36,10 @@ fi
 # Replace database name in URL with $DB_NAME
 TARGET_DB_URL=$(echo "$BASE_URL" | sed -E "s|/([^/?]+)(\\?.*)?$|/${DB_NAME}\\2|")
 
+# Mask password in URL for display
+MASKED_URL=$(echo "$TARGET_DB_URL" | sed -E 's|(:)[^/@]+(@)|\1***\2|')
+
+echo "Target DB: $MASKED_URL"
 echo "==> Seeding database '$DB_NAME'..."
 
 # 1. Base seed (Go)
