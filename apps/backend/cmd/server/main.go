@@ -18,6 +18,7 @@ import (
 	"github.com/pc1605/rps/apps/backend/internal/batch"
 	"github.com/pc1605/rps/apps/backend/internal/config"
 	"github.com/pc1605/rps/apps/backend/internal/db"
+	"github.com/pc1605/rps/apps/backend/internal/factorytime"
 	"github.com/pc1605/rps/apps/backend/internal/files"
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
 	"github.com/pc1605/rps/apps/backend/internal/reference"
@@ -48,6 +49,9 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to create upload directory")
 	}
 	files.Configure(cfg.FileURLSecret, cfg.FileURLTTL)
+	if err := factorytime.Configure(cfg.FactoryTZ); err != nil {
+		log.Fatal().Err(err).Msg("invalid FACTORY_TZ")
+	}
 
 	// ───── Services (dependency wiring) ─────
 	authSvc := auth.NewService(pool, cfg.JWTAccessSecret, cfg.JWTRefreshSecret, cfg.JWTAccessTTL, cfg.JWTRefreshTTL)

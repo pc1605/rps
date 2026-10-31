@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/pc1605/rps/apps/backend/internal/audit"
+	"github.com/pc1605/rps/apps/backend/internal/factorytime"
 )
 
 var (
@@ -379,12 +380,12 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 		  COUNT(*) FILTER (WHERE current_phase = 'stitching' AND status = 'awaiting_assignment'),
 		  COUNT(*) FILTER (WHERE current_phase = 'stitching' AND status IN ('pending','in_progress')),
 		  COUNT(*) FILTER (WHERE current_phase = 'packing'   AND status IN ('pending','in_progress')),
-		  COUNT(*) FILTER (WHERE status = 'completed' AND updated_at::date = CURRENT_DATE),
+		  COUNT(*) FILTER (WHERE status = 'completed' AND (updated_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date),
 		  COUNT(*) FILTER (WHERE status NOT IN ('completed','cancelled')),
 		  (SELECT COUNT(*) FROM rework_logs WHERE fixed_at IS NULL AND (decision IS NULL OR decision = 'to_stitcher')),
 		  (SELECT COUNT(*) FROM rework_logs WHERE route = 'admin' AND decision IS NULL)
 		FROM batches
-	`).Scan(
+	`, factorytime.Name()).Scan(
 		&st.InCutting,
 		&st.AwaitingAssignment,
 		&st.InStitching,
