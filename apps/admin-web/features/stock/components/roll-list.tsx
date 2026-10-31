@@ -93,6 +93,8 @@ export function RollList() {
       rows={rolls ?? []}
       columns={columns}
       rowKey={(r) => r.id}
+      rowHref={(r) => `/stock/lots/${r.id}`}
+      rowLabel={(r) => `Open roll ${r.roll_code}`}
       loading={isPending}
       empty={
         <EmptyState

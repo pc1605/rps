@@ -119,6 +119,8 @@ export default function CarsPage() {
         rows={visible}
         columns={columns}
         rowKey={(i) => String(i.id)}
+        rowHref={(i) => `/cars/${i.id}`}
+        rowLabel={(i) => `Open ${i.brand_name} ${i.name}`}
         loading={isPending}
         empty={
           q ? (

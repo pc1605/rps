@@ -9,12 +9,14 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreateBatchDialog } from "@/features/batches/components/create-batch-dialog";
 import { Pipeline } from "@/features/batches/components/pipeline";
-import { useBatches, useBatchStats } from "@/features/batches/hooks";
+import { useBatchPage, useBatchStats } from "@/features/batches/hooks";
 import { useRollsStock } from "@/features/stock/hooks";
 import { batchTone, sizeLabel } from "@/lib/tokens";
 
 export default function DashboardPage() {
-  const { data: batches, isPending } = useBatches();
+  // Small, targeted queries (U2) — the dashboard never loads the whole batch list.
+  const { data: recentPage, isPending } = useBatchPage({ limit: 6 });
+  const { data: shortPage } = useBatchPage({ view: "ready", short: true, limit: 20 });
   const { data: stats } = useBatchStats();
   const { data: rolls } = useRollsStock();
 
@@ -23,10 +25,8 @@ export default function DashboardPage() {
     day: "numeric",
     month: "long",
   });
-  const recent = batches?.slice(0, 6) ?? [];
-  const shortCuts = (batches ?? []).filter(
-    (b) => b.status === "awaiting_assignment" && b.cut_qty < b.quantity,
-  );
+  const recent = recentPage?.items ?? [];
+  const shortCuts = shortPage?.items ?? [];
   const lowRolls = (rolls ?? []).filter((r) => r.is_active && r.is_low);
   const reworkNeedsDecision = stats?.rework_needs_decision ?? 0;
   const reworkOpen = stats?.rework_open ?? 0;

@@ -158,6 +158,8 @@ export default function CarPage({ params }: { params: Promise<{ id: string }> })
           rows={data.active_batches}
           columns={batchColumns}
           rowKey={(b) => b.id}
+          rowHref={(b) => `/batches/${b.id}`}
+          rowLabel={(b) => `Open batch ${b.batch_code}`}
           empty={<EmptyState icon={Package} title="No batches in production for this item" />}
         />
       </section>
@@ -168,6 +170,8 @@ export default function CarPage({ params }: { params: Promise<{ id: string }> })
           rows={data.recent_completed}
           columns={batchColumns}
           rowKey={(b) => b.id}
+          rowHref={(b) => `/batches/${b.id}`}
+          rowLabel={(b) => `Open batch ${b.batch_code}`}
           empty={<EmptyState icon={Package} title="Nothing completed yet" />}
         />
       </section>

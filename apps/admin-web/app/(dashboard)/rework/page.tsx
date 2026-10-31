@@ -220,6 +220,8 @@ export default function ReworkPage() {
               rows={stitcherItems}
               columns={stitcherColumns}
               rowKey={(r) => r.id}
+              rowHref={(r) => `/units/${encodeURIComponent(r.unit_code ?? "")}`}
+              rowLabel={(r) => `Open mat ${r.unit_code}`}
               empty={
                 <EmptyState
                   icon={Wrench}

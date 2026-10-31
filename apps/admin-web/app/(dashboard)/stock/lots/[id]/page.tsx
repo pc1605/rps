@@ -199,6 +199,8 @@ export default function LotPage({ params }: { params: Promise<{ id: string }> })
           rows={lot.batches}
           columns={batchColumns(unit)}
           rowKey={(b) => b.batch_id}
+          rowHref={(b) => `/batches/${b.batch_id}`}
+          rowLabel={(b) => `Open batch ${b.batch_code}`}
           empty={<EmptyState title="No batch has used this lot yet" />}
         />
       </section>

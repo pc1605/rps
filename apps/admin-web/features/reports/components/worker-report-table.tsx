@@ -88,6 +88,8 @@ export function WorkerReportTable({
       rows={workers}
       columns={columns}
       rowKey={(w) => w.worker_id}
+      rowHref={(w) => `/workers/${w.worker_id}`}
+      rowLabel={(w) => `Open ${w.worker_name}`}
       loading={loading}
       empty={
         <EmptyState
