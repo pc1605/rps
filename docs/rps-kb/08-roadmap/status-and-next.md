@@ -24,7 +24,7 @@
   - Stitcher rework queue (`GET /worker/rework`) and fix scan returning `rework_fixed: true`.
   - Admin rework table (`/rework`) with photo preview, filtering (`open`/`all`, `admin`/`stitcher`), and decisions (`to_stitcher`, `recut` spawning 1-mat batch, `write_off`).
   - HMAC-SHA256 signed photo URLs (`/api/v1/files/rework/:name?exp=&sig=`) allowing public caching without auth header issues.
-  - Housekeeping: Updated comprehensive Postman collection with 100% pass rate; fresh demo seed (`demo-seed.sql`) and `scripts/seed-uploads.sh`.
+  - Housekeeping: Updated comprehensive Postman collection with 100% pass rate; self-sufficient seeds (`seeds/01-catalog.sql`, `seeds/02-demo.sql`), `scripts/seed-dev.sh`, and `scripts/seed-uploads.sh`.
 
 ## Next Slices (designs in `remaining-slices.md`)
 | Slice | Scope | Status / Next |

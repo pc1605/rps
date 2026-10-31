@@ -23,6 +23,7 @@ Monorepo (pnpm workspace, hoisted node_modules):
 - Errors are sentinels matched with `errors.Is`; handlers map them to `httpx.Error(c, status, code, msg)`; log real errors with zerolog before `httpx.Internal`.
 - SELECT columns and Scan targets must match 1:1 (most common bug here). Nullable columns → pointer fields.
 - Migrations: run from repo root: `set -a; source .env; set +a; migrate -path apps/backend/migrations -database "$DATABASE_URL" up`. Use the next free number. Enum names: `batch_phase`, `batch_status`, `unit_status`, `worker_station`, `car_size`.
+- Seeds: run from repo root: `scripts/seed-dev.sh [db_name]` (default `rps`). Chains `go run ./cmd/seed` → `seeds/01-catalog.sql` → `seeds/02-demo.sql` → `scripts/seed-uploads.sh`.
 - Photos: signed URLs (`?exp=&sig=`), public file route verifies the signature. Never require auth headers on image URLs.
 
 ## Admin web rules

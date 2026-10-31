@@ -116,5 +116,5 @@ TRUNCATE phase_logs, batch_units, batches, audit_log, batch_assignments, rework_
 DELETE FROM batch_code_counters;
 DELETE FROM workers WHERE name LIKE 'PM %' OR name LIKE 'Postman%';"
 ```
-Workers, users, car models, rolls survive. Run `psql "$DATABASE_URL" -f demo-seed.sql` and `./scripts/seed-uploads.sh` to re-seed realistic multi-phase demo data.
+Workers, users, car models, rolls survive. Run `scripts/seed-dev.sh` (or `seeds/02-demo.sql` followed by `./scripts/seed-uploads.sh`) to re-seed realistic multi-phase demo data.
 

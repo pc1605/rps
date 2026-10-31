@@ -7,7 +7,7 @@ pnpm install                       # if blocked: pnpm approve-builds → select 
 docker compose up -d               # Postgres on 5433, Adminer on 8083 (via docker-compose.yml at repo root)
 set -a; source .env; set +a
 migrate -path apps/backend/migrations -database "$DATABASE_URL" up
-cd apps/backend && go run ./cmd/seed   # admin owner@ambika.local / admin123 + reference data
+scripts/seed-dev.sh                 # admin owner@ambika.local / admin123 + catalogue + demo batches + uploads
 ```
 Tools: Go 1.23+, Node 20+, pnpm (corepack), golang-migrate CLI, Docker, Android Studio (SDK + emulator), adb, lefthook, golangci-lint.
 
@@ -39,7 +39,7 @@ Always from the **repo root** (`.env` lives there). `version` / `up` / `force N`
 Before writing a migration that references an enum: `docker exec -it rps_postgres psql -U rps_dev -d rps -c "\d <table>"`.
 
 ## Reset data
-See `02-domain/data-model.md` → Reset. Then create a fresh batch through the UI/Postman; do not use the stale `demo-seed.sql`.
+See `02-domain/data-model.md` → Reset. To seed realistic multi-phase demo batches and real catalogue items, run `scripts/seed-dev.sh`.
 
 ## Handy DB queries
 ```bash

@@ -6,8 +6,9 @@
 -- followed by the base catalog seed:
 --   1. migrate -path apps/backend/migrations -database "$DATABASE_URL" up
 --   2. (cd apps/backend && go run ./cmd/seed)
---   3. psql "$DATABASE_URL" -f demo-seed.sql
---   4. ./scripts/seed-uploads.sh
+--   3. seeds/01-catalog.sql
+--   4. seeds/02-demo.sql
+--   5. ./scripts/seed-uploads.sh
 --
 -- Idempotency:
 -- Looks up existing users, workers, brands, and models by name, inserting them
@@ -28,7 +29,6 @@ DECLARE
   v_raju_id     UUID;
   v_roll_id     UUID;
   v_line_rex_r  INT;
-  v_line_pvc    INT;
   v_baleno_id   INT;
   v_creta_id    INT;
   v_nexon_id    INT;
@@ -86,9 +86,11 @@ BEGIN
     RETURNING id INTO v_raju_id;
   END IF;
 
-  -- 3. Product lines and Rexine Rolls
+  -- 3. Product line REX-R and Rexine Rolls
   SELECT id INTO v_line_rex_r FROM product_lines WHERE code = 'REX-R' LIMIT 1;
-  SELECT id INTO v_line_pvc FROM product_lines WHERE code = 'PVC-18' LIMIT 1;
+  IF v_line_rex_r IS NULL THEN
+    RAISE EXCEPTION 'demo seed: missing product line REX-R — run seeds/01-catalog.sql first';
+  END IF;
 
   SELECT id INTO v_roll_id FROM raw_materials WHERE roll_code = 'R-001' LIMIT 1;
   IF v_roll_id IS NULL THEN
@@ -97,22 +99,58 @@ BEGIN
     RETURNING id INTO v_roll_id;
   END IF;
 
-  -- 4. Car Models
-  SELECT id INTO v_baleno_id FROM car_models WHERE name = 'Baleno' LIMIT 1;
-  SELECT id INTO v_creta_id  FROM car_models WHERE name = 'Creta' LIMIT 1;
-  SELECT id INTO v_nexon_id  FROM car_models WHERE name = 'Nexon' LIMIT 1;
-  SELECT id INTO v_ertiga_id FROM car_models WHERE name = 'Ertiga' LIMIT 1;
-  SELECT id INTO v_swift_id  FROM car_models WHERE name = 'Swift' LIMIT 1;
+  -- 4. Car Models (catalogue items with product line and barcode)
+  SELECT cm.id INTO v_baleno_id
+  FROM car_models cm
+  JOIN product_lines pl ON pl.id = cm.product_line_id
+  WHERE cm.name = 'Baleno' AND pl.code = 'REX-R' AND cm.barcode IS NOT NULL
+  LIMIT 1;
+  IF v_baleno_id IS NULL THEN
+    RAISE EXCEPTION 'demo seed: missing Baleno · Rexine (R) — run seeds/01-catalog.sql first';
+  END IF;
 
-  -- Ensure product lines attached
-  UPDATE car_models SET product_line_id = v_line_rex_r WHERE id IN (v_baleno_id, v_creta_id, v_swift_id) AND product_line_id IS NULL;
-  UPDATE car_models SET product_line_id = v_line_pvc WHERE id IN (v_nexon_id, v_ertiga_id) AND product_line_id IS NULL;
+  SELECT cm.id INTO v_swift_id
+  FROM car_models cm
+  JOIN product_lines pl ON pl.id = cm.product_line_id
+  WHERE cm.name = 'Swift 2018' AND pl.code = 'REX-R' AND cm.barcode IS NOT NULL
+  LIMIT 1;
+  IF v_swift_id IS NULL THEN
+    RAISE EXCEPTION 'demo seed: missing Swift 2018 · Rexine (R) — run seeds/01-catalog.sql first';
+  END IF;
+
+  SELECT cm.id INTO v_creta_id
+  FROM car_models cm
+  JOIN product_lines pl ON pl.id = cm.product_line_id
+  WHERE cm.name = 'Creta 2020' AND pl.code = 'REX-R' AND cm.barcode IS NOT NULL
+  LIMIT 1;
+  IF v_creta_id IS NULL THEN
+    RAISE EXCEPTION 'demo seed: missing Creta 2020 · Rexine (R) — run seeds/01-catalog.sql first';
+  END IF;
+
+  SELECT cm.id INTO v_nexon_id
+  FROM car_models cm
+  JOIN product_lines pl ON pl.id = cm.product_line_id
+  WHERE cm.name = 'Nexon' AND pl.code = 'REX-R' AND cm.barcode IS NOT NULL
+  LIMIT 1;
+  IF v_nexon_id IS NULL THEN
+    RAISE EXCEPTION 'demo seed: missing Nexon · Rexine (R) — run seeds/01-catalog.sql first';
+  END IF;
+
+  SELECT cm.id INTO v_ertiga_id
+  FROM car_models cm
+  JOIN product_lines pl ON pl.id = cm.product_line_id
+  WHERE cm.name = 'Ertiga 2018' AND pl.code = 'REX-R' AND cm.barcode IS NOT NULL
+  LIMIT 1;
+  IF v_ertiga_id IS NULL THEN
+    RAISE EXCEPTION 'demo seed: missing Ertiga 2018 · Rexine (R) — run seeds/01-catalog.sql first';
+  END IF;
 
   -- Clean out previous demo seed batches if present to keep rerun idempotent
   DELETE FROM batches WHERE batch_code IN ('B-2026-001','B-2026-002','B-2026-003','B-2026-004','B-2026-005','B-2026-006','B-2026-007');
 
   -- ────────────────────────────────────────────────────────────────────────────
   -- BATCH 1: Pending Cutting (Qty 4)
+  -- Phase: cutting, Status: pending
   -- ────────────────────────────────────────────────────────────────────────────
   INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, cut_qty, current_phase, status, created_by, created_at, updated_at)
   VALUES ('B-2026-001', v_baleno_id, v_roll_id, 4, 0, 'cutting', 'pending', v_owner_id, NOW() - INTERVAL '4 hours', NOW() - INTERVAL '4 hours')
@@ -124,10 +162,11 @@ BEGIN
   END LOOP;
 
   -- ────────────────────────────────────────────────────────────────────────────
-  -- BATCH 2: Awaiting Assignment with Short Cut (cut_qty 4 < quantity 6)
+  -- BATCH 2: Short-Cut Batch Parked for Admin (cut_qty 4 < quantity 6)
+  -- Phase: stitching, Status: awaiting_assignment
   -- ────────────────────────────────────────────────────────────────────────────
   INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, cut_qty, current_phase, status, notes, created_by, created_at, updated_at)
-  VALUES ('B-2026-002', v_swift_id, v_roll_id, 6, 4, 'cutting', 'awaiting_assignment', 'Roll ended early; short cut by 2 units', v_owner_id, NOW() - INTERVAL '5 hours', NOW() - INTERVAL '3 hours')
+  VALUES ('B-2026-002', v_swift_id, v_roll_id, 6, 4, 'stitching', 'awaiting_assignment', 'Roll ended early; short cut by 2 units', v_owner_id, NOW() - INTERVAL '5 hours', NOW() - INTERVAL '3 hours')
   RETURNING id INTO v_b2_id;
 
   FOR i IN 1..6 LOOP
@@ -140,6 +179,7 @@ BEGIN
 
   -- ────────────────────────────────────────────────────────────────────────────
   -- BATCH 3: Stitching In-Progress with Quotas (Surya 4 / Mahesh 2, partial scans)
+  -- Phase: stitching, Status: in_progress
   -- ────────────────────────────────────────────────────────────────────────────
   INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, cut_qty, current_phase, status, created_by, created_at, updated_at)
   VALUES ('B-2026-003', v_creta_id, v_roll_id, 6, 6, 'stitching', 'in_progress', v_owner_id, NOW() - INTERVAL '3 hours', NOW() - INTERVAL '1 hour')
@@ -171,6 +211,7 @@ BEGIN
 
   -- ────────────────────────────────────────────────────────────────────────────
   -- BATCH 4: Packing In-Progress with Rework (1 routed to stitcher, 1 to admin)
+  -- Phase: packing, Status: in_progress
   -- ────────────────────────────────────────────────────────────────────────────
   INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, cut_qty, current_phase, status, rework_count, created_by, created_at, updated_at)
   VALUES ('B-2026-004', v_nexon_id, v_roll_id, 5, 5, 'packing', 'in_progress', 2, v_owner_id, NOW() - INTERVAL '4 hours', NOW() - INTERVAL '30 minutes')
@@ -226,6 +267,7 @@ BEGIN
 
   -- ────────────────────────────────────────────────────────────────────────────
   -- BATCH 5: Batch with One Written-Off Unit (defective + closed round)
+  -- Phase: packing, Status: in_progress
   -- ────────────────────────────────────────────────────────────────────────────
   INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, cut_qty, current_phase, status, rework_count, created_by, created_at, updated_at)
   VALUES ('B-2026-005', v_ertiga_id, v_roll_id, 4, 4, 'packing', 'in_progress', 1, v_owner_id, NOW() - INTERVAL '5 hours', NOW() - INTERVAL '1 hour')
@@ -266,6 +308,7 @@ BEGIN
 
   -- ────────────────────────────────────────────────────────────────────────────
   -- BATCH 6: Completed Batch Yesterday (for reports)
+  -- Phase: completed, Status: completed
   -- ────────────────────────────────────────────────────────────────────────────
   INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, cut_qty, current_phase, status, created_by, created_at, updated_at)
   VALUES ('B-2026-006', v_baleno_id, v_roll_id, 5, 5, 'completed', 'completed', v_owner_id, NOW() - INTERVAL '28 hours', NOW() - INTERVAL '20 hours')
@@ -289,6 +332,7 @@ BEGIN
 
   -- ────────────────────────────────────────────────────────────────────────────
   -- BATCH 7: Completed Batch Last Week (for reports)
+  -- Phase: completed, Status: completed
   -- ────────────────────────────────────────────────────────────────────────────
   INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, cut_qty, current_phase, status, created_by, created_at, updated_at)
   VALUES ('B-2026-007', v_creta_id, v_roll_id, 8, 8, 'completed', 'completed', v_owner_id, NOW() - INTERVAL '7 days', NOW() - INTERVAL '6 days')
