@@ -8,6 +8,9 @@ Sidebar sub-nav: Cutting · Ready to stitch · Stitching · Packing · Completed
 No `phase` param → all batches. Table columns: Code (link) · Model/size · Qty · Phase badge (amber **ready** for parked) ·
 Packed n/m · Created. **Packing view only**: extra column **Print stickers** → downloads sticker PDF and POSTs
 `stickers-printed` → label flips to **Reprint**.
+**U2 — URL is the state** (`features/batches/use-list-params.ts`): `phase`, `q` (debounced), `car`, `line`, `from`, `to`,
+`rework=1`, `short=1`, `sort`, `order`, `page` → server-side `GET /batches` (50 per page, "x–y of N", Prev/Next).
+Sortable headers (Code, Model, Qty, Phase, Created). Whole row opens the batch (ctrl/⌘/middle-click → new tab).
 
 ## Batch detail — `/batches/[id]`
 - Header: code, model · qty · size, notes; **Labels PDF** (taffeta reprint); badge shows `ready for stitching` when parked.
@@ -55,3 +58,14 @@ detail crumbs go back to the batch's own phase view.
 - **Lot — `/stock/lots/[id]`**: type, width, colour, supplier, cost; remaining/received, used, wasted, adjusted,
   returned; batches that used it; ledger (load more).
 - `components/ui/card.tsx` is a plain surface (no default flex-col) — callers own padding and layout.
+
+## Lists & search (U2)
+- **Whole-row links** on every table: `DataTable rowHref` (+ `rowLabel`). Clicks on inner links, buttons, inputs,
+  switches, checkboxes and portal content (dialogs opened from a row) never trigger the row. Workers → worker,
+  cars → car, reports → worker, stock rolls → lot, rework "With stitchers" → mat, worker history / car / lot batch
+  tables → batch. The lot ledger isn't clickable (most movements have no batch).
+- **Header search** (`components/layout/global-search.tsx`): batches, mats, cars (incl. barcode), workers, lots; arrow
+  keys + Enter; exact match first. A USB scanner's "code + Enter" (before results arrive) fetches and opens the exact
+  match. No ⌘K / shortcuts yet (deferred in NEXT-STEPS).
+- The dashboard no longer loads the full batch list: recent = `?limit=6`, short cuts = `?view=ready&short=true`,
+  pipeline names = `stats.working`.

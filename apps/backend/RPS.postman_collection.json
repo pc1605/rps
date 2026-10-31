@@ -268,6 +268,22 @@
     {
       "key": "u1LotId",
       "value": ""
+    },
+    {
+      "key": "u2Total",
+      "value": ""
+    },
+    {
+      "key": "u2Code",
+      "value": ""
+    },
+    {
+      "key": "u2First",
+      "value": ""
+    },
+    {
+      "key": "u2Barcode",
+      "value": ""
     }
   ],
   "item": [
@@ -8357,6 +8373,610 @@
               }
             ],
             "url": "{{baseUrl}}/materials/lots/00000000-0000-0000-0000-000000000000"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lists & search (U2)",
+      "description": "Read-only. Run against the test backend (RPS test, :8082).",
+      "item": [
+        {
+          "name": "Setup \u00b7 admin login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('accessToken', d.tokens.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"owner@ambika.local\", \"password\": \"admin123\"}"
+            }
+          }
+        },
+        {
+          "name": "List \u00b7 first page",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('page shape', () => { pm.expect(d.page).to.eql(1); pm.expect(d.limit).to.eql(2); pm.expect(d.items.length).to.be.at.most(2); pm.expect(d.total).to.be.at.least(d.items.length); });",
+                  "pm.collectionVariables.set('u2Total', d.total); if (d.items[0]) { pm.collectionVariables.set('u2Code', d.items[0].batch_code); pm.collectionVariables.set('u2First', d.items[0].id); pm.collectionVariables.set('u2Barcode', d.items[0].barcode || ''); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?limit=2"
+          }
+        },
+        {
+          "name": "List \u00b7 page 2 is disjoint",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('different rows than page 1', () => d.items.forEach((b) => pm.expect(b.id).to.not.eql(pm.collectionVariables.get('u2First'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?limit=2&page=2"
+          }
+        },
+        {
+          "name": "List \u00b7 views add up",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('total unchanged with big limit', () => pm.expect(d.total).to.eql(Number(pm.collectionVariables.get('u2Total'))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?limit=200"
+          }
+        },
+        {
+          "name": "List \u00b7 view=packing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('only packing', () => d.items.forEach((b) => pm.expect(b.current_phase).to.eql('packing')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?view=packing&limit=200"
+          }
+        },
+        {
+          "name": "List \u00b7 view=ready",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('only awaiting assignment', () => d.items.forEach((b) => pm.expect(b.status).to.eql('awaiting_assignment')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?view=ready"
+          }
+        },
+        {
+          "name": "List \u00b7 sort code asc",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('ordered', () => { const c = d.items.map((b) => b.batch_code); pm.expect(c).to.eql([...c].sort()); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?sort=code&order=asc&limit=200"
+          }
+        },
+        {
+          "name": "List \u00b7 sort quantity desc",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('ordered', () => { for (let i = 1; i < d.items.length; i++) pm.expect(d.items[i].quantity).to.be.at.most(d.items[i - 1].quantity); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?sort=quantity&order=desc&limit=200"
+          }
+        },
+        {
+          "name": "List \u00b7 q = batch code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('finds it', () => pm.expect(d.items.map((b) => b.batch_code)).to.include(pm.collectionVariables.get('u2Code')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?q={{u2Code}}"
+          }
+        },
+        {
+          "name": "List \u00b7 q is not a wildcard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('no hits for %', () => pm.expect(d.total).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?q=%25"
+          }
+        },
+        {
+          "name": "List \u00b7 has_rework",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('all have open rework', () => d.items.forEach((b) => pm.expect(b.rework_open).to.be.above(0)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?has_rework=true"
+          }
+        },
+        {
+          "name": "List \u00b7 short",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('all short', () => d.items.forEach((b) => { pm.expect(b.status).to.eql('awaiting_assignment'); pm.expect(b.cut_qty).to.be.below(b.quantity); }));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?short=true"
+          }
+        },
+        {
+          "name": "List \u00b7 created in the future",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('none', () => pm.expect(d.total).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?from=2099-01-01"
+          }
+        },
+        {
+          "name": "List \u00b7 limit 0 \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?limit=0"
+          }
+        },
+        {
+          "name": "List \u00b7 bad view \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?view=nope"
+          }
+        },
+        {
+          "name": "List \u00b7 bad sort \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?sort=id"
+          }
+        },
+        {
+          "name": "List \u00b7 bad order \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?order=up"
+          }
+        },
+        {
+          "name": "List \u00b7 bad date \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?from=31-10-2026"
+          }
+        },
+        {
+          "name": "Search \u00b7 batch code exact",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('exact batch', () => { pm.expect(d.exact.kind).to.eql('batch'); pm.expect(d.exact.label).to.eql(pm.collectionVariables.get('u2Code')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/search?q={{u2Code}}"
+          }
+        },
+        {
+          "name": "Search \u00b7 mat code exact (lower case)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('exact unit', () => pm.expect(d.exact && d.exact.kind).to.eql('unit'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/search?q={{u2Code}}-001"
+          }
+        },
+        {
+          "name": "Search \u00b7 worker name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('worker hit', () => pm.expect(d.hits.some((h) => h.kind === 'worker')).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/search?q=sur"
+          }
+        },
+        {
+          "name": "Search \u00b7 1 char \u2192 empty",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('no hits', () => pm.expect(d.hits).to.eql([]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/search?q=B"
+          }
+        },
+        {
+          "name": "Stats \u00b7 working names",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('working is a map of name lists', () => { pm.expect(d.working).to.be.an('object'); Object.values(d.working).forEach((v) => pm.expect(v).to.be.an('array')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/stats"
           }
         }
       ]

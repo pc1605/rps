@@ -22,9 +22,9 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | GET/POST | `/car-brands` | list brands / create brand `{name}` |
 | GET | `/product-lines` | list active product lines (`REX-R`, `REX-87`, `PVC-18`, `PVC-21`) |
 | GET | `/rolls` | raw materials roll list |
-| GET | `/batches` | all batches, newest first (List). Roll-ups `units_total, units_packed, units_stitched, units_written_off, rework_open`, plus `active_workers` (open logs at the current phase) |
+| GET | `/batches?view&q&car_model_id&product_line_id&from&to&has_rework&short&sort&order&page&limit` | **U2**: `{items, total, page, limit}`. `view` = cutting · ready · stitching · packing · completed (sidebar tabs); `q` matches batch code, car (brand + model), product line name or exact barcode (LIKE-escaped); from/to = created, factory days inclusive; `sort` created · code · quantity · phase · car (default created desc); `limit` 1–200 (default 50). Items carry roll-ups `units_total, units_packed, units_stitched, units_written_off, rework_open` + `active_workers`. 400 on bad params |
 | POST | `/batches` | `{car_model_id, quantity, roll_id?, notes?}` → 201 Batch (units created) |
-| GET | `/batches/stats` | `BatchStats` (`@rps/shared`): `{in_cutting, awaiting_assignment, in_stitching, in_packing, completed_today, total_active, rework_open, rework_needs_decision}`. `completed_today` = factory day (`FACTORY_TZ`) |
+| GET | `/batches/stats` | `BatchStats` (`@rps/shared`): `{in_cutting, awaiting_assignment, in_stitching, in_packing, completed_today, total_active, rework_open, rework_needs_decision, material_shortfalls_open, low_stock_types, working: {phase: [names]}}`. `completed_today` = factory day (`FACTORY_TZ`) |
 | GET | `/batches/:id` | BatchDetail: `units[]`, `timeline[]`, `assignments[]`, `cut_qty`, `parent_batch_id`, `short_reason`; same roll-ups as List, computed server-side |
 | PUT | `/batches/:id/assignments` | `{phase:"stitching", assignments:[{worker_id, target_qty?}, …]}`. Empty list clears. Operates the gate for stitching. 400 on quota rule violations |
 | POST | `/batches/:id/resolve-short` | `{action:"split"|"reduce"|"recut", reason?}`. Resolves cutter short cuts. Split creates linked remainder batch; reduce cancels un-cut units; recut re-opens cutting |
@@ -38,6 +38,7 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | GET | `/workers/:id/history?limit&cursor` | participations newest first (`phase_logs`): batch, item, phase, mats, target, first/last scan, rework caused; keyset `next_cursor` |
 | PATCH | `/workers/:id` | `{name?, phone? ("" clears), station?, is_active?}`; station change / deactivation → 409 `worker_busy` while open claims or unfinished quotas. Tx + audit |
 | POST | `/workers/:id/reset-pin` | `{pin?}` → `{pin}` returned once (random 4 digits if omitted); never logged; audit says `pin_reset` only |
+| GET | `/search?q=` | **U2** header search (q ≥ 2 chars, ≤ 5 per kind): `{q, exact?, hits[{kind: batch·unit·car·worker·lot, id, label, sub}]}`; `exact` = full batch/unit/lot code or barcode (scanner input) |
 | GET | `/units/:code` | **unit page**: `{unit (incl. rework rounds + photos), batch, cutting[]}`; 404 `unit_not_found` |
 | GET | `/car-models/:id/overview?from&to` | **car page**: item + stats (stitched, packed, rework rounds/rate, first-pass yield in range; WIP, stock now) + active + last 10 completed batches (default range last 30 days) |
 | GET | `/materials/lots/:id` | **lot page**: lot + `consumed`, `wasted`, `adjusted`, `returned` + batches that chose it as roll or drew from it |
