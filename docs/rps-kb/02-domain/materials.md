@@ -49,6 +49,18 @@ The first match wins; an override of `0` means the type isn't used (no consumpti
 - Every other type is drawn **FIFO** (oldest `received_at` first) across active lots of the type — any variant, unless
   the matching line pins one. Resolve the quantity with the **variant of the first lot drawn**.
 
+As built (C1b, `internal/batch/consume.go`):
+- **Eligible lot** = active, `qty_remaining > 0`, and a quantity resolves for its variant. "Pinned" therefore means: if a
+  type only has variant-specific lines/overrides (no "any"), only lots of those variants are drawn; with an "any" line,
+  every lot of the type is eligible.
+- **Roll-covered type:** order = the roll (if active with stock), then the type's other eligible lots FIFO, then a
+  shortfall. V stays the roll's variant even if the roll is empty.
+- **FIFO type with no eligible lot:** V = the first lot's variant if any lot exists (→ usually `none`), else none → the
+  "any" quantity becomes a full shortfall.
+- **No recipe lines, no overrides and no roll** for the car: no plan rows (a plan row needs a type), only the batch note
+  "Materials not recorded: no recipe for this car's product line × consumption group".
+- Quantities are `Milli` (int64 thousandths, exact for numeric(12,3)); never float64.
+
 ## Consumption (C1b)
 
 - When: at **cutting-complete**, for `quantity_completed` mats — per completion, so a re-cut consumes only for the extra
@@ -57,8 +69,13 @@ The first match wins; an override of `0` means the type isn't used (no consumpti
   `batch_material_plan` row per type (`source`, `qty_per_mat`, `mats`, `planned_qty`, `phase_log_id`).
   Movements and plan rows carry the cutting completion's `phase_log_id`; `uq_plan_completion_type`
   (phase_log_id, type) makes a second run for the same completion fail → no double deduction.
-- **Never blocks the cutter.** If the lots run out, the rest is a `consume` movement with `lot_id = NULL`
-  (a **shortfall**) and an admin alert. Shortfall is the only movement allowed without a lot (DB check).
+- **Never blocks the cutter.** If the lots run out, the rest is ONE `consume` movement with `lot_id = NULL`
+  (a **shortfall**, reason `shortfall`) plus the batch note "Material shortfall: <type> <qty> <unit>". Shortfall is the
+  only movement allowed without a lot (DB check). Only real DB errors fail the completion.
+- **Locking:** every candidate lot of every needed type is locked in ONE `… ORDER BY id FOR UPDATE`, so concurrent cuts
+  lock in the same order (no deadlock); types are then processed in id order.
+- **Alerts:** `/batches/stats` → `material_shortfalls_open` (shortfall movements in the last 30 days) and
+  `low_stock_types` (active types with `min_level` whose active lots sum below it). Shown in the admin UI from C2.
 - Actual metres measured at cutting (owner Q5) will later arrive as `adjust`/`waste` against the plan (R2).
 
 ## Invariants (enforced or checked)
