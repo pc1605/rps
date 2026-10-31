@@ -17,6 +17,7 @@ func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 	api.Get("/batches/:id", admin, h.Get)
 	api.Get("/rework", admin, h.AdminListRework)
 	api.Get("/units/:code", admin, h.UnitJourney)
+	api.Get("/search", admin, h.Search)
 
 	// Admin actions
 	api.Post("/batches", admin, h.Create)
