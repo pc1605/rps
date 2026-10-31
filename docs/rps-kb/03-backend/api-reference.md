@@ -33,6 +33,16 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | POST | `/rework/:id/decide` | `{decision: "to_stitcher"|"recut"|"write_off", note?}`. Directs admin-routed rework items. Recut spawns new 1-mat batch |
 | GET/POST | `/workers` | list (no badge exposed) / create `{name, station, pin, phone?}` → 201 with `badge_token` **once** |
 | GET | `/workers/:id/enrollment` | `{badge_token}` for re-showing the QR (admin) |
+| GET | `/workers/:id` | **worker page (U1)**: profile + `open_claims` (batch, phase, since, my_done/target), `assigned` (at the batch's current phase, not joined), `open_rework` (rounds on mats they stitched; `awaiting_decision`) |
+| GET | `/workers/:id/summary?from&to` | factory days, inclusive (default last 14): `unit` (pieces cut / mats stitched / mats packed), `total`, `today`, `last_7_days`, `mats_per_hour`, `days[]` (mats, first/last, active secs); stitchers `rework_caused {rounds, rate_pct, by_reason}` + `rework_fixed {count, median_turnaround_secs}`; packers `flagged`. Counted from scan facts (`stitched_at`/`packed_at`; cutting `completed_at`) |
+| GET | `/workers/:id/history?limit&cursor` | participations newest first (`phase_logs`): batch, item, phase, mats, target, first/last scan, rework caused; keyset `next_cursor` |
+| PATCH | `/workers/:id` | `{name?, phone? ("" clears), station?, is_active?}`; station change / deactivation → 409 `worker_busy` while open claims or unfinished quotas. Tx + audit |
+| POST | `/workers/:id/reset-pin` | `{pin?}` → `{pin}` returned once (random 4 digits if omitted); never logged; audit says `pin_reset` only |
+| GET | `/units/:code` | **unit page**: `{unit (incl. rework rounds + photos), batch, cutting[]}`; 404 `unit_not_found` |
+| GET | `/car-models/:id/overview?from&to` | **car page**: item + stats (stitched, packed, rework rounds/rate, first-pass yield in range; WIP, stock now) + active + last 10 completed batches (default range last 30 days) |
+| GET | `/materials/lots/:id` | **lot page**: lot + `consumed`, `wasted`, `adjusted`, `returned` + batches that chose it as roll or drew from it |
+
+Ids next to names (U1): units `stitched_by`/`packed_by`; rework entries `flagged_by`, `fixed_by`, `stitcher_id`; a `recut` decision returns `new_batch_id`.
 | GET/POST/PATCH | `/stock/rolls`, `/stock/rolls/:id` | rolls with `is_low`, `batch_count`; PATCH `{remaining_meters?, is_active?}` |
 | GET | `/stock/finished` | packed units grouped by model |
 | GET | `/reports/workers?from=YYYY-MM-DD&to=YYYY-MM-DD` | dates are factory days (`FACTORY_TZ`, default Asia/Kolkata), `to` inclusive; default last 7 days incl. today; per worker `batches_done, pieces_done, avg_duration_secs, currently_working` (open claim, window-independent); sorted pieces desc. Role-guarded |

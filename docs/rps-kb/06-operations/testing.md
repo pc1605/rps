@@ -45,6 +45,8 @@ Folders and run order:
    lot PATCH, movements pagination, groups, recipes, car group + overrides, resolve dry run, batch → cutter
    materials-needed → cut → batch materials; main 4xx; restores the car's group at the end.
    `npx -y newman@6.2.1 run apps/backend/RPS.postman_collection.json -e apps/backend/RPS-test.postman_environment.json --folder "Materials (C1c)"`
+9. **Entity pages (U1)** — worker detail/summary/history, busy-deactivate 409, throwaway packer: edit, reset PIN,
+   login with it, deactivate → its token 401, reactivate; unit journey, car overview, lot detail; main 4xx. Same command with `--folder "Entity pages (U1)"`.
 
 Use **Collection Runner → Run folder** to avoid ordering mistakes. Re-runs create "PM …" workers; clear with the reset SQL.
 

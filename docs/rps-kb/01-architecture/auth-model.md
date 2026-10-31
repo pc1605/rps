@@ -23,6 +23,9 @@ Worker routes are `/worker/*` only; their handlers check the worker token/statio
 (HMAC-signed URL). **New admin route ⇒ add the role middleware**; the phone app must only call `/worker/*`.
 Before U0, worker tokens could read every batch, fetch any worker's badge, and create/edit car models.
 
+**Deactivation is immediate (U1):** for worker tokens the Guard also checks `workers.is_active` (PK lookup) on every
+request → a deactivated worker's existing 30-day token gets 401 "worker deactivated — ask your admin".
+
 ## Worker enrollment
 - Admin creates worker → response includes `badge_token` once. Admin UI shows QR `RPS-ENROLL:<badge_token>` + text.
 - Any time later: Workers list → QR icon → `GET /workers/:id/enrollment` re-shows the QR (admin-only).
@@ -31,7 +34,6 @@ Before U0, worker tokens could read every batch, fetch any worker's badge, and c
 - Cold start: `app/index.tsx` checks SecureStore → `/home` (then `restore()` loads `/worker/me`) or `/login`.
 
 ## Known hardening gaps (pre-rollout, §3/§4 — NOT built)
-- 30-day worker tokens are not re-checked against `workers.is_active` per request → deactivation takes effect at expiry.
 - Badge tokens are permanent; the plan is one-time, expiring enrollment codes (endpoint URL kept, semantics swapped).
 - No login rate-limiting (4-digit PINs).
 - Admin refresh token should move to an httpOnly cookie; rotate all secrets at deploy.

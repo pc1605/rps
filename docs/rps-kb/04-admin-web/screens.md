@@ -38,3 +38,20 @@ Raw tab: rolls with progress bar, `⚠ Low` under 10 m, create/edit. Finished ta
 Range presets (Today / 7d / This month / 30d / custom) → table per worker: batches, pieces, avg/batch, 🏆 top producer,
 pulsing "working" dot (open claim, independent of range). Summary strip: Pieces · Phase runs · On floor now.
 (Slice D adds ₹ earnings via `piece_rates`.)
+
+## Entity pages & links (U1)
+Every worker / batch / unit / car / lot name is a link (`components/rps/entity-link.tsx`: `WorkerLink`, `BatchLink`,
+`UnitLink`, `CarLink`, `LotLink` — neutral style, never amber). Pages use `PageHeader crumbs` (breadcrumbs); batch
+detail crumbs go back to the batch's own phase view.
+- **Worker — `/workers/[id]`**: Now (open claims with my_done/target, assigned-not-joined, open rework) · Output
+  (range picker; today / 7 days / range / per active hour; stitchers rework caused (rate, reasons) + fixed (median
+  turnaround); packers sent-to-rework; per-day bars in the station colour) · Work history (load more). Actions:
+  Enrollment QR, Reset PIN (shown once), Edit (name, phone, station), Deactivate/Reactivate (AlertDialog; refused
+  while the worker has open work).
+- **Unit — `/units/[code]`**: journey — batch created → cut (who, pieces, roll) → stitched → rework rounds (reasons,
+  note, photos/lightbox, decision, re-cut batch link, fixed by) → packed.
+- **Car item — `/cars/[id]`**: size, line, pieces, consumption group, barcode; range stats (stitched, packed, rework
+  rate, first-pass yield, in production, in stock); active + recently completed batches.
+- **Lot — `/stock/lots/[id]`**: type, width, colour, supplier, cost; remaining/received, used, wasted, adjusted,
+  returned; batches that used it; ledger (load more).
+- `components/ui/card.tsx` is a plain surface (no default flex-col) — callers own padding and layout.
