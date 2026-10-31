@@ -38,8 +38,33 @@ If a cutter cuts fewer pieces than planned (e.g. roll ended, flaw in cloth), the
 The batch pauses in `awaiting_assignment` with a short-cut banner visible to the admin.
 Admin selects one of three resolution paths:
 1. **Split**: Reduces current batch to `N` units and creates a linked child batch with `quantity = Q - N` (`parent_batch_id = parent.id`).
-2. **Reduce**: Clamps batch quantity to `N`, marks unused units as `cancelled`, and stores `short_reason`.
+2. **Reduce**: Clamps batch quantity to `N`, **deletes** the un-cut units, and stores `short_reason`.
 3. **Recut**: Keeps batch quantity `Q` and transitions back to cutting so another cutter can cut the remaining pieces.
+
+Every action is confirmed in a dialog and needs a reason (R1/W5): Roll ran out · Material defect · Machine issue ·
+Cutter error · Order changed · Other (+ note, required for Other). The reason goes into the batch notes,
+`short_reason` (split/reduce) and the `short_resolved` event.
+
+## Batch events (R1, migration 016)
+`batch_events` is the typed history every report reads time from. Each transition writes one row in its own tx:
+
+| Kind | Written by | to_phase / to_status | data |
+|---|---|---|---|
+| `created` | Create · split remainder · rework re-cut | cutting / pending | quantity, parent, via (`split`/`recut`), recut_of |
+| `cut_started` | cutter Start (every claim) | cutting / in_progress | |
+| `cut_completed` | cutter Complete | stitching / awaiting_assignment | cut, cut_total, quantity, short |
+| `short_resolved` | resolve-short | recut → cutting / pending; else unchanged | action, reason, note, remainder, cut, quantity |
+| `assigned` | SetAssignments | stitching / pending (or back to awaiting) when the gate flips | phase, `before` / `after` [{worker_id, target_qty}] — quota history (D6) |
+| `stitching_started` / `packing_started` | first worker joins the phase | phase / in_progress | |
+| `stitching_completed` | last stitching scan | packing / pending | |
+| `completed` | last packing scan, or a write-off / re-cut decision that finishes packing | completed / completed | |
+
+- **Stage entry** (WIP ageing) = newest event with `to_phase` = current phase and `to_status` = the stage's entry status
+  (`pending`; `awaiting_assignment` for Ready). **Last activity** (stuck) = newest of: any event, unit scan, phase claim,
+  rework step. Stuck = last activity older than `app_settings.stuck_hours[stage]`.
+- "Completed today" (`/batches/stats`) counts `completed` events by factory day (D5), not `updated_at`.
+- Backfilled rows (`data.backfill`) are approximate: stitching/packing start = first scan, completion = last pack scan;
+  old `assigned` rows only know the worker count.
 
 ## Visibility per status
 - `awaiting_assignment`: admin only (Batches → Ready to stitch). Worker queues filter `status IN ('pending','in_progress')`.

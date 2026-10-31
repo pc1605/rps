@@ -13,6 +13,7 @@ migrate -path apps/backend/migrations -database "$DATABASE_URL" up      # or: ve
 | `batch_status` | pending, in_progress, completed, cancelled, **awaiting_assignment** (added 006) |
 | `worker_station` | cutter, stitcher, packer |
 | `unit_status` | pending, packed, defective, dispatched, **rework** (added 012) |
+| `batch_event_kind` | created, cut_started, cut_completed, short_resolved, assigned, stitching_started, stitching_completed, packing_started, completed, cancelled, edited, claim_released (016; the last three are for U3) |
 
 Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` must not be used by a statement in the same transaction.
 
@@ -113,6 +114,11 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
 - `recipes(product_line_id × consumption_group_id unique)`, `recipe_lines(recipe_id, material_type_id, variant_id NULL=any, qty_per_mat > 0)`, `car_material_overrides(car_model_id, material_type_id, variant_id NULL=any, qty_per_mat ≥ 0)` — unique on `COALESCE(variant_id,0)`.
 - `batch_material_plan(batch_id, phase_log_id, material_type_id, variant_id, source, qty_per_mat, mats, planned_qty, note)`; `uq_plan_completion_type (phase_log_id, material_type_id)` — one row per type per cutting completion.
 - Down refuses once 015-era data exists (see `materials.md`).
+
+### 016 — batch_events + app_settings (R1)
+- `batch_events(id bigserial, batch_id → batches ON DELETE CASCADE, at, kind batch_event_kind, from_phase, to_phase, from_status, to_status, actor_user_id, actor_worker_id, data jsonb)`; indexes `(batch_id, at)`, `(kind, at)`. One row per transition, written in the same tx (`internal/batch/events.go`). See `batch-lifecycle.md` → Batch events.
+- `app_settings(key pk, value jsonb, updated_at, updated_by)`; seeded `stuck_hours` = `{cutting:24, awaiting_assignment:24, stitching:48, packing:48}`.
+- `backfill_batch_events()` rebuilds history for batches with **no** events (idempotent; `data.backfill = true`); run by the migration and at the end of `seeds/02-demo.sql`.
 
 ## Key invariants
 - One open cutting log per batch; many open stitching/packing logs (one per joined worker).

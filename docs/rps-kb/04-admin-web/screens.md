@@ -2,6 +2,7 @@
 
 ## Dashboard
 Stat cards: In cutting · **Ready for stitching** (amber; the admin's to-do) · In stitching · In packing · Completed today · total active.
+Attention cards include **N batches stuck** (R1, from `/reports/stuck`) → Reports overview.
 
 ## Batches (list) — `/batches[?phase=…]`
 Sidebar sub-nav: Cutting · Ready to stitch · Stitching · Packing · Completed, each with a live count pill (from `/batches/stats`).
@@ -36,9 +37,17 @@ Table: name · station badge · active · last login · **QR icon** → Enrollme
 ## Stock — `/stock`
 Finished goods only (packed mats by item), with a pointer to Materials. The old Raw-material/Rolls tab was removed in C2.
 
-## Reports
-Range presets (Today / 7d / This month / 30d / custom) → table per worker: batches, pieces, avg/batch, 🏆 top producer,
-pulsing "working" dot (open claim, independent of range). Summary strip: Pieces · Phase runs · On floor now.
+## Reports (R1) — `/reports`, `/reports/workers`, `/reports/quality`
+Tabs are routes; the date range is URL state (`?from&to`, default last 30 days) and travels between tabs. Every table
+has a CSV button (built in the browser). **Thresholds** dialog edits the stuck hours per stage.
+- **Overview:** packed / stitched / cut with change vs the previous period, first-pass yield, stuck now · throughput
+  per day as three small-multiple bar charts (one series each, phase colours, hover = day value, screen-reader table) ·
+  work in progress right now per stage with ageing buckets (<4 h, 4–24 h, 1–3 d, >3 d) → `/batches?view=…` · stuck
+  batches list · FPY by week · item mix (packed per car).
+- **Workers:** per station table — pieces/mats, days, active time, per hour (≥ 15 min), stitchers: rework rate and
+  quota delivered.
+- **Quality:** rework rounds, average fix time, short cuts / cuts, write-offs, re-cuts · rework and losses by reason
+  (ranked bars) · rework by stitcher · short cuts by action × reason · write-offs & re-cuts by item.
 (Slice D adds ₹ earnings via `piece_rates`.)
 
 ## Entity pages & links (U1)

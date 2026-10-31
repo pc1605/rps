@@ -107,3 +107,18 @@ Shared TypeScript package (`packages/shared/`) contains phase labels, status lab
 **Consequences**: Secret key `FILE_URL_SECRET` configures signing and constant-time verification; URLs expire after `FILE_URL_TTL_MINUTES` (default 60m).
 **Status**: Built & Verified (Slice B).
 
+### D28 — Typed batch events for time-based reports (Oct 2026)
+**Decision**: Every batch transition writes a `batch_events` row (kind, from/to phase and status, actor, data) in the same tx. Reports take time from events and count mats from unit scans.
+**Why**: Phase entry/exit times were scattered across `phase_logs`, `updated_at` and audit JSON; ageing, stuck, cycle time and "completed today" were approximations (audit E1, D5).
+**Consequences**: Migration 016 backfills existing batches (approximate, `data.backfill`); `backfill_batch_events()` also runs after the demo seed. U3 writes `cancelled` / `edited` / `claim_released`.
+**Status**: Built (R1).
+
+### D29 — Stuck = no activity past a per-stage threshold (Oct 2026)
+**Decision**: A live batch is stuck when its last activity (event, scan, claim, rework step) is older than `app_settings.stuck_hours[stage]` — defaults cutting 24 h, ready for stitching 24 h, stitching 48 h, packing 48 h; editable on Reports.
+**Why**: Owner question 5 in the audit; defaults approved in R1.
+**Status**: Built (R1).
+
+### D30 — Short-cut actions need a reason (Oct 2026)
+**Decision**: Split, Reduce and Re-cut are confirmed in a dialog and require a reason code (+ note for Other).
+**Why**: Audit W5 — actions ran with one tap, and only Reduce had an (optional) reason, so short-cut frequency by cause was unknowable.
+**Status**: Built (R1). Older resolutions show as "Not recorded".
