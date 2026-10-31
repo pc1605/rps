@@ -230,6 +230,11 @@ func TestLotMovements(t *testing.T) {
 	_, err = f.s.ListMovements(f.ctx, MovementFilter{Cursor: "garbage"})
 	is(t, "bad cursor", err, ErrInvalid)
 
+	ld, err := f.s.LotDetail(f.ctx, lot.ID)
+	if err != nil || ld.Wasted != 1250 || ld.Returned != 750 || ld.Adjusted != -1500 || ld.Consumed != 0 || len(ld.Batches) != 0 {
+		t.Errorf("lot detail totals: %+v, %v", ld, err)
+	}
+
 	lots, err := f.s.ListLots(f.ctx, &sheet.ID, bp(false), false)
 	if err != nil || len(lots) != 1 || lots[0].ID != lot.ID {
 		t.Errorf("list lots type+inactive: %d lots, %v", len(lots), err)

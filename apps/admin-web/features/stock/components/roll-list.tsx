@@ -10,6 +10,7 @@ import type { Roll } from "../types";
 import { AddRollDialog } from "./add-roll-dialog";
 import { RollActions } from "./roll-actions";
 import { StockBar } from "./stock-bar";
+import { LotLink } from "@/components/rps/entity-link";
 
 const statusTone = {
   finished: { text: "text-muted-foreground", border: "border-border" },
@@ -35,7 +36,7 @@ const columns: Column<Roll>[] = [
             !r.is_active && "text-muted-foreground line-through",
           )}
         >
-          {r.roll_code}
+          <LotLink id={r.id} code={r.roll_code} />
         </div>
         <div className="text-caption text-muted-foreground">{r.color}</div>
       </div>

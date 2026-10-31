@@ -11,6 +11,7 @@ import { ReasonChip } from "@/features/rework/components/reason-chip";
 import { unitTone } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
 import type { Unit } from "../types";
+import { UnitLink, WorkerLink } from "@/components/rps/entity-link";
 
 export function fmtStamp(iso?: string) {
   if (!iso) return null;
@@ -36,14 +37,15 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
 
   const tone = unitTone[displayState(u)];
 
-  const events: { icon: string; who?: string; at?: string; label: string }[] = [
+  const events: { icon: string; who?: string; whoId?: string; at?: string; label: string }[] = [
     {
       icon: "🧵",
       label: "Stitched",
       who: u.stitched_by_name,
+      whoId: u.stitched_by,
       at: u.stitched_at,
     },
-    { icon: "📦", label: "Packed", who: u.packed_by_name, at: u.packed_at },
+    { icon: "📦", label: "Packed", who: u.packed_by_name, whoId: u.packed_by, at: u.packed_at },
   ];
 
   const handleOpenPhoto = (photos: ReworkPhoto[], idx: number) => {
@@ -58,7 +60,7 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
     <>
       <Card className="space-y-2 p-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-mono text-small">{u.unit_code}</span>
+          <UnitLink code={u.unit_code} className="text-small" />
           <Chip tone={tone}>{tone.label}</Chip>
         </div>
 
@@ -68,7 +70,7 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
               <li key={e.label} className="flex items-start gap-1.5 text-caption leading-tight">
                 <span aria-hidden>{e.icon}</span>
                 <span className="min-w-0">
-                  <span className="text-foreground">{e.who ?? e.label}</span>
+                  <WorkerLink id={e.whoId} name={e.who ?? e.label} className="text-foreground" />
                   <time dateTime={e.at} className="tabular block text-muted-foreground">
                     {fmtStamp(e.at)}
                   </time>
@@ -160,7 +162,12 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
 
                     {/* Flagged info */}
                     <div className="text-caption text-muted-foreground">
-                      Flagged by <span className="text-foreground">{round.flagged_by_name}</span>{" "}
+                      Flagged by{" "}
+                      <WorkerLink
+                        id={round.flagged_by}
+                        name={round.flagged_by_name}
+                        className="text-foreground"
+                      />{" "}
                       {round.flagged_at && `· ${fmtStamp(round.flagged_at)}`}
                     </div>
 
@@ -182,7 +189,12 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
                     {/* Fixed info */}
                     {round.fixed_at && (
                       <div className="text-caption text-muted-foreground">
-                        Fixed by <span className="text-foreground">{round.fixed_by_name ?? "Stitcher"}</span>{" "}
+                        Fixed by{" "}
+                        <WorkerLink
+                          id={round.fixed_by}
+                          name={round.fixed_by_name ?? "Stitcher"}
+                          className="text-foreground"
+                        />{" "}
                         · {fmtStamp(round.fixed_at)}
                       </div>
                     )}

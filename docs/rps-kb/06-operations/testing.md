@@ -23,9 +23,9 @@ cd apps/backend && TEST_DATABASE_URL=… go test -v ./internal/batch -run TestRe
 ```
 
 ## Postman collection (`apps/backend/RPS.postman_collection.json`)
-**Run only against a second backend on rps_test:** `cd apps/backend && DATABASE_URL=<rps_test url> PORT=8081 go run ./cmd/server`,
+**Run only against a second backend on rps_test:** `cd apps/backend && DATABASE_URL=<rps_test url> PORT=8082 go run ./cmd/server`,
 then select the **`RPS test`** environment (`apps/backend/RPS-test.postman_environment.json`, `baseUrl`
-`http://localhost:8081/api/v1` — environment values override the collection's `baseUrl`). Never against :8080 / `rps`.
+`http://localhost:8082/api/v1` — environment values override the collection's `baseUrl`). Never against :8080 / `rps`.
 
 Variables: `baseUrl` (localhost:8080/api/v1), `accessToken`, `workerToken` (cutter), `stitcherToken`, `stitcher2Token`,
 `packerToken`, badge vars, `batchId`, `workerBatchId`, `scanBatchId/Code`, `stockRollId`, `reportFrom/To`.
@@ -45,6 +45,8 @@ Folders and run order:
    lot PATCH, movements pagination, groups, recipes, car group + overrides, resolve dry run, batch → cutter
    materials-needed → cut → batch materials; main 4xx; restores the car's group at the end.
    `npx -y newman@6.2.1 run apps/backend/RPS.postman_collection.json -e apps/backend/RPS-test.postman_environment.json --folder "Materials (C1c)"`
+9. **Entity pages (U1)** — worker detail/summary/history, busy-deactivate 409, throwaway packer: edit, reset PIN,
+   login with it, deactivate → its token 401, reactivate; unit journey, car overview, lot detail; main 4xx. Same command with `--folder "Entity pages (U1)"`.
 
 Use **Collection Runner → Run folder** to avoid ordering mistakes. Re-runs create "PM …" workers; clear with the reset SQL.
 

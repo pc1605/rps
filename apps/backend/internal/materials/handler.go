@@ -434,3 +434,15 @@ func (h *Handler) MaterialsNeeded(c *fiber.Ctx) error {
 	}
 	return httpx.OK(c, out)
 }
+
+func (h *Handler) LotDetail(c *fiber.Ctx) error {
+	id, err := uuidParam(c, "id")
+	if err != nil {
+		return fail(c, err, "load lot")
+	}
+	out, err := h.svc.LotDetail(c.Context(), id)
+	if err != nil {
+		return fail(c, err, "load lot")
+	}
+	return httpx.OK(c, out)
+}

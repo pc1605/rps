@@ -227,3 +227,63 @@ func (s *Service) MaterialsNeeded(ctx context.Context, batchID uuid.UUID) (*Mate
 	}
 	return out, nil
 }
+
+// ───────────────────────── lot page ─────────────────────────
+
+type LotBatch struct {
+	BatchID   uuid.UUID `json:"batch_id"`
+	BatchCode string    `json:"batch_code"`
+	CarName   string    `json:"car_name"`
+	Quantity  int       `json:"quantity"`
+	Phase     string    `json:"current_phase"`
+	Drawn     Milli     `json:"drawn"` // consumed from this lot by the batch
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type LotDetail struct {
+	Lot
+	Consumed Milli      `json:"consumed"` // Σ consume (positive number)
+	Wasted   Milli      `json:"wasted"`   // Σ waste (positive number)
+	Adjusted Milli      `json:"adjusted"` // Σ adjust (signed)
+	Returned Milli      `json:"returned"`
+	Batches  []LotBatch `json:"batches"` // chosen as roll, or drew from this lot
+}
+
+// LotDetail — the lot, its ledger totals, and the batches that used it (as their roll or by drawing).
+func (s *Service) LotDetail(ctx context.Context, id uuid.UUID) (*LotDetail, error) {
+	l, err := s.getLot(ctx, s.pool, id)
+	if err != nil {
+		return nil, err
+	}
+	out := &LotDetail{Lot: *l, Batches: []LotBatch{}}
+	if err := s.pool.QueryRow(ctx, `
+		SELECT COALESCE((-SUM(qty) FILTER (WHERE kind = 'consume') * 1000)::bigint, 0),
+		       COALESCE((-SUM(qty) FILTER (WHERE kind = 'waste') * 1000)::bigint, 0),
+		       COALESCE((SUM(qty) FILTER (WHERE kind = 'adjust') * 1000)::bigint, 0),
+		       COALESCE((SUM(qty) FILTER (WHERE kind = 'return') * 1000)::bigint, 0)
+		FROM material_movements WHERE lot_id = $1`, id).Scan(&out.Consumed, &out.Wasted, &out.Adjusted, &out.Returned); err != nil {
+		return nil, err
+	}
+	rows, err := s.pool.Query(ctx, `
+		SELECT b.id, b.batch_code, cb.name || ' ' || cm.name || COALESCE(' · ' || pl.name, ''), b.quantity, b.current_phase::text,
+		       COALESCE((SELECT (-SUM(m.qty) * 1000)::bigint FROM material_movements m
+		                 WHERE m.batch_id = b.id AND m.lot_id = $1 AND m.kind = 'consume'), 0),
+		       b.created_at
+		FROM batches b
+		JOIN car_models cm ON cm.id = b.car_model_id JOIN car_brands cb ON cb.id = cm.brand_id
+		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
+		WHERE b.roll_id = $1 OR EXISTS (SELECT 1 FROM material_movements m WHERE m.batch_id = b.id AND m.lot_id = $1)
+		ORDER BY b.created_at DESC`, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var b LotBatch
+		if err := rows.Scan(&b.BatchID, &b.BatchCode, &b.CarName, &b.Quantity, &b.Phase, &b.Drawn, &b.CreatedAt); err != nil {
+			return nil, err
+		}
+		out.Batches = append(out.Batches, b)
+	}
+	return out, rows.Err()
+}

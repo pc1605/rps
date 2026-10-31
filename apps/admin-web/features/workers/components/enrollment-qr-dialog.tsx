@@ -16,7 +16,16 @@ import {
 } from "@/components/ui/dialog";
 import { http } from "@/lib/api-client";
 
-export function EnrollmentQrDialog({ workerId, workerName }: { workerId: string; workerName: string }) {
+export function EnrollmentQrDialog({
+  workerId,
+  workerName,
+  trigger,
+}: {
+  workerId: string;
+  workerName: string;
+  /** Custom trigger (defaults to a QR icon button). */
+  trigger?: React.ReactNode;
+}) {
   const [badge, setBadge] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -29,14 +38,16 @@ export function EnrollmentQrDialog({ workerId, workerName }: { workerId: string;
   return (
     <Dialog onOpenChange={load}>
       <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          title="Show enrollment QR"
-          aria-label={`Show enrollment QR for ${workerName}`}
-        >
-          <QrCode className="h-4 w-4" />
-        </Button>
+        {trigger ?? (
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Show enrollment QR"
+            aria-label={`Show enrollment QR for ${workerName}`}
+          >
+            <QrCode className="h-4 w-4" />
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>

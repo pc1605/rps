@@ -60,8 +60,8 @@ cd apps/backend && go build ./... && golangci-lint run ./... && TEST_DATABASE_UR
 cd apps/admin-web && pnpm build          # when admin changed
 ```
 Postman runs only against a **second backend on rps_test**:
-`cd apps/backend && DATABASE_URL=<rps_test url> PORT=8081 go run ./cmd/server`, then run the collection with the
-`RPS test` environment (`apps/backend/RPS-test.postman_environment.json`, baseUrl `http://localhost:8081/api/v1`).
+`cd apps/backend && DATABASE_URL=<rps_test url> PORT=8082 go run ./cmd/server`, then run the collection with the
+`RPS test` environment (`apps/backend/RPS-test.postman_environment.json`, baseUrl `http://localhost:8082/api/v1`).
 
 Then `scripts/review.sh master` and list: files changed, anything out of scope, red flags.
 

@@ -7,6 +7,7 @@ import { phaseTone } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
 import type { Phase, PhaseLogEntry } from "../types";
 import { fmtStamp } from "./unit-card";
+import { WorkerLink } from "@/components/rps/entity-link";
 
 const phaseIcon: Partial<Record<Phase, React.ElementType>> = {
   cutting: Scissors,
@@ -61,7 +62,10 @@ export function BatchTimeline({ timeline }: { timeline: PhaseLogEntry[] }) {
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-body font-medium">
                     <span className={tone.text}>{tone.label}</span>
-                    <span className="font-normal text-muted-foreground"> · {e.worker_name}</span>
+                    <span className="font-normal text-muted-foreground">
+                      {" "}
+                      · <WorkerLink id={e.worker_id} name={e.worker_name} />
+                    </span>
                   </div>
                   {open ? (
                     <span className="inline-flex items-center gap-1.5 text-caption text-working">

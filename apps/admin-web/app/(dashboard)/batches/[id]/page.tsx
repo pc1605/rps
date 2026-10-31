@@ -15,6 +15,8 @@ import { ShortCutPanel } from "@/features/batches/components/short-cut-panel";
 import { UnitCard } from "@/features/batches/components/unit-card";
 import { useBatch } from "@/features/batches/hooks";
 import { generateLabelPdf } from "@/features/batches/label-pdf";
+import { batchViews } from "@/features/batches/views";
+import { CarLink, LotLink } from "@/components/rps/entity-link";
 import { batchTone, sizeLabel } from "@/lib/tokens";
 
 export default function BatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -45,23 +47,32 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
     );
 
   const tone = batchTone(batch.current_phase, batch.status);
+  const view = batchViews.find((v) => v.filter(batch));
 
   return (
     <div className="space-y-8">
       <PageHeader
         mono
-        back={{ href: "/batches", label: "Batches" }}
+        crumbs={[
+          { label: "Batches", href: "/batches" },
+          ...(view ? [{ label: view.label, href: `/batches?phase=${view.key}` }] : []),
+        ]}
         title={batch.batch_code}
         description={
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="text-foreground">
+            <CarLink id={batch.car_model_id} className="text-foreground">
               {batch.brand_name} {batch.model_name}
-            </span>
+            </CarLink>
             <span>
               · {sizeLabel[batch.size_class] ?? batch.size_class}
               {batch.line_name ? ` · ${batch.line_name}` : ""} · {batch.quantity} mats
             </span>
             {batch.barcode && <span className="font-mono text-small">▮ {batch.barcode}</span>}
+            {batch.roll_id && (
+              <span className="text-small">
+                roll <LotLink id={batch.roll_id} code={batch.roll_code} />
+              </span>
+            )}
             {batch.parent_batch_code && (
               <Link
                 href={`/batches/${batch.parent_batch_id}`}

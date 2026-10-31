@@ -552,3 +552,16 @@ func (h *Handler) ServeReworkFile(c *fiber.Ctx) error {
 	c.Set("Cache-Control", "private, max-age=3000")
 	return c.SendFile(filePath)
 }
+
+// UnitJourney — GET /units/:code (admin): the mat's batch, cut/stitch/pack and rework rounds.
+func (h *Handler) UnitJourney(c *fiber.Ctx) error {
+	out, err := h.svc.UnitJourney(c.Context(), c.Params("code"))
+	if err != nil {
+		if errors.Is(err, ErrUnitNotFound) {
+			return httpx.Error(c, fiber.StatusNotFound, "unit_not_found", "unit not found")
+		}
+		log.Error().Err(err).Msg("unit journey")
+		return httpx.Internal(c, "failed to load unit")
+	}
+	return httpx.OK(c, out)
+}

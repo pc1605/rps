@@ -5,6 +5,7 @@ import { Users } from "lucide-react";
 import { Chip } from "@/components/rps/chip";
 import { type Column, DataTable } from "@/components/rps/data-table";
 import { EmptyState } from "@/components/rps/empty-state";
+import { WorkerLink } from "@/components/rps/entity-link";
 import { stationTone } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
 import { useWorkers } from "../hooks";
@@ -18,9 +19,11 @@ const columns: Column<Worker>[] = [
     header: "Name",
     card: "title",
     cell: (w) => (
-      <span className={cn("font-medium", !w.is_active && "text-muted-foreground line-through")}>
-        {w.name}
-      </span>
+      <WorkerLink
+        id={w.id}
+        name={w.name}
+        className={cn("font-medium", !w.is_active && "text-muted-foreground line-through")}
+      />
     ),
   },
   {

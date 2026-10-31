@@ -224,6 +224,50 @@
     {
       "key": "matCutterToken",
       "value": ""
+    },
+    {
+      "key": "u1Sfx",
+      "value": ""
+    },
+    {
+      "key": "u1StitcherId",
+      "value": ""
+    },
+    {
+      "key": "u1HistCursor",
+      "value": ""
+    },
+    {
+      "key": "u1WorkerId",
+      "value": ""
+    },
+    {
+      "key": "u1Badge",
+      "value": ""
+    },
+    {
+      "key": "u1Pin",
+      "value": ""
+    },
+    {
+      "key": "u1WorkerToken",
+      "value": ""
+    },
+    {
+      "key": "u1UnitCode",
+      "value": ""
+    },
+    {
+      "key": "u1BatchId",
+      "value": ""
+    },
+    {
+      "key": "u1CarId",
+      "value": ""
+    },
+    {
+      "key": "u1LotId",
+      "value": ""
     }
   ],
   "item": [
@@ -5634,7 +5678,7 @@
     },
     {
       "name": "Materials (C1c)",
-      "description": "Self-contained (logs in, builds a cutter token). Run ONLY against the test backend (RPS test environment, :8081 on rps_test). Creates PM-* types/lots/groups there.",
+      "description": "Self-contained (logs in, builds a cutter token). Run ONLY against the test backend (RPS test environment, :8082 on rps_test). Creates PM-* types/lots/groups there.",
       "item": [
         {
           "name": "Setup \u00b7 admin login",
@@ -7419,6 +7463,898 @@
               "mode": "raw",
               "raw": "{\n  \"is_active\": false\n}"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Entity pages (U1)",
+      "description": "Self-contained. Run ONLY against the test backend (RPS test environment, :8082 on rps_test). Creates one 'PM U1 \u2026' packer and leaves it inactive.",
+      "item": [
+        {
+          "name": "Setup \u00b7 admin login",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('u1Sfx', String(Date.now()).slice(-7));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('accessToken', d.tokens.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@ambika.local\",\n  \"password\": \"admin123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Setup \u00b7 pick a busy stitcher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const s = d.find((w) => w.name === 'Surya') || d.find((w) => w.station === 'stitcher' && w.is_active);",
+                  "pm.collectionVariables.set('u1StitcherId', s.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/workers"
+          }
+        },
+        {
+          "name": "Worker detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('now sections present', () => { ['open_claims','assigned','open_rework'].forEach((k) => pm.expect(d[k]).to.be.an('array')); });",
+                  "pm.test('no badge leaked', () => pm.expect(d.badge_token).to.be.undefined);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1StitcherId}}"
+          }
+        },
+        {
+          "name": "Worker detail \u00b7 unknown \u2192 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code not_found', () => pm.expect(pm.response.json().code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/00000000-0000-0000-0000-000000000000"
+          }
+        },
+        {
+          "name": "Worker summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('stitcher output shape', () => { pm.expect(d.unit).to.eql('mats stitched'); pm.expect(d.days).to.be.an('array'); pm.expect(d.rework_caused).to.be.an('object'); });",
+                  "pm.test('total = sum of days', () => pm.expect(d.total).to.eql(d.days.reduce((a, x) => a + x.mats, 0)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1StitcherId}}/summary?from=2026-10-01&to=2026-12-31"
+          }
+        },
+        {
+          "name": "Worker summary \u00b7 bad date \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1StitcherId}}/summary?from=31-10-2026"
+          }
+        },
+        {
+          "name": "Worker history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('one row + cursor when more exist', () => { pm.expect(d.items.length).to.be.at.most(1); if (d.items.length) pm.expect(d.items[0]).to.have.property('batch_code'); });",
+                  "pm.collectionVariables.set('u1HistCursor', d.next_cursor || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1StitcherId}}/history?limit=1"
+          }
+        },
+        {
+          "name": "Worker history \u00b7 bad cursor \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1StitcherId}}/history?cursor=nope"
+          }
+        },
+        {
+          "name": "Deactivate busy worker \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code worker_busy', () => pm.expect(pm.response.json().code).to.eql('worker_busy'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1StitcherId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Setup \u00b7 create a throwaway packer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('u1WorkerId', d.id);",
+                  "pm.collectionVariables.set('u1Badge', d.badge_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/workers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"PM U1 {{u1Sfx}}\", \"station\": \"packer\", \"pin\": \"2468\"}"
+            }
+          }
+        },
+        {
+          "name": "Edit worker (phone)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('phone saved', () => pm.expect(d.phone).to.eql('98250 11111'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1WorkerId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"98250 11111\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Edit worker \u00b7 bad station \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1WorkerId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"station\": \"boss\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset PIN (generated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('4-digit PIN returned once', () => pm.expect(d.pin).to.match(/^\\d{4}$/));",
+                  "pm.collectionVariables.set('u1Pin', d.pin);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1WorkerId}}/reset-pin",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        },
+        {
+          "name": "Reset PIN \u00b7 not 4 digits \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1WorkerId}}/reset-pin",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pin\": \"12a4\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Worker logs in with the new PIN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('u1WorkerToken', d.tokens.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"badge_token\": \"{{u1Badge}}\", \"pin\": \"{{u1Pin}}\"}"
+            }
+          }
+        },
+        {
+          "name": "Worker token on admin worker page \u2192 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u1WorkerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1StitcherId}}"
+          }
+        },
+        {
+          "name": "Deactivate free worker",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('inactive', () => pm.expect(d.is_active).to.be.false);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1WorkerId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Deactivated worker's token \u2192 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u1WorkerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/me"
+          }
+        },
+        {
+          "name": "Reactivate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1WorkerId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Reactivated token works again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u1WorkerToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/me"
+          }
+        },
+        {
+          "name": "Cleanup \u00b7 deactivate throwaway",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/workers/{{u1WorkerId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Setup \u00b7 a batch with units + rework",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('rework rows carry worker ids', () => { if (d.length) pm.expect(d[0].flagged_by).to.be.a('string'); });",
+                  "const r = d[0]; if (r) { pm.collectionVariables.set('u1UnitCode', r.unit_code); pm.collectionVariables.set('u1BatchId', r.batch_id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/rework?status=all"
+          }
+        },
+        {
+          "name": "Batch detail \u00b7 units carry worker ids",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const u = d.units.find((x) => x.stitched_at);",
+                  "pm.test('stitched_by id next to name', () => { if (u) pm.expect(u.stitched_by).to.be.a('string'); });",
+                  "pm.collectionVariables.set('u1CarId', d.car_model_id);",
+                  "pm.collectionVariables.set('u1LotId', d.roll_id || '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u1BatchId}}"
+          }
+        },
+        {
+          "name": "Unit journey",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('unit, batch, cutting', () => { pm.expect(d.unit.unit_code).to.eql(pm.collectionVariables.get('u1UnitCode')); pm.expect(d.batch.id).to.eql(pm.collectionVariables.get('u1BatchId')); pm.expect(d.cutting).to.be.an('array'); });",
+                  "pm.test('rework rounds with flagged_by', () => { (d.unit.rework || []).forEach((r) => pm.expect(r.flagged_by).to.be.a('string')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/units/{{u1UnitCode}}"
+          }
+        },
+        {
+          "name": "Unit journey \u00b7 unknown \u2192 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code unit_not_found', () => pm.expect(pm.response.json().code).to.eql('unit_not_found'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/units/B-0000-000-000"
+          }
+        },
+        {
+          "name": "Car overview",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('car + stats + batches', () => { pm.expect(d.car.id).to.eql(Number(pm.collectionVariables.get('u1CarId'))); ['stitched','packed','in_wip','in_stock'].forEach((k) => pm.expect(d.stats[k]).to.be.a('number')); pm.expect(d.active_batches).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/car-models/{{u1CarId}}/overview?from=2026-01-01&to=2026-12-31"
+          }
+        },
+        {
+          "name": "Car overview \u00b7 bad date \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/car-models/{{u1CarId}}/overview?to=nope"
+          }
+        },
+        {
+          "name": "Car overview \u00b7 unknown \u2192 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code not_found', () => pm.expect(pm.response.json().code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/car-models/999999/overview"
+          }
+        },
+        {
+          "name": "Setup \u00b7 a lot",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "if (!pm.collectionVariables.get('u1LotId') && d.length) pm.collectionVariables.set('u1LotId', d[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots"
+          }
+        },
+        {
+          "name": "Lot detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('totals + batches', () => { ['consumed','wasted','adjusted','returned'].forEach((k) => pm.expect(d[k]).to.be.a('number')); pm.expect(d.batches).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots/{{u1LotId}}"
+          }
+        },
+        {
+          "name": "Lot detail \u00b7 unknown \u2192 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code not_found', () => pm.expect(pm.response.json().code).to.eql('not_found'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots/00000000-0000-0000-0000-000000000000"
           }
         }
       ]

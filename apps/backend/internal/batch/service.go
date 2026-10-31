@@ -245,7 +245,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 
 	rows, err := s.pool.Query(ctx, `
 		SELECT bu.id, bu.batch_id, bu.unit_code, bu.unit_number, bu.status,
-		       bu.stitched_at, ws.name, bu.packed_at, wp.name, bu.created_at
+		       bu.stitched_at, bu.stitched_by, ws.name, bu.packed_at, bu.packed_by, wp.name, bu.created_at
 		FROM batch_units bu
 		LEFT JOIN workers ws ON ws.id = bu.stitched_by
 		LEFT JOIN workers wp ON wp.id = bu.packed_by
@@ -259,7 +259,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 	detail := &BatchDetail{Batch: b, Units: []Unit{}}
 	for rows.Next() {
 		var u Unit
-		if err := rows.Scan(&u.ID, &u.BatchID, &u.UnitCode, &u.UnitNumber, &u.Status, &u.StitchedAt, &u.StitchedByName, &u.PackedAt, &u.PackedByName, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.BatchID, &u.UnitCode, &u.UnitNumber, &u.Status, &u.StitchedAt, &u.StitchedBy, &u.StitchedByName, &u.PackedAt, &u.PackedBy, &u.PackedByName, &u.CreatedAt); err != nil {
 			return nil, err
 		}
 		u.Rework = []ReworkEntry{}
@@ -282,7 +282,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 	// Load rework entries for all units in this batch
 	reworkRows, err := s.pool.Query(ctx, `
 		SELECT rl.id, rl.unit_id, bu.unit_code, rl.batch_id, rl.round, rl.reasons, rl.note, rl.route,
-		       w.name, rl.flagged_at, rl.decision, rl.decided_at, wf.name, rl.fixed_at, ws.name
+		       w.name, rl.flagged_by, rl.flagged_at, rl.decision, rl.decided_at, wf.name, rl.fixed_by, rl.fixed_at, ws.name, bu.stitched_by
 		FROM rework_logs rl
 		JOIN batch_units bu ON bu.id = rl.unit_id
 		JOIN workers w ON w.id = rl.flagged_by
@@ -303,8 +303,8 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 		var fixedByName *string
 		if err := reworkRows.Scan(
 			&e.ID, &e.UnitID, &e.UnitCode, &e.BatchID, &e.Round, &e.Reasons, &e.Note, &e.Route,
-			&e.FlaggedByName, &e.FlaggedAt, &e.Decision, &e.DecidedAt, &fixedByName, &e.FixedAt,
-			&e.StitcherName,
+			&e.FlaggedByName, &e.FlaggedBy, &e.FlaggedAt, &e.Decision, &e.DecidedAt, &fixedByName, &e.FixedBy, &e.FixedAt,
+			&e.StitcherName, &e.StitcherID,
 		); err != nil {
 			return nil, err
 		}

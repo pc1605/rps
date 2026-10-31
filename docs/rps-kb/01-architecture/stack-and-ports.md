@@ -4,6 +4,7 @@
 | App | Tech | Port | Location |
 |---|---|---|---|
 | Backend API | Go + Fiber v2, pgx/pgxpool (raw SQL), golang-migrate, golang-jwt, bcrypt, zerolog | **8080** | `apps/backend` |
+| Test backend | same binary on the isolated `rps_test` DB — Postman / curl checks only (`RPS test` environment) | **8082** | `DATABASE_URL=<rps_test url> PORT=8082 go run ./cmd/server` (8081 is Metro) |
 | Database | PostgreSQL 16 in Docker (container `rps_postgres`) | **5433** on host | `docker-compose.yml` at repo root |
 | Adminer | DB browser | **8083** | Server field must be `postgres` (compose service name), not `db` |
 | Admin web | Next.js 16 (App Router, Turbopack), shadcn/ui, TanStack Query v5, Zustand, axios | **3000** | `apps/admin-web` |

@@ -1,4 +1,5 @@
 import type { AxiosResponse } from "axios";
+import type { CarOverview } from "@rps/shared";
 import { http } from "@/lib/api-client";
 import type { Brand, CarItem, CarItemInput, ProductLine } from "./types";
 
@@ -14,6 +15,8 @@ export const catalogApi = {
   createBrand: async (name: string) => d(await http.post<Envelope<Brand>>("/car-brands", { name })),
   createItem: async (input: CarItemInput) =>
     d(await http.post<Envelope<{ id: number; barcode: string }>>("/car-models", input)),
+  overview: async (id: number, from: string, to: string) =>
+    d(await http.get<Envelope<CarOverview>>(`/car-models/${id}/overview`, { params: { from, to } })),
   updateItem: async (id: number, patch: Partial<CarItemInput> & { is_active?: boolean }) =>
     d(await http.patch<Envelope<{ message: string }>>(`/car-models/${id}`, patch)),
 };

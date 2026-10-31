@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/rps/empty-state";
 import { stationTone } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
 import type { WorkerProductivity } from "../types";
+import { WorkerLink } from "@/components/rps/entity-link";
 
 function fmtDuration(s: number) {
   if (s <= 0) return "—";
@@ -38,7 +39,7 @@ export function WorkerReportTable({
             !w.is_active && "text-muted-foreground line-through",
           )}
         >
-          {w.worker_name}
+          <WorkerLink id={w.worker_id} name={w.worker_name} />
           {w.pieces_done > 0 && w.pieces_done === topPieces && (
             <Trophy className="h-3.5 w-3.5 text-brand" aria-label="Top producer" />
           )}
