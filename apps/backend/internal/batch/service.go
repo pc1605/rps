@@ -161,6 +161,7 @@ func (s *Service) List(ctx context.Context) ([]Batch, error) {
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id),
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed'),
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.stitched_at IS NOT NULL),
+		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'defective'),
 		       (SELECT COUNT(*) FROM rework_logs rl WHERE rl.batch_id = b.id AND rl.fixed_at IS NULL AND (rl.decision IS NULL OR rl.decision = 'to_stitcher')),
 		       -- who's working right now (open logs at the current phase)
 		       (SELECT string_agg(wk.name, ', ' ORDER BY plg.started_at)
@@ -192,7 +193,7 @@ func (s *Service) List(ctx context.Context) ([]Batch, error) {
 			&b.ReworkCount, &b.CreatedBy, &b.CreatedByName,
 			&b.Version, &b.CreatedAt, &b.UpdatedAt,
 			&b.CutQty, &b.ParentBatchID, &b.ParentBatchCode, &b.ShortReason, &b.StickersPrintedAt,
-			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched, &b.ReworkOpen,
+			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched, &b.UnitsWrittenOff, &b.ReworkOpen,
 			&b.ActiveWorkers,
 		); err != nil {
 			return nil, err
@@ -261,8 +262,14 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 		u.Rework = []ReworkEntry{}
 		detail.Units = append(detail.Units, u)
 		detail.UnitsTotal++
-		if u.Status == UnitPacked {
+		switch u.Status {
+		case UnitPacked:
 			detail.UnitsPacked++
+		case UnitDefective:
+			detail.UnitsWrittenOff++
+		}
+		if u.StitchedAt != nil {
+			detail.UnitsStitched++
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -418,6 +425,7 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UU
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id),
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed'),
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.stitched_at IS NOT NULL),
+		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'defective'),
 		       (SELECT COUNT(*) FROM rework_logs rl WHERE rl.batch_id = b.id AND rl.fixed_at IS NULL AND (rl.decision IS NULL OR rl.decision = 'to_stitcher')),
 		       -- who's working right now / did I join
 		       (SELECT string_agg(wk.name, ', ' ORDER BY pl.started_at)
@@ -477,7 +485,7 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UU
 			&b.ReworkCount, &b.CreatedBy, &b.CreatedByName,
 			&b.Version, &b.CreatedAt, &b.UpdatedAt,
 			&b.CutQty, &b.ParentBatchID, &b.ParentBatchCode, &b.ShortReason,
-			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched, &b.ReworkOpen,
+			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched, &b.UnitsWrittenOff, &b.ReworkOpen,
 			&b.ActiveWorkers, &b.JoinedByMe,
 			&b.AssignedWorkers, &b.AssignedToMe,
 			&b.MyTargetQty, &b.MyDoneQty,

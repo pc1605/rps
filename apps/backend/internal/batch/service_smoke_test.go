@@ -82,6 +82,20 @@ func TestReadQueriesSmoke(t *testing.T) {
 		}
 	}
 
+	// D4: list and detail must agree on unit roll-ups (incl. written-off), for every batch.
+	for _, b := range list {
+		d, err := s.Get(ctx, b.ID)
+		if err != nil {
+			t.Fatalf("Get(%s): %v", b.BatchCode, err)
+		}
+		if d.UnitsTotal != b.UnitsTotal || d.UnitsPacked != b.UnitsPacked ||
+			d.UnitsStitched != b.UnitsStitched || d.UnitsWrittenOff != b.UnitsWrittenOff {
+			t.Errorf("%s: list total/packed/stitched/off = %d/%d/%d/%d, detail = %d/%d/%d/%d", b.BatchCode,
+				b.UnitsTotal, b.UnitsPacked, b.UnitsStitched, b.UnitsWrittenOff,
+				d.UnitsTotal, d.UnitsPacked, d.UnitsStitched, d.UnitsWrittenOff)
+		}
+	}
+
 	// Peek query smoke: unknown unit returns ErrUnitNotFound without panic
 	if _, err := s.PeekUnit(ctx, "NONEXISTENT_UNIT_CODE", uuid.New()); !errors.Is(err, ErrUnitNotFound) {
 		t.Fatalf("PeekUnit(unknown): expected ErrUnitNotFound, got %v", err)

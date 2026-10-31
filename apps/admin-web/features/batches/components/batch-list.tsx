@@ -101,6 +101,9 @@ const baseColumns: Column<Batch>[] = [
       <span className="tabular text-muted-foreground">
         {b.units_stitched ?? 0} · {b.units_packed}
         <span className="text-muted-foreground/60"> / {b.units_total}</span>
+        {b.units_written_off > 0 && (
+          <span className="block text-caption text-danger">{b.units_written_off} written off</span>
+        )}
       </span>
     ),
   },
