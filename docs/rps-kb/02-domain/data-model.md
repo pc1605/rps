@@ -97,6 +97,12 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
 - `ALTER TABLE car_models DROP CONSTRAINT IF EXISTS car_models_brand_id_name_key;`
   Allows multiple product lines per car model name (superseded by `uq_car_models_item` from migration 009: `brand_id, lower(name), size_class, product_line_id`).
 
+### 014 — report_indexes (U0 / audit P2)
+- `idx_units_stitched_by (stitched_by, stitched_at) WHERE stitched_by IS NOT NULL`, `idx_units_packed_by (packed_by, packed_at) WHERE packed_by IS NOT NULL` — per-worker attribution (quota checks, worker pages, reports).
+- `idx_rework_batch (batch_id)`, `idx_rework_flagged_at (flagged_at DESC)` — rework per batch / by date.
+- `idx_batches_parent (parent_batch_id) WHERE parent_batch_id IS NOT NULL` — related (split / re-cut) batches.
+- Indexes only, no data change. Slice C1 takes 015.
+
 ## Key invariants
 - One open cutting log per batch; many open stitching/packing logs (one per joined worker).
 - `phase_logs.quantity_completed` for stitching/packing = that worker's scan count, set when the phase auto-completes.

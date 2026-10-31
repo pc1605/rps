@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/pc1605/rps/apps/backend/internal/factorytime"
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
 )
 
@@ -13,20 +14,21 @@ type Handler struct{ svc *Service }
 func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
 
 // Workers — GET /reports/workers?from=2026-07-01&to=2026-07-31
-// Defaults to the last 7 days when params are absent/invalid.
+// Dates are factory-local days (FACTORY_TZ, default Asia/Kolkata), inclusive.
+// Defaults to the last 7 days including today when params are absent/invalid.
 func (h *Handler) Workers(c *fiber.Ctx) error {
-	now := time.Now()
-	from := now.AddDate(0, 0, -7)
-	to := now.Add(24 * time.Hour)
+	today := factorytime.StartOfDay(time.Now())
+	from := today.AddDate(0, 0, -6)
+	to := today.AddDate(0, 0, 1)
 
 	if v := c.Query("from"); v != "" {
-		if t, err := time.Parse("2006-01-02", v); err == nil {
+		if t, err := factorytime.ParseDay(v); err == nil {
 			from = t
 		}
 	}
 	if v := c.Query("to"); v != "" {
-		if t, err := time.Parse("2006-01-02", v); err == nil {
-			to = t.Add(24 * time.Hour) // inclusive end date
+		if t, err := factorytime.ParseDay(v); err == nil {
+			to = t.AddDate(0, 0, 1) // inclusive end date
 		}
 	}
 	if !to.After(from) {

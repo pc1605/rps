@@ -58,6 +58,8 @@ type Batch struct {
 	UnitsTotal    int `json:"units_total"`
 	UnitsPacked   int `json:"units_packed"`
 	UnitsStitched int `json:"units_stitched"`
+	// Written-off (defective) mats: they never get packed but do not block completion.
+	UnitsWrittenOff int `json:"units_written_off"`
 	// Open claim on the current phase, if any
 	ActiveWorkers     *string    `json:"active_workers,omitempty"` // "Surya, Mahesh"
 	JoinedByMe        bool       `json:"joined_by_me"`

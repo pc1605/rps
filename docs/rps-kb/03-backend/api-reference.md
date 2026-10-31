@@ -22,10 +22,10 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | GET/POST | `/car-brands` | list brands / create brand `{name}` |
 | GET | `/product-lines` | list active product lines (`REX-R`, `REX-87`, `PVC-18`, `PVC-21`) |
 | GET | `/rolls` | raw materials roll list |
-| GET | `/batches` | all batches, newest first (List) |
+| GET | `/batches` | all batches, newest first (List). Roll-ups `units_total, units_packed, units_stitched, units_written_off, rework_open`, plus `active_workers` (open logs at the current phase) |
 | POST | `/batches` | `{car_model_id, quantity, roll_id?, notes?}` → 201 Batch (units created) |
-| GET | `/batches/stats` | `{in_cutting, awaiting_assignment, in_stitching, in_packing, completed_today, total_active}` |
-| GET | `/batches/:id` | BatchDetail: `units[]`, `timeline[]`, `assignments[]`, `cut_qty`, `parent_batch_id`, `short_reason` |
+| GET | `/batches/stats` | `BatchStats` (`@rps/shared`): `{in_cutting, awaiting_assignment, in_stitching, in_packing, completed_today, total_active, rework_open, rework_needs_decision}`. `completed_today` = factory day (`FACTORY_TZ`) |
+| GET | `/batches/:id` | BatchDetail: `units[]`, `timeline[]`, `assignments[]`, `cut_qty`, `parent_batch_id`, `short_reason`; same roll-ups as List, computed server-side |
 | PUT | `/batches/:id/assignments` | `{phase:"stitching", assignments:[{worker_id, target_qty?}, …]}`. Empty list clears. Operates the gate for stitching. 400 on quota rule violations |
 | POST | `/batches/:id/resolve-short` | `{action:"split"|"reduce"|"recut", reason?}`. Resolves cutter short cuts. Split creates linked remainder batch; reduce cancels un-cut units; recut re-opens cutting |
 | POST | `/batches/:id/stickers-printed` | stamps `stickers_printed_at = now()` |
@@ -35,7 +35,9 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | GET | `/workers/:id/enrollment` | `{badge_token}` for re-showing the QR (admin) |
 | GET/POST/PATCH | `/stock/rolls`, `/stock/rolls/:id` | rolls with `is_low`, `batch_count`; PATCH `{remaining_meters?, is_active?}` |
 | GET | `/stock/finished` | packed units grouped by model |
-| GET | `/reports/workers?from=YYYY-MM-DD&to=YYYY-MM-DD` | default last 7 days; per worker `batches_done, pieces_done, avg_duration_secs, currently_working` (open claim, window-independent); sorted pieces desc. Role-guarded |
+| GET | `/reports/workers?from=YYYY-MM-DD&to=YYYY-MM-DD` | dates are factory days (`FACTORY_TZ`, default Asia/Kolkata), `to` inclusive; default last 7 days incl. today; per worker `batches_done, pieces_done, avg_duration_secs, currently_working` (open claim, window-independent); sorted pieces desc. Role-guarded |
+
+All routes above require an **admin** token (`owner`/`supervisor`); worker tokens get 403 (U0 / G4).
 
 ## Worker (requires worker token)
 | Method | Path | Notes |

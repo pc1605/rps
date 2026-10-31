@@ -1,5 +1,6 @@
 "use client";
 
+import { factoryDay } from "@rps/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -10,19 +11,16 @@ export interface DateRange {
   label: string;
 }
 
-function fmt(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
+// Factory-day strings (FACTORY_TZ). IST has no DST, so n × 24 h steps are exact days.
 export function presetRanges(): DateRange[] {
-  const today = new Date();
-  const days = (n: number) => new Date(Date.now() - n * 86_400_000);
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const today = factoryDay();
+  const daysAgo = (n: number) => factoryDay(new Date(Date.now() - n * 86_400_000));
+  const monthStart = `${today.slice(0, 7)}-01`;
   return [
-    { label: "Today", from: fmt(today), to: fmt(today) },
-    { label: "Last 7 days", from: fmt(days(6)), to: fmt(today) },
-    { label: "This month", from: fmt(monthStart), to: fmt(today) },
-    { label: "Last 30 days", from: fmt(days(29)), to: fmt(today) },
+    { label: "Today", from: today, to: today },
+    { label: "Last 7 days", from: daysAgo(6), to: today },
+    { label: "This month", from: monthStart, to: today },
+    { label: "Last 30 days", from: daysAgo(29), to: today },
   ];
 }
 

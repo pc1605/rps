@@ -5,6 +5,21 @@ export const UNIT_CODE_RE = /^B-\d{4}-\d{3}-\d{3}$/;
 /** Batch code prefix of a unit code: "B-2026-005-003" → "B-2026-005". */
 export const batchCodeOf = (unitCode: string) => unitCode.split("-").slice(0, 3).join("-");
 
+/** Factory calendar timezone. Must match backend FACTORY_TZ. All "days" (reports, today) are factory days. */
+export const FACTORY_TZ = "Asia/Kolkata";
+
+/** YYYY-MM-DD of `d` in the factory timezone (never UTC — `toISOString()` is wrong before 05:30 IST). */
+export function factoryDay(d: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: FACTORY_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
 /** Enrollment QR payload prefix: RPS-ENROLL:<badge_token>. */
 export const ENROLL_PREFIX = "RPS-ENROLL:";
 

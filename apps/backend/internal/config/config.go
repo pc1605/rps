@@ -24,6 +24,7 @@ type Config struct {
 	UploadDir        string
 	FileURLSecret    string
 	FileURLTTL       time.Duration
+	FactoryTZ        string // IANA zone for calendar days (reports, "today")
 }
 
 func Load() (*Config, error) {
@@ -43,6 +44,7 @@ func Load() (*Config, error) {
 		CORSOrigins:      strings.Split(getEnv("CORS_ORIGINS", "http://localhost:3000"), ","),
 		UploadDir:        getEnv("UPLOAD_DIR", "./uploads"),
 		FileURLSecret:    getEnv("FILE_URL_SECRET", ""),
+		FactoryTZ:        getEnv("FACTORY_TZ", "Asia/Kolkata"),
 	}
 
 	accessMin, _ := strconv.Atoi(getEnv("JWT_ACCESS_TTL_MINUTES", "15"))

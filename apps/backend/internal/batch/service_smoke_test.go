@@ -32,6 +32,19 @@ func TestReadQueriesSmoke(t *testing.T) {
 	}
 	t.Logf("List: %d batches", len(list))
 
+	// D1: admin List must carry active_workers exactly when open logs exist at the current phase.
+	for _, b := range list {
+		var open int
+		if err := pool.QueryRow(ctx, `
+			SELECT COUNT(*) FROM phase_logs
+			WHERE batch_id = $1 AND phase = $2 AND completed_at IS NULL`, b.ID, b.CurrentPhase).Scan(&open); err != nil {
+			t.Fatal(err)
+		}
+		if has := b.ActiveWorkers != nil && *b.ActiveWorkers != ""; has != (open > 0) {
+			t.Errorf("List(%s): active_workers=%v but %d open logs", b.BatchCode, b.ActiveWorkers, open)
+		}
+	}
+
 	if _, err := s.GetStats(ctx); err != nil {
 		t.Fatalf("GetStats: %v", err)
 	}
@@ -66,6 +79,20 @@ func TestReadQueriesSmoke(t *testing.T) {
 		seen[b.CurrentPhase] = true
 		if _, err := s.Get(ctx, b.ID); err != nil {
 			t.Fatalf("Get(%s, %s): %v", b.BatchCode, b.CurrentPhase, err)
+		}
+	}
+
+	// D4: list and detail must agree on unit roll-ups (incl. written-off), for every batch.
+	for _, b := range list {
+		d, err := s.Get(ctx, b.ID)
+		if err != nil {
+			t.Fatalf("Get(%s): %v", b.BatchCode, err)
+		}
+		if d.UnitsTotal != b.UnitsTotal || d.UnitsPacked != b.UnitsPacked ||
+			d.UnitsStitched != b.UnitsStitched || d.UnitsWrittenOff != b.UnitsWrittenOff {
+			t.Errorf("%s: list total/packed/stitched/off = %d/%d/%d/%d, detail = %d/%d/%d/%d", b.BatchCode,
+				b.UnitsTotal, b.UnitsPacked, b.UnitsStitched, b.UnitsWrittenOff,
+				d.UnitsTotal, d.UnitsPacked, d.UnitsStitched, d.UnitsWrittenOff)
 		}
 	}
 
