@@ -1,5 +1,11 @@
 import type { WorkerUpdateInput } from "@rps/shared";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { workerApi } from "./api";
 import type { CreateWorkerInput } from "./types";
 
@@ -25,7 +31,11 @@ export const useWorker = (id: string) =>
   });
 
 export const useWorkerSummary = (id: string, from: string, to: string) =>
-  useQuery({ queryKey: ["worker-summary", id, from, to], queryFn: () => workerApi.summary(id, from, to) });
+  useQuery({
+    queryKey: ["worker-summary", id, from, to],
+    queryFn: () => workerApi.summary(id, from, to),
+    placeholderData: keepPreviousData,
+  });
 
 export const useWorkerHistory = (id: string) =>
   useInfiniteQuery({

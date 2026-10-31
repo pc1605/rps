@@ -1,10 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { catalogApi } from "./api";
 import type { CarItemInput } from "./types";
 
 export const useCarItems = () => useQuery({ queryKey: ["car-models"], queryFn: catalogApi.items });
 export const useBrands = () => useQuery({ queryKey: ["car-brands"], queryFn: catalogApi.brands });
 export const useProductLines = () => useQuery({ queryKey: ["product-lines"], queryFn: catalogApi.lines });
+
+export const useCarOverview = (id: number, from: string, to: string) =>
+  useQuery({
+    queryKey: ["car-overview", id, from, to],
+    queryFn: () => catalogApi.overview(id, from, to),
+    enabled: id > 0,
+    placeholderData: keepPreviousData, // no skeleton flash when the range changes
+  });
 
 export function useCreateBrand() {
   const qc = useQueryClient();
