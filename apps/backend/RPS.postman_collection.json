@@ -3497,7 +3497,8 @@
                   "// Last 30 days, computed at run time",
                   "const to = new Date();",
                   "const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);",
-                  "const fmt = function (d) { return d.toISOString().slice(0, 10); };",
+                  "// factory days (IST, UTC+05:30) — matches backend FACTORY_TZ",
+                  "const fmt = function (d) { return new Date(d.getTime() + 330 * 60 * 1000).toISOString().slice(0, 10); };",
                   "pm.collectionVariables.set('reportFrom', fmt(from));",
                   "pm.collectionVariables.set('reportTo', fmt(to));"
                 ]
