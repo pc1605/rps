@@ -110,8 +110,8 @@ func (h *Handler) SetBarcode(c *fiber.Ctx) error {
 
 func (h *Handler) Rolls(c *fiber.Ctx) error {
 	rows, err := h.svc.pool.Query(c.Context(), `
-		SELECT id, roll_code, color, remaining_meters
-		FROM raw_materials WHERE is_active ORDER BY roll_code
+		SELECT id, lot_code, color, qty_remaining
+		FROM material_lots WHERE is_active ORDER BY lot_code
 	`)
 	if err != nil {
 		log.Error().Err(err).Msg("list rolls")

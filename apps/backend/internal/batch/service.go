@@ -81,7 +81,7 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 		if err != nil {
 			return nil, fmt.Errorf("%w: bad roll_id", ErrInvalidInput)
 		}
-		err = tx.QueryRow(ctx, `SELECT roll_code FROM raw_materials WHERE id = $1 AND is_active`, parsed).Scan(&rollCode)
+		err = tx.QueryRow(ctx, `SELECT lot_code FROM material_lots WHERE id = $1 AND is_active`, parsed).Scan(&rollCode)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("%w: roll not found or inactive", ErrInvalidInput)
 		}
@@ -154,7 +154,7 @@ func (s *Service) List(ctx context.Context) ([]Batch, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT b.id, b.batch_code, b.car_model_id,
 		       cb.name, cm.name, cm.size_class::text, pl.code, pl.name, cm.barcode,
-		       b.roll_id, rm.roll_code,
+		       b.roll_id, rm.lot_code,
 		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
 		       b.rework_count, b.created_by, u.name,
 		       b.version, b.created_at, b.updated_at, b.cut_qty, b.parent_batch_id, pb.batch_code, b.short_reason, b.stickers_printed_at,
@@ -174,7 +174,7 @@ func (s *Service) List(ctx context.Context) ([]Batch, error) {
 		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
 		LEFT JOIN batches pb ON pb.id = b.parent_batch_id
 		JOIN users u       ON u.id = b.created_by
-		LEFT JOIN raw_materials rm ON rm.id = b.roll_id
+		LEFT JOIN material_lots rm ON rm.id = b.roll_id
 		ORDER BY b.created_at DESC
 	`)
 	if err != nil {
@@ -209,7 +209,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 	err := s.pool.QueryRow(ctx, `
 		SELECT b.id, b.batch_code, b.car_model_id,
 		       cb.name, cm.name,cm.size_class::text, pl.code, pl.name, cm.barcode,
-		       b.roll_id, rm.roll_code,
+		       b.roll_id, rm.lot_code,
 		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
 		       b.rework_count, b.created_by, u.name,
 		       b.version, b.created_at, b.updated_at,
@@ -221,7 +221,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
 		LEFT JOIN batches pb ON pb.id = b.parent_batch_id
 		JOIN users u       ON u.id = b.created_by
-		LEFT JOIN raw_materials rm ON rm.id = b.roll_id
+		LEFT JOIN material_lots rm ON rm.id = b.roll_id
 		WHERE b.id = $1
 	`, id).Scan(
 		&b.ID, &b.BatchCode, &b.CarModelID,
@@ -416,7 +416,7 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UU
 	rows, err := s.pool.Query(ctx, `
 		SELECT b.id, b.batch_code, b.car_model_id,
 		       cb.name, cm.name, cm.size_class::text, pl.code, pl.name, cm.barcode,
-		       b.roll_id, rm.roll_code,
+		       b.roll_id, rm.lot_code,
 		       b.quantity, b.current_phase, b.status, COALESCE(b.notes,''),
 		       b.rework_count, b.created_by, u.name,
 		       b.version, b.created_at, b.updated_at,
@@ -454,7 +454,7 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UU
 		LEFT JOIN product_lines pl ON pl.id = cm.product_line_id
 		LEFT JOIN batches pb ON pb.id = b.parent_batch_id
 		JOIN users u       ON u.id = b.created_by
-		LEFT JOIN raw_materials rm ON rm.id = b.roll_id
+		LEFT JOIN material_lots rm ON rm.id = b.roll_id
 		WHERE b.current_phase = $1
 		  AND b.status IN ('pending', 'in_progress')
 		  AND (
