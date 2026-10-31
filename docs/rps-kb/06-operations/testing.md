@@ -41,6 +41,10 @@ Folders and run order:
 6. **Multi-Worker Scanning** — self-contained (creates qty-4 batch, Stitcher A/B, packer; cutter start/complete; both stitchers join; split scans; idempotent re-scan; manual complete 400; last scan `phase_completed`; stitcher-after-move 409; packer joins via pre-request and packs all → `batch_completed`).
    **Needs updating for Slice A/A.2:** after cutter complete the batch is `awaiting_assignment`; insert `PUT /batches/{{scanBatchId}}/assignments` with `{"phase":"stitching","assignments":[{"worker_id":…,"target_qty":3},{…,"target_qty":1}]}` before the joins; add a non-assignee join → 403 `not_assigned`; add a quota-exceeded scan → 409 `quota_reached`; add sum-mismatch → 400.
 7. **Reports** — default range, dynamic 30-day with echo check, invalid range 400, worker 403, sort assertion.
+8. **Materials (C1c)** — self-contained (logs in, builds a cutter token): types, variants, receive, adjust/waste/return,
+   lot PATCH, movements pagination, groups, recipes, car group + overrides, resolve dry run, batch → cutter
+   materials-needed → cut → batch materials; main 4xx; restores the car's group at the end.
+   `npx -y newman@6.2.1 run apps/backend/RPS.postman_collection.json -e apps/backend/RPS-test.postman_environment.json --folder "Materials (C1c)"`
 
 Use **Collection Runner → Run folder** to avoid ordering mistakes. Re-runs create "PM …" workers; clear with the reset SQL.
 

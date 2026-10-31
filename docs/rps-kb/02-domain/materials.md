@@ -78,6 +78,22 @@ As built (C1b, `internal/batch/consume.go`):
   `low_stock_types` (active types with `min_level` whose active lots sum below it). Shown in the admin UI from C2.
 - Actual metres measured at cutting (owner Q5) will later arrive as `adjust`/`waste` against the plan (R2).
 
+## Known behaviour
+
+- **Quantity per mat comes from the FIRST lot's variant.** If a batch spills from a 60″ roll onto a 54″ lot (roll ran
+  out, FIFO continues), the spill is charged at the **60″ rate**. Revisit (per-lot resolution) if the owner needs it.
+
+## API (C1c)
+
+`internal/materials` — full list in `03-backend/api-reference.md` → Materials. Highlights:
+- Receive / adjust / waste / return / PATCH lots; every quantity change goes through `materials.InsertMovement`
+  (movement + `qty_remaining` in one tx). Type/variant of a lot can change only before any consume/waste/return.
+- Recipes edited per product line × group (`PUT …/lines`, full replace), car overrides per car.
+- The planner `materials.BuildPlan` is shared: the engine calls it with `ForUpdate` inside the cutting tx; the dry run
+  `GET /recipes/resolve` and the cutter's `GET /worker/batches/:id/materials-needed` call it read-only — so the
+  preview equals what a cut would draw (test `TestDryRunMatchesEngine`).
+- `GET /batches/:id/materials`: plan + movements per cutting completion.
+
 ## Invariants (enforced or checked)
 
 | Rule | Where |
