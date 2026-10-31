@@ -108,10 +108,10 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
 - `material_types(id, code unique, name, unit, has_variants, min_level, sort, is_active)` — seeded REX-R, REX-87, PVC-18, PVC-21 (m, with variants).
 - `material_variants(id, material_type_id, name, specs jsonb, is_active)` — specs that change consumption (roll width), never colour. `UNIQUE(id, material_type_id)` backs composite FKs.
 - **`raw_materials` renamed `material_lots`**: `roll_code→lot_code`, `total_meters→qty_received`, `remaining_meters→qty_remaining` (numeric 12,3), + `material_type_id NOT NULL`, `variant_id`, `unit_cost`, `supplier`, `note`; `color` stays (colour is per lot). `batches.roll_id` unchanged (FK follows the rename).
-- `material_movements(id, lot_id NULL=shortfall, material_type_id, variant_id, kind, qty signed, batch_id, reason, actor_user_id, actor_worker_id, created_at)` + sign / shortfall CHECKs. Backfilled opening balance per lot.
+- `material_movements(id, lot_id NULL=shortfall, material_type_id, variant_id, kind, qty signed, batch_id, phase_log_id, reason, actor_user_id, actor_worker_id, created_at)` + sign / shortfall CHECKs. Backfilled opening balance per lot.
 - `consumption_groups(id, name, sort, is_active, default_for_size car_size unique)` seeded Small/Medium/Large; `car_models.consumption_group_id NOT NULL` (backfilled from size; BEFORE INSERT trigger fills it from `default_for_size`).
 - `recipes(product_line_id × consumption_group_id unique)`, `recipe_lines(recipe_id, material_type_id, variant_id NULL=any, qty_per_mat > 0)`, `car_material_overrides(car_model_id, material_type_id, variant_id NULL=any, qty_per_mat ≥ 0)` — unique on `COALESCE(variant_id,0)`.
-- `batch_material_plan(batch_id, phase_log_id, material_type_id, variant_id, source, qty_per_mat, mats, planned_qty, note)`.
+- `batch_material_plan(batch_id, phase_log_id, material_type_id, variant_id, source, qty_per_mat, mats, planned_qty, note)`; `uq_plan_completion_type (phase_log_id, material_type_id)` — one row per type per cutting completion.
 - Down refuses once 015-era data exists (see `materials.md`).
 
 ## Key invariants

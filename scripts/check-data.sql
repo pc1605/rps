@@ -75,7 +75,7 @@ FROM material_movements m JOIN material_lots l ON l.id = m.lot_id
 JOIN material_types mt ON mt.id = m.material_type_id JOIN material_types lt ON lt.id = l.material_type_id
 WHERE m.material_type_id <> l.material_type_id;
 
-\echo '17. active cars with no recipe for their product line × consumption group (consumption would plan "none")'
+\echo '17. WARNING (informational, may be non-empty): active cars with no recipe for their product line × consumption group — consumption would plan "none"'
 SELECT cb.name AS brand, cm.name AS model, pl.code AS line, g.name AS grp
 FROM car_models cm JOIN car_brands cb ON cb.id = cm.brand_id
 JOIN product_lines pl ON pl.id = cm.product_line_id JOIN consumption_groups g ON g.id = cm.consumption_group_id

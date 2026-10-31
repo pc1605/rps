@@ -83,6 +83,7 @@ CREATE TABLE material_movements (
   kind              movement_kind NOT NULL,
   qty               NUMERIC(12,3) NOT NULL CHECK (qty <> 0),   -- signed: + in, − out
   batch_id          UUID REFERENCES batches(id) ON DELETE SET NULL,
+  phase_log_id      UUID REFERENCES phase_logs(id) ON DELETE SET NULL,   -- the cutting completion that consumed
   reason            TEXT,
   actor_user_id     UUID REFERENCES users(id),
   actor_worker_id   UUID REFERENCES workers(id),
@@ -97,6 +98,7 @@ CREATE TABLE material_movements (
 );
 CREATE INDEX idx_movements_lot   ON material_movements (lot_id, created_at) WHERE lot_id IS NOT NULL;
 CREATE INDEX idx_movements_batch ON material_movements (batch_id) WHERE batch_id IS NOT NULL;
+CREATE INDEX idx_movements_phase_log ON material_movements (phase_log_id) WHERE phase_log_id IS NOT NULL;
 CREATE INDEX idx_movements_type  ON material_movements (material_type_id, created_at DESC);
 
 -- Opening balance so the ledger matches today's numbers: receive the full roll, adjust down to what's left.
@@ -190,3 +192,6 @@ CREATE TABLE batch_material_plan (
   CONSTRAINT batch_material_plan_none CHECK ((source = 'none') = (qty_per_mat IS NULL AND planned_qty IS NULL))
 );
 CREATE INDEX idx_batch_material_plan_batch ON batch_material_plan (batch_id);
+-- One plan row per type per cutting completion: re-running consumption for a completion fails (no double deduction).
+CREATE UNIQUE INDEX uq_plan_completion_type ON batch_material_plan (phase_log_id, material_type_id)
+  WHERE phase_log_id IS NOT NULL;

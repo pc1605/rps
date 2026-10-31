@@ -232,6 +232,8 @@ export interface MaterialMovement {
   kind: MovementKind;
   qty: number;
   batch_id?: string;
+  /** Cutting completion that consumed it (consume / shortfall rows). */
+  phase_log_id?: string;
   reason?: string;
   actor_user_id?: string;
   actor_worker_id?: string;
