@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
 	"github.com/pc1605/rps/apps/backend/internal/auth"
@@ -77,22 +76,6 @@ func (h *Handler) WorkerOutput(c *fiber.Ctx) error {
 		return internal(c, err, "build worker output")
 	}
 	return httpx.OK(c, fiber.Map{"range": rangeOf(from, to), "workers": out})
-}
-
-func (h *Handler) WorkerDaily(c *fiber.Ctx) error {
-	id, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return httpx.BadRequest(c, "invalid worker id")
-	}
-	from, to, err := parseRange(c, 14)
-	if err != nil {
-		return httpx.BadRequest(c, err.Error())
-	}
-	out, err := h.svc.WorkerDaily(c.Context(), id, from, to)
-	if err != nil {
-		return internal(c, err, "build worker daily output")
-	}
-	return httpx.OK(c, fiber.Map{"range": rangeOf(from, to), "days": out})
 }
 
 func (h *Handler) Quality(c *fiber.Ctx) error {

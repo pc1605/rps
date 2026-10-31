@@ -781,3 +781,134 @@ export interface SearchResult {
   exact?: SearchHit;
   hits: SearchHit[];
 }
+
+// ───── Reports v2 (R1) — days are factory-local (FACTORY_TZ), `from`/`to` inclusive ─────
+
+/** Where a live batch sits. */
+export type ReportStage = "cutting" | "awaiting_assignment" | "stitching" | "packing";
+
+/** app_settings "stuck_hours": idle hours before a batch counts as stuck, per stage. */
+export interface StuckHours {
+  cutting: number;
+  awaiting_assignment: number;
+  stitching: number;
+  packing: number;
+}
+
+export interface Settings {
+  stuck_hours: StuckHours;
+}
+
+export interface ReportRange {
+  from: string;
+  to: string;
+}
+
+export interface ThroughputDay {
+  day: string;
+  cut: number;
+  stitched: number;
+  packed: number;
+}
+
+export interface ThroughputTotals {
+  cut: number;
+  stitched: number;
+  packed: number;
+}
+
+export interface WipStage {
+  stage: ReportStage;
+  batches: number;
+  mats: number;
+  /** Batches by time since entering the stage: <4 h, 4–24 h, 1–3 d, >3 d. */
+  ageing: [number, number, number, number];
+  stuck: number;
+}
+
+export interface FpyWeek {
+  /** Monday of the week. */
+  week: string;
+  packed: number;
+  first_pass: number;
+}
+
+export interface ItemMixRow {
+  car_model_id: number;
+  car_name: string;
+  product_line?: string;
+  packed: number;
+}
+
+/** GET /reports/overview?from&to (default last 30 days). */
+export interface ReportOverview {
+  range: ReportRange;
+  days: ThroughputDay[];
+  totals: ThroughputTotals;
+  /** Same number of days just before `from`. */
+  previous: ThroughputTotals;
+  wip: WipStage[];
+  stuck_count: number;
+  fpy_packed: number;
+  fpy_first_pass: number;
+  fpy_weeks: FpyWeek[];
+  items: ItemMixRow[];
+  stuck_hours: StuckHours;
+}
+
+/** GET /reports/stuck — live batches idle past their stage's threshold, longest idle first. */
+export interface StuckBatch {
+  batch_id: string;
+  batch_code: string;
+  car_name: string;
+  quantity: number;
+  stage: ReportStage;
+  entered_at: string;
+  last_activity_at: string;
+  idle_hours: number;
+  threshold_hours: number;
+}
+
+export interface WorkerOutputRow {
+  worker_id: string;
+  worker_name: string;
+  station: Station;
+  is_active: boolean;
+  /** Cutters: pieces cut. Stitchers/packers: mats scanned. */
+  mats: number;
+  days_worked: number;
+  /** Cutters: start → complete. Others: first → last scan per day, summed. */
+  active_secs: number;
+  /** Only with ≥ 15 min active. */
+  mats_per_hour?: number;
+  rework_rounds: number;
+  quota_target: number;
+  quota_done: number;
+  quota_batches: number;
+  currently_open: number;
+}
+
+/** GET /reports/worker-output?from&to (default last 7 days). */
+export interface WorkerOutputReport {
+  range: ReportRange;
+  workers: WorkerOutputRow[];
+}
+
+export interface ReasonCount {
+  reason: string;
+  count: number;
+}
+
+/** GET /reports/quality?from&to (default last 30 days). */
+export interface QualityReport {
+  range: ReportRange;
+  rework_rounds: number;
+  by_reason: ReasonCount[];
+  by_stitcher: { worker_id: string; worker_name: string; rounds: number; stitched: number }[];
+  fixed_count: number;
+  avg_fix_hours?: number;
+  cut_completions: number;
+  short_cuts: { action: ShortAction; reason: ShortReason | "unknown"; count: number }[];
+  losses: { decision: "write_off" | "recut"; car_model_id: number; car_name: string; count: number }[];
+  loss_by_reason: ReasonCount[];
+}

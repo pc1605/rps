@@ -201,11 +201,6 @@ func TestReportsV2(t *testing.T) {
 	if d := byWorker(wo, packerID).Mats - byWorker(wo0, packerID).Mats; d != 2 {
 		t.Errorf("packer mats delta = %d, want 2", d)
 	}
-	days, err := rs.WorkerDaily(ctx, packerID, from, to)
-	must("daily", err)
-	if len(days) != 7 || days[6].Mats < 2 {
-		t.Errorf("packer daily = %+v", days)
-	}
 
 	// Quality.
 	q, err := rs.Quality(ctx, from, to)

@@ -4,6 +4,7 @@ import type {
   MovementKind,
   Phase,
   PlanSource,
+  ReportStage,
   ReworkReason,
   ShortReason,
   SizeClass,
@@ -62,6 +63,13 @@ export const REWORK_REASON_LABEL: Record<ReworkReason, string> = {
   cutting_fault: "Cutting fault",
   material_defect: "Material defect",
   other: "Other",
+};
+
+export const REPORT_STAGE_LABEL: Record<ReportStage, string> = {
+  cutting: "Cutting",
+  awaiting_assignment: "Ready for stitching",
+  stitching: "Stitching",
+  packing: "Packing",
 };
 
 /** Order = picker order. Mirrors ShortReasonLabel in the backend (batch/service.go). */

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/pc1605/rps/apps/backend/internal/factorytime"
@@ -307,20 +306,6 @@ func (s *Service) WorkerOutput(ctx context.Context, from, to time.Time) ([]Worke
 		out[i].MatsPerHour = matsPerHour(out[i].Mats, out[i].ActiveSecs)
 	}
 	return out, nil
-}
-
-// WorkerDaily: one row per day in range (zeros included) for one worker — the worker page chart.
-func (s *Service) WorkerDaily(ctx context.Context, workerID uuid.UUID, from, to time.Time) ([]WorkerDay, error) {
-	r := rangeOf(from, to)
-	rows, err := s.pool.Query(ctx, workerDaysSQL+`,
-		days AS (SELECT d::date AS day FROM generate_series($5::date, $6::date, interval '1 day') d)
-		SELECT to_char(d.day, 'YYYY-MM-DD'), COALESCE(SUM(pd.n), 0)::int, COALESCE(SUM(pd.secs), 0)::int
-		FROM days d LEFT JOIN per_day pd ON pd.day = d.day AND pd.w = $4
-		GROUP BY d.day ORDER BY d.day`, factorytime.Name(), from, to, workerID, r.From, r.To)
-	if err != nil {
-		return nil, fmt.Errorf("worker daily: %w", err)
-	}
-	return collect(rows, func(d *WorkerDay) error { return rows.Scan(&d.Day, &d.Mats, &d.ActiveSecs) })
 }
 
 // ───── quality ─────

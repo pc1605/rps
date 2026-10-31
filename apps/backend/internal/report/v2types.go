@@ -94,12 +94,6 @@ type WorkerOutput struct {
 	CurrentlyOpen int `json:"currently_open"` // open claims right now
 }
 
-type WorkerDay struct {
-	Day        string `json:"day"`
-	Mats       int    `json:"mats"`
-	ActiveSecs int    `json:"active_secs"`
-}
-
 type ReasonCount struct {
 	Reason string `json:"reason"`
 	Count  int    `json:"count"`
