@@ -78,11 +78,10 @@ func main() {
 		for _, m := range models {
 			_, err = pool.Exec(ctx, `
 				INSERT INTO car_models (brand_id, name, size_class, pieces_per_set, piece_groups)
-				VALUES ($1, $2, $3, $4, $5)
-				ON CONFLICT (brand_id, name) DO UPDATE
-				SET size_class     = EXCLUDED.size_class,
-				    pieces_per_set = EXCLUDED.pieces_per_set,
-				    piece_groups   = EXCLUDED.piece_groups
+				SELECT $1, $2, $3, $4, $5
+				WHERE NOT EXISTS (
+					SELECT 1 FROM car_models WHERE brand_id = $1 AND name = $2
+				)
 			`, brandID, m.name, m.size, m.piecesPerSet, m.pieceGroups)
 			if err != nil {
 				panic(err)

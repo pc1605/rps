@@ -11,6 +11,7 @@
 - pnpm blocks postinstall scripts: `[ERR_PNPM_IGNORED_BUILDS]` → `pnpm approve-builds` (select) → `pnpm install`. Hoisted layout ⇒ packages are in the **root** `node_modules`.
 
 ## Next.js / React
+- **Combobox inside Dialog scroll lock**: Selecting or scrolling items in a shadcn Combobox (`Popover` + `Command`/`cmdk`) inside a Radix `<Dialog>` fails on wheel and touch because the Dialog's body scroll lock blocks portaled popovers. Solution: set `<Popover modal>` and add `max-h-60 overflow-y-auto overscroll-contain` to `CommandList`.
 - **Radix Dialog click race**: Selecting an item from a shadcn `<Select>` inside a `<Dialog>` fires a pointer-down event on the select portal that Radix Dialog interprets as an outside click, causing the dialog to dismiss prematurely. Fixed in `components/ui/dialog.tsx` by setting a `menuOpenAtPointerDown` ref in `onPointerDownOutside` and calling `e.preventDefault()`.
 - TanStack v5: `isLoading = isPending && isFetching`. A **disabled** query or an **errored** query has `isLoading === false` with no data → empty-state flash. Branch on `isPending` and add an error branch.
 - `react-hooks/set-state-in-effect` lint: don't sync props into state in effects; remount with `key` or load in the dialog's `onOpenChange`.
@@ -18,6 +19,9 @@
 - shadcn `Tabs` looked cramped with five long labels → moved the phase filter to the sidebar sub-nav.
 
 ## Expo / RN
+- **Android camera hand-off race**: On navigation back (e.g. returning from rework flag or fix screen to the batch scan screen), React Navigation keeps both screens mounted during the transition animation. The returning screen requests camera access before the leaving screen releases the camera hardware. On older Android devices (e.g. Realme 2 Pro, Android 9/10), camera HAL fails on the concurrent request → permanent black preview. Fixed via `useCameraReady()` hook (`lib/use-camera-ready.ts`) which delays camera mount until navigation `transitionEnd` (`e.data.closing === false`) fires (with a 600 ms timeout fallback), and immediately resets `ready: false` on blur.
+- **Signed photo URLs vs Auth headers**: Mobile `<Image source={{uri}}>` cannot send dynamic `Authorization: Bearer <token>` headers across all native platforms and image caching layers. Attempting to protect photo endpoints with bearer tokens causes silent 401 image failures on mobile. Solution: serve files via public signed URLs with HMAC-SHA256 query parameters (`?exp=<unix>&sig=<hex>`) verified on the server.
+- **Lazy + hidden image rendering**: Off-screen or hidden image components on Android retain native decoders and memory locks, or fail to load if mounted with zero dimensions. Always conditionally render `<Image>` components only when visible.
 - Expo Go is broken for this project — use the dev build only.
 - `EXPO_PUBLIC_*` is baked at build time; `.env` edits need `expo run:android` (dev) or a release rebuild for phones.
 - `10.0.2.2` is emulator-only. Phones need LAN IP, hotspot IP (`10.42.0.1`), or ngrok. Check `http://<host>:8080/healthz` in the phone browser first. Home routers with AP/client isolation block phone→laptop.

@@ -12,7 +12,7 @@ migrate -path apps/backend/migrations -database "$DATABASE_URL" up      # or: ve
 | `batch_phase` | cutting, stitching, packing, completed |
 | `batch_status` | pending, in_progress, completed, cancelled, **awaiting_assignment** (added 006) |
 | `worker_station` | cutter, stitcher, packer |
-| `unit_status` | pending, packed, defective, dispatched — Slice B will add `rework` |
+| `unit_status` | pending, packed, defective, dispatched, **rework** (added 012) |
 
 Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` must not be used by a statement in the same transaction.
 
@@ -69,6 +69,34 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
 - `ALTER TABLE batches ADD COLUMN short_reason TEXT;` (reason notes recorded on short-cut reduction).
 - Backfill: `UPDATE batches SET cut_qty = quantity WHERE current_phase <> 'cutting';`
 
+### 012 — rework
+- `ALTER TYPE unit_status ADD VALUE IF NOT EXISTS 'rework';`
+- `rework_logs`:
+  - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+  - `unit_id UUID NOT NULL REFERENCES batch_units(id) ON DELETE CASCADE`
+  - `batch_id UUID NOT NULL REFERENCES batches(id) ON DELETE CASCADE`
+  - `round INT NOT NULL` (1-indexed counter per unit)
+  - `reasons TEXT[] NOT NULL` (`stitching_fault`, `stain`, `cutting_fault`, `material_defect`, `other`)
+  - `note TEXT`
+  - `route TEXT NOT NULL CHECK (route IN ('stitcher', 'admin'))`
+  - `flagged_by UUID NOT NULL REFERENCES workers(id)` (packer)
+  - `flagged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+  - `decision TEXT CHECK (decision IN ('to_stitcher', 'recut', 'write_off'))` (set by admin)
+  - `decided_by UUID REFERENCES users(id)`
+  - `decided_at TIMESTAMPTZ`
+  - `fixed_by UUID REFERENCES workers(id)` (stitcher)
+  - `fixed_at TIMESTAMPTZ`
+- `CREATE UNIQUE INDEX uq_rework_open ON rework_logs(unit_id) WHERE fixed_at IS NULL AND (decision IS NULL OR decision = 'to_stitcher');`
+- `rework_photos`:
+  - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+  - `rework_id UUID NOT NULL REFERENCES rework_logs(id) ON DELETE CASCADE`
+  - `path TEXT NOT NULL` (filename in `$UPLOAD_DIR/rework/`)
+  - `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
+
+### 013 — car_models_drop_name_unique
+- `ALTER TABLE car_models DROP CONSTRAINT IF EXISTS car_models_brand_id_name_key;`
+  Allows multiple product lines per car model name (superseded by `uq_car_models_item` from migration 009: `brand_id, lower(name), size_class, product_line_id`).
+
 ## Key invariants
 - One open cutting log per batch; many open stitching/packing logs (one per joined worker).
 - `phase_logs.quantity_completed` for stitching/packing = that worker's scan count, set when the phase auto-completes.
@@ -78,13 +106,19 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
   1. `split`: batch quantity reduced to `N`, remainder batch `(Q - N)` created with `parent_batch_id`.
   2. `reduce`: batch quantity reduced to `N`, un-cut units marked cancelled, reason logged in `short_reason`.
   3. `recut`: cutter re-assigned to cut remaining `(Q - N)` pieces.
+- Rework & completion policy (Slice B):
+  - A batch at packing advances to `completed` if and only if all units are either `packed`, `defective`, or `dispatched`.
+  - Units in `rework` or `pending` block batch completion.
+  - Round 1 routing: stitching fault/stain/other → original stitcher (`bu.stitched_by`); cutting fault / material defect → admin.
+  - Round 2+ routing: always escalates to admin.
+  - Admin `recut` decision writes off the defective unit and spawns a new 1-mat batch.
 
 ## Reset (dev)
 ```bash
 docker exec -it rps_postgres psql -U rps_dev -d rps -c "
-TRUNCATE phase_logs, batch_units, batches, audit_log, batch_assignments RESTART IDENTITY CASCADE;
+TRUNCATE phase_logs, batch_units, batches, audit_log, batch_assignments, rework_logs, rework_photos RESTART IDENTITY CASCADE;
 DELETE FROM batch_code_counters;
 DELETE FROM workers WHERE name LIKE 'PM %' OR name LIKE 'Postman%';"
 ```
-Workers, users, car models, rolls survive. The root `demo-seed.sql` predates 005–007 — **do not run it**; a new seed
-must set `stitched_by`, create assignments with quotas, and set `batch_code_counters(year, last_number)`.
+Workers, users, car models, rolls survive. Run `scripts/seed-dev.sh rps --force` (or `seeds/02-demo.sql` followed by `./scripts/seed-uploads.sh`) to re-seed realistic multi-phase demo data.
+

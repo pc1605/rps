@@ -6,7 +6,8 @@
 ├── .npmrc                        # node-linker=hoisted
 ├── pnpm-workspace.yaml           # nodeLinker: hoisted, allowBuilds
 ├── metro.config.js               # workspace watchFolders for Expo
-├── demo-seed.sql                 # OLD demo data (pre-multi-worker) — do not run; needs rewrite (see roadmap)
+├── seeds/                        # 01-catalog.sql (real items/barcodes), 02-demo.sql (batches lifecycle)
+├── scripts/                      # seed-dev.sh, seed-uploads.sh, review.sh
 ├── v2.md                         # historical backlog; mostly superseded by 08-roadmap/
 ├── docker-compose.yml            # PostgreSQL 16 + Adminer containers
 ├── apps/

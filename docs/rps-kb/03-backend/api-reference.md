@@ -10,7 +10,9 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | POST | `/auth/login` | `{email,password}` → `{user, tokens{access_token, refresh_token}}` |
 | POST | `/auth/refresh` | `{refresh_token}` → tokens |
 | POST | `/worker/login` | `{badge_token, pin, device_id?}` → `{worker, tokens{access_token}}` (30d). Always 401 `invalid badge or pin` on failure |
+| GET | `/files/rework/:name?exp=<unix>&sig=<hmac>` | Public signed URL for rework photos. Validates HMAC-SHA256 signature against `FILE_URL_SECRET`. 403 `invalid_signature` if expired or tampered |
 
+## Admin (requires admin token)
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/me` | current user |
@@ -27,23 +29,32 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | PUT | `/batches/:id/assignments` | `{phase:"stitching", assignments:[{worker_id, target_qty?}, …]}`. Empty list clears. Operates the gate for stitching. 400 on quota rule violations |
 | POST | `/batches/:id/resolve-short` | `{action:"split"|"reduce"|"recut", reason?}`. Resolves cutter short cuts. Split creates linked remainder batch; reduce cancels un-cut units; recut re-opens cutting |
 | POST | `/batches/:id/stickers-printed` | stamps `stickers_printed_at = now()` |
+| GET | `/rework` | query params `?status=open|all&route=admin|stitcher`. Returns `ReworkEntry[]` with signed photo URLs |
+| POST | `/rework/:id/decide` | `{decision: "to_stitcher"|"recut"|"write_off", note?}`. Directs admin-routed rework items. Recut spawns new 1-mat batch |
 | GET/POST | `/workers` | list (no badge exposed) / create `{name, station, pin, phone?}` → 201 with `badge_token` **once** |
 | GET | `/workers/:id/enrollment` | `{badge_token}` for re-showing the QR (admin) |
 | GET/POST/PATCH | `/stock/rolls`, `/stock/rolls/:id` | rolls with `is_low`, `batch_count`; PATCH `{remaining_meters?, is_active?}` |
 | GET | `/stock/finished` | packed units grouped by model |
 | GET | `/reports/workers?from=YYYY-MM-DD&to=YYYY-MM-DD` | default last 7 days; per worker `batches_done, pieces_done, avg_duration_secs, currently_working` (open claim, window-independent); sorted pieces desc. Role-guarded |
 
-## Worker
+## Worker (requires worker token)
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/worker/me` | profile (used by cold-start `restore()`) |
 | GET | `/worker/batches` | my queue (ListByPhase for my station; visibility rules apply). Fields in `02-domain/work-model.md §6` |
 | POST | `/worker/batches/:id/start` | cutting: exclusive claim; stitching/packing: join (idempotent). 403 `not_assigned` if assigned elsewhere |
 | POST | `/worker/batches/:id/complete` | `{quantity_completed, notes?}` — **cutting only**; 400 for stitching/packing |
-| POST | `/worker/units/scan` | `{unit_code}` → `ScanResult{unit_code, batch_code, phase, already_done, done_count, total_units, phase_completed, batch_completed}`. 404 unit_not_found · 409 wrong_phase / not_started / quota_reached |
+| GET | `/worker/units/:code/peek` | Packer inspection before pack/flag. Returns `{unit_code, batch_code, status, batch_phase, batch_status, joined, can_pack, can_rework, reason}` |
+| POST | `/worker/units/:code/rework` | Multipart form: `reasons` (`stitching_fault`, `stain`, `cutting_fault`, `material_defect`, `other`), `note?`, `photos` (1-3 images). Flags unit in rework |
+| GET | `/worker/rework` | Stitcher rework queue: lists open rework items where `route = 'stitcher'` and `stitched_by = worker_id` |
+| POST | `/worker/units/scan` | `{unit_code}` → `ScanResult`. Marks stitched / packed, or repairs rework (`rework_fixed: true`). 404 unit_not_found · 409 wrong_phase / not_started / quota_reached / in_rework / written_off / rework_pending_decision · 403 not_your_rework |
 
 ## Scan endpoint behaviour by station
 - cutter → 409 wrong_phase (cutters don't scan).
-- stitcher on a batch at stitching, joined, under quota → marks `stitched_by/at`; last one → phase_completed.
-- packer on a batch at packing, joined, under quota → marks packed; last one → batch_completed.
+- stitcher on normal batch → marks `stitched_by/at`; last one → phase_completed.
+- stitcher on rework mat (`status='rework'`) → if `stitched_by == me` and `route='stitcher'` (or admin decided `to_stitcher`), resets unit to pending, closes rework round, returns `rework_fixed: true`. If another stitcher scans → 403 `not_your_rework`. If awaiting admin decision → 409 `rework_pending_decision`.
+- packer on normal batch → marks packed; last one → batch_completed.
+- packer on rework mat → 409 `in_rework`.
+- packer on written-off mat (`status='defective'`) → 409 `written_off`.
 - Already done → 200 `already_done:true` (no writes) regardless of phase/join state.
+

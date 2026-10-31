@@ -50,6 +50,14 @@ Admin selects one of three resolution paths:
 `GET /batches/:id` → `timeline[]` = every `phase_logs` row with worker name, start/end, duration, quantity.
 Multi-worker phases yield multiple rows (two stitching entries: 8 pcs and 2 pcs; a joiner with no scans shows 0 pcs).
 
-## Rework (Slice B — designed, not built)
-Unit-level `status='rework'`; batch stays at packing; mat routes back to its `stitched_by`; `rework_logs(unit_id, flagged_by,
-reason, photo_path, flagged_at, fixed_by, fixed_at)`; `batches.rework_count++`. Design in `08-roadmap/remaining-slices.md`.
+## Rework Lifecycle (Slice B — Built & Verified)
+- Mat-level lifecycle: `pending` → `packed`, or flagged to `rework`, or written off as `defective`.
+- Batch remains in `packing` phase while units are in rework.
+- **Rework completion rule**: The packing phase completes when all units in the batch satisfy `status IN ('packed', 'defective', 'dispatched')`.
+- Defect routing:
+  - Round 1 with stitching fault/stain/other → routes to `bu.stitched_by` (`route='stitcher'`).
+  - Round 1 with cutting fault or material defect → routes to admin (`route='admin'`).
+  - Round 2+ (escalation) → routes to admin.
+- Stitcher repairs the defect and scans the mat (`POST /worker/units/scan`) → `rework_fixed: true`, closes round, resets unit to `pending`.
+- Admin decision on `route='admin'` items: `to_stitcher` (reroute to stitcher), `recut` (write off unit + spawn new 1-mat batch), or `write_off` (permanently defective).
+

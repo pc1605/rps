@@ -75,17 +75,18 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 
 	// 2. Optional roll validation
 	var rollID *uuid.UUID
+	var rollCode string
 	if in.RollID != nil && *in.RollID != "" {
 		parsed, err := uuid.Parse(*in.RollID)
 		if err != nil {
 			return nil, fmt.Errorf("%w: bad roll_id", ErrInvalidInput)
 		}
-		var rollExists bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM raw_materials WHERE id = $1 AND is_active)`, parsed).Scan(&rollExists); err != nil {
-			return nil, err
-		}
-		if !rollExists {
+		err = tx.QueryRow(ctx, `SELECT roll_code FROM raw_materials WHERE id = $1 AND is_active`, parsed).Scan(&rollCode)
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("%w: roll not found or inactive", ErrInvalidInput)
+		}
+		if err != nil {
+			return nil, err
 		}
 		rollID = &parsed
 	}
@@ -111,6 +112,9 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("insert batch: %w", err)
+	}
+	if rollID != nil {
+		b.RollCode = &rollCode
 	}
 
 	// 5. Insert N units in one statement (Hard Rule #18)
