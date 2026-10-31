@@ -43,12 +43,13 @@ SELECT b.id, b.created_at, 'created', 'cutting', 'pending', b.created_by,
 FROM batches b;
 
 -- cutting: one start + one completion per cutting log
-INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, actor_worker_id, data)
-SELECT pl.batch_id, pl.started_at, 'cut_started', 'cutting', 'cutting', pl.worker_id, '{"backfill": true}'
+INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, to_status, actor_worker_id, data)
+SELECT pl.batch_id, pl.started_at, 'cut_started', 'cutting', 'cutting', 'in_progress', pl.worker_id, '{"backfill": true}'
 FROM phase_logs pl WHERE pl.phase = 'cutting';
 
-INSERT INTO batch_events (batch_id, at, kind, from_phase, actor_worker_id, data)
-SELECT pl.batch_id, pl.completed_at, 'cut_completed', 'cutting', pl.worker_id,
+-- (every cut completion parks the batch in stitching / awaiting_assignment)
+INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, to_status, actor_worker_id, data)
+SELECT pl.batch_id, pl.completed_at, 'cut_completed', 'cutting', 'stitching', 'awaiting_assignment', pl.worker_id,
        jsonb_build_object('backfill', true, 'cut', pl.quantity_completed)
 FROM phase_logs pl WHERE pl.phase = 'cutting' AND pl.completed_at IS NOT NULL;
 
@@ -72,18 +73,18 @@ WHERE a.entity_type = 'batch' AND a.after_json->>'event' = 'assignments_set'
   AND EXISTS (SELECT 1 FROM batches b WHERE b.id::text = a.entity_id);
 
 -- stitching / packing: first and last scan
-INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, data)
-SELECT bu.batch_id, MIN(bu.stitched_at), 'stitching_started', 'stitching', 'stitching', '{"backfill": true}'
+INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, to_status, data)
+SELECT bu.batch_id, MIN(bu.stitched_at), 'stitching_started', 'stitching', 'stitching', 'in_progress', '{"backfill": true}'
 FROM batch_units bu WHERE bu.stitched_at IS NOT NULL GROUP BY bu.batch_id;
 
-INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, data)
-SELECT bu.batch_id, MAX(bu.stitched_at), 'stitching_completed', 'stitching', 'packing', '{"backfill": true}'
+INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, to_status, data)
+SELECT bu.batch_id, MAX(bu.stitched_at), 'stitching_completed', 'stitching', 'packing', 'pending', '{"backfill": true}'
 FROM batch_units bu JOIN batches b ON b.id = bu.batch_id
 WHERE bu.stitched_at IS NOT NULL AND b.current_phase IN ('packing', 'completed')
 GROUP BY bu.batch_id;
 
-INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, data)
-SELECT bu.batch_id, MIN(bu.packed_at), 'packing_started', 'packing', 'packing', '{"backfill": true}'
+INSERT INTO batch_events (batch_id, at, kind, from_phase, to_phase, to_status, data)
+SELECT bu.batch_id, MIN(bu.packed_at), 'packing_started', 'packing', 'packing', 'in_progress', '{"backfill": true}'
 FROM batch_units bu WHERE bu.packed_at IS NOT NULL GROUP BY bu.batch_id;
 
 -- completed: last pack scan (or last update when nothing was packed, e.g. all written off)

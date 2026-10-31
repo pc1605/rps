@@ -126,7 +126,7 @@ func TestBatchEvents(t *testing.T) {
 		{"cut_started", "cutting", "in_progress"},
 		{"cut_completed", "stitching", "awaiting_assignment"},
 		{"short_resolved", "stitching", "awaiting_assignment"},
-		{"assigned", "", "pending"},
+		{"assigned", "stitching", "pending"},
 		{"stitching_started", "stitching", "in_progress"},
 		{"stitching_completed", "packing", "pending"},
 		{"packing_started", "packing", "in_progress"},

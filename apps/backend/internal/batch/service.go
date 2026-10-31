@@ -735,6 +735,8 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 		}
 		if tag.RowsAffected() == 0 {
 			ev.FromStatus, ev.ToStatus = "", ""
+		} else {
+			ev.FromPhase, ev.ToPhase = PhaseStitching, PhaseStitching
 		}
 	}
 	after, err := assignmentTargets(ctx, tx, batchID, phase)
