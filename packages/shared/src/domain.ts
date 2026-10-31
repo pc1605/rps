@@ -175,3 +175,117 @@ export interface UnitPeek {
   can_rework: boolean;
   reason?: PeekReason;
 }
+
+// ───── Materials (migration 015 · design: docs/rps-kb/02-domain/materials.md) ─────
+// Row shapes for the C1c endpoints. Numeric quantities arrive as JSON numbers.
+
+export type MaterialUnit = "m" | "sqm" | "pcs" | "spool" | "kg";
+export type MovementKind = "receive" | "consume" | "adjust" | "waste" | "return";
+/** Which rule produced a planned quantity (most specific first). */
+export type PlanSource = "car_variant" | "car_any" | "recipe_variant" | "recipe_any" | "none";
+
+export interface MaterialType {
+  id: number;
+  code: string; // e.g. "REX-R", "VELCRO"
+  name: string;
+  unit: MaterialUnit;
+  has_variants: boolean;
+  /** Low stock when the sum of active lots' qty_remaining is below this. */
+  min_level?: number;
+  sort: number;
+  is_active: boolean;
+}
+
+/** Specs that change consumption (e.g. roll width) — never colour; colour is on the lot. */
+export interface MaterialVariant {
+  id: number;
+  material_type_id: number;
+  name: string; // e.g. "60″"
+  specs: Record<string, unknown>; // e.g. { width_in: 60 }
+  is_active: boolean;
+}
+
+/** One received quantity of a material (a roll, a box). Formerly raw_materials (rolls). */
+export interface MaterialLot {
+  id: string;
+  lot_code: string;
+  material_type_id: number;
+  variant_id?: number;
+  color: string;
+  qty_received: number;
+  /** Cached; always equals the sum of the lot's movements. */
+  qty_remaining: number;
+  unit_cost?: number; // ₹ per unit
+  supplier?: string;
+  note?: string;
+  is_active: boolean;
+  received_at: string;
+  created_at: string;
+}
+
+/** Append-only ledger row. qty is signed (+ in, − out). lot_id absent = shortfall. */
+export interface MaterialMovement {
+  id: string;
+  lot_id?: string;
+  material_type_id: number;
+  variant_id?: number;
+  kind: MovementKind;
+  qty: number;
+  batch_id?: string;
+  reason?: string;
+  actor_user_id?: string;
+  actor_worker_id?: string;
+  created_at: string;
+}
+
+export interface ConsumptionGroup {
+  id: number;
+  name: string; // "Small", "Medium", "Large", "XL 7-seater"…
+  sort: number;
+  is_active: boolean;
+  /** New cars of this size class default to this group. */
+  default_for_size?: SizeClass;
+}
+
+/** Recipe key: product line × consumption group. */
+export interface Recipe {
+  id: number;
+  product_line_id: number;
+  consumption_group_id: number;
+  note?: string;
+  lines: RecipeLine[];
+}
+
+export interface RecipeLine {
+  id: number;
+  recipe_id: number;
+  material_type_id: number;
+  /** Absent = default for any variant. */
+  variant_id?: number;
+  qty_per_mat: number;
+}
+
+export interface CarMaterialOverride {
+  id: number;
+  car_model_id: number;
+  material_type_id: number;
+  /** Absent = any variant. */
+  variant_id?: number;
+  /** 0 = this car doesn't use the material. */
+  qty_per_mat: number;
+}
+
+/** Recipe snapshot written at each cutting completion (planned vs actual, R2). */
+export interface BatchMaterialPlanLine {
+  id: string;
+  batch_id: string;
+  phase_log_id?: string;
+  material_type_id: number;
+  variant_id?: number;
+  source: PlanSource;
+  qty_per_mat?: number; // absent when source = "none"
+  mats: number;
+  planned_qty?: number; // absent when source = "none"
+  note?: string;
+  created_at: string;
+}
