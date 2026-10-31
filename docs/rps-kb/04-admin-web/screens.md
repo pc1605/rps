@@ -33,9 +33,8 @@ Catalog management of flat car items.
 Table: name · station badge · active · last login · **QR icon** → EnrollmentQrDialog (fetches `/workers/:id/enrollment`, shows
 `RPS-ENROLL:` QR + copyable text). Create dialog → success view shows QR + text code + instructions.
 
-## Stock
-Raw tab: rolls with progress bar, `⚠ Low` under 10 m, create/edit. Finished tab: packed units by model.
-(Slice C replaces "rolls" with generalized materials + BOM.)
+## Stock — `/stock`
+Finished goods only (packed mats by item), with a pointer to Materials. The old Raw-material/Rolls tab was removed in C2.
 
 ## Reports
 Range presets (Today / 7d / This month / 30d / custom) → table per worker: batches, pieces, avg/batch, 🏆 top producer,
@@ -55,7 +54,7 @@ detail crumbs go back to the batch's own phase view.
   note, photos/lightbox, decision, re-cut batch link, fixed by) → packed.
 - **Car item — `/cars/[id]`**: size, line, pieces, consumption group, barcode; range stats (stitched, packed, rework
   rate, first-pass yield, in production, in stock); active + recently completed batches.
-- **Lot — `/stock/lots/[id]`**: type, width, colour, supplier, cost; remaining/received, used, wasted, adjusted,
+- **Lot — `/materials/lots/[id]`** (old `/stock/lots/[id]` redirects): type, width, colour, supplier, cost; remaining/received, used, wasted, adjusted,
   returned; batches that used it; ledger (load more).
 - `components/ui/card.tsx` is a plain surface (no default flex-col) — callers own padding and layout.
 
@@ -69,3 +68,24 @@ detail crumbs go back to the batch's own phase view.
   match. No ⌘K / shortcuts yet (deferred in NEXT-STEPS).
 - The dashboard no longer loads the full batch list: recent = `?limit=6`, short cuts = `?view=ready&short=true`,
   pipeline names = `stats.working`.
+
+## Materials (C2) — `/materials`
+Tabs are routes: **Stock** `/materials` · **Ledger** `/materials/ledger` · **Types** `/materials/types` · **Recipes**
+`/materials/recipes`.
+- **Stock:** per-type totals (low flagged; click filters), lots table (remaining bar, cost, last movement), filters in the
+  URL (`type`, `low=1`, `all=1` incl. finished lots), **Receive lot** dialog (variant required iff the type has
+  variants; qty ≤ 3 dp, cost ≤ 2 dp). Row → lot page.
+- **Lot page:** Adjust (new remaining + reason) · Waste · Return · Edit (colour, supplier, cost, note, in use; material /
+  width locked once the lot has consumption, waste or returns). Totals, batches, ledger.
+- **Ledger:** every movement newest first, material + date filters, shortfalls marked, lots/batches/workers linked.
+- **Types:** card per material (unit, stock, low level, active) + edit dialog; variants as chips with add/edit (name +
+  width in inches → `specs.width_in`, other spec keys kept).
+- **Recipes:** product line select (`?line=`), grid material(+width) × consumption group, per-group edit dialog
+  (`LinesEditor`: material, any width / specific width, qty > 0) → full replace; PLACEHOLDER warning; consumption groups
+  table + new/edit dialog.
+- **Car:** item dialog has the consumption group; the car page has **Materials** (engine dry run for N mats: source,
+  width, qty/mat, lots it would draw, available, shortfall) + **Edit overrides** (qty ≥ 0, 0 = not used) + Edit.
+- **Batch:** **Materials used** per cutting completion (plan × mats, source, lots drawn, shortfall). **New batch:** the
+  roll picker lists active lots of the car's sheet material (type code = product line code) and a live "materials at
+  cutting" preview shows shortfalls before creating.
+- **Dashboard:** low-stock types and 30-day shortfalls (from `/batches/stats`) replace the old per-roll low cards.

@@ -106,7 +106,13 @@ As built (C1b, `internal/batch/consume.go`):
 | Every active car has a recipe for its line × group | check-data #17 — **warning only** (may be non-empty until recipes are entered; consumption then plans `none`). All other check-data sections must be empty. |
 | Every car has a consumption group | `NOT NULL` + trigger: a new car without one gets the group whose `default_for_size` = its `size_class` (rename-safe) |
 
-## Compatibility until C2
+## Compatibility (C2 status)
+- C2 moved the admin to the materials API: the old Rolls UI is gone and the batch roll picker uses `/materials/lots`.
+  `/stock/rolls` and `/rolls` remain for compatibility (Postman, older clients) — candidates for removal later.
+- `batches.roll_id` was **not** renamed in C2: it's in the batch JSON the mobile app reads; rename together with the
+  C3 cutter work if wanted.
+
+### As of C1 (history)
 
 - `raw_materials` was **renamed** to `material_lots` (ids kept; `roll_code→lot_code`, `total_meters→qty_received`,
   `remaining_meters→qty_remaining`, numeric(12,3)). Existing rolls became sheet lots; type inferred from the product
