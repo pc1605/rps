@@ -361,13 +361,14 @@ func (h *Handler) ResolveShort(c *fiber.Ctx) error {
 	}
 	var in struct {
 		Action string `json:"action"`
-		Reason string `json:"reason"`
+		Reason string `json:"reason"` // ShortReasonLabel code
+		Note   string `json:"note"`
 	}
 	if err := c.BodyParser(&in); err != nil {
 		return httpx.BadRequest(c, "invalid request body")
 	}
 	adminID, _ := auth.UserID(c)
-	remainder, err := h.svc.ResolveShort(c.Context(), id, ShortAction(in.Action), strings.TrimSpace(in.Reason), adminID, c.IP())
+	remainder, err := h.svc.ResolveShort(c.Context(), id, ShortAction(in.Action), strings.TrimSpace(in.Reason), strings.TrimSpace(in.Note), adminID, c.IP())
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrNotFound):

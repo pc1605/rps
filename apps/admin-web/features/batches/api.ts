@@ -1,4 +1,4 @@
-import type { BatchListParams, BatchPage, SearchResult } from "@rps/shared";
+import type { BatchListParams, BatchPage, SearchResult, ShortAction, ShortReason } from "@rps/shared";
 import { http } from "@/lib/api-client";
 import type {
   AssignmentInput,
@@ -45,11 +45,8 @@ export const batchApi = {
     const res = await http.post(`/batches/${id}/stickers-printed`);
     return res.data?.data ?? res.data;
   },
-  resolveShort: async (id: string, action: "split" | "reduce" | "recut", reason?: string) => {
-    const res = await http.post(`/batches/${id}/resolve-short`, {
-      action,
-      reason,
-    });
+  resolveShort: async (id: string, action: ShortAction, reason: ShortReason, note?: string) => {
+    const res = await http.post(`/batches/${id}/resolve-short`, { action, reason, note });
     return res.data?.data ?? res.data;
   },
 };

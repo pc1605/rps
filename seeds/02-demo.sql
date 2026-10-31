@@ -370,3 +370,6 @@ BEGIN
   DO UPDATE SET last_number = GREATEST(batch_code_counters.last_number, 7);
 
 END $$;
+
+-- Typed history for the demo batches (migration 016); a no-op for batches that already have events.
+SELECT backfill_batch_events();

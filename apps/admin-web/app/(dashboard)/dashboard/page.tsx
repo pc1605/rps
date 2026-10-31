@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes, ChevronRight, Scissors, Wrench } from "lucide-react";
+import { Boxes, ChevronRight, Hourglass, Scissors, Wrench } from "lucide-react";
 import Link from "next/link";
 import { Chip } from "@/components/rps/chip";
 import { EmptyState } from "@/components/rps/empty-state";
@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CreateBatchDialog } from "@/features/batches/components/create-batch-dialog";
 import { Pipeline } from "@/features/batches/components/pipeline";
 import { useBatchPage, useBatchStats } from "@/features/batches/hooks";
+import { useStuck } from "@/features/reports/hooks";
 import { batchTone, sizeLabel } from "@/lib/tokens";
 
 export default function DashboardPage() {
@@ -17,6 +18,8 @@ export default function DashboardPage() {
   const { data: recentPage, isPending } = useBatchPage({ limit: 6 });
   const { data: shortPage } = useBatchPage({ view: "ready", short: true, limit: 20 });
   const { data: stats } = useBatchStats();
+  const { data: stuckList } = useStuck();
+  const stuck = stuckList?.length ?? 0;
 
   const today = new Date().toLocaleDateString(undefined, {
     weekday: "long",
@@ -40,7 +43,8 @@ export default function DashboardPage() {
         reworkOpen > 0 ||
         shortCuts.length > 0 ||
         lowTypes > 0 ||
-        shortfalls > 0) && (
+        shortfalls > 0 ||
+        stuck > 0) && (
         <div className="grid gap-2 sm:grid-cols-2">
           {reworkNeedsDecision > 0 && (
             <Link href="/rework">
@@ -89,6 +93,22 @@ export default function DashboardPage() {
               </Card>
             </Link>
           ))}
+          {stuck > 0 && (
+            <Link href="/reports#stuck">
+              <Card className="flex items-center gap-3 p-3 hover:bg-accent">
+                <Hourglass className="h-4 w-4 text-danger" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <div className="text-small font-medium">
+                    {stuck} batch{stuck === 1 ? "" : "es"} stuck
+                  </div>
+                  <div className="text-caption text-muted-foreground">
+                    No scan or step past the stage's threshold — oldest: {stuckList?.[0]?.batch_code}
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+              </Card>
+            </Link>
+          )}
           {lowTypes > 0 && (
             <Link href="/materials?low=1">
               <Card className="flex items-center gap-3 p-3 hover:bg-accent">

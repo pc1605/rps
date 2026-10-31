@@ -27,7 +27,7 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | GET | `/batches/stats` | `BatchStats` (`@rps/shared`): `{in_cutting, awaiting_assignment, in_stitching, in_packing, completed_today, total_active, rework_open, rework_needs_decision, material_shortfalls_open, low_stock_types, working: {phase: [names]}}`. `completed_today` = factory day (`FACTORY_TZ`) |
 | GET | `/batches/:id` | BatchDetail: `units[]`, `timeline[]`, `assignments[]`, `cut_qty`, `parent_batch_id`, `short_reason`; same roll-ups as List, computed server-side |
 | PUT | `/batches/:id/assignments` | `{phase:"stitching", assignments:[{worker_id, target_qty?}, …]}`. Empty list clears. Operates the gate for stitching. 400 on quota rule violations |
-| POST | `/batches/:id/resolve-short` | `{action:"split"|"reduce"|"recut", reason?}`. Resolves cutter short cuts. Split creates linked remainder batch; reduce cancels un-cut units; recut re-opens cutting |
+| POST | `/batches/:id/resolve-short` | `{action:"split"|"reduce"|"recut", reason, note?}` — `reason` **required** (R1/W5), a `SHORT_REASON_LABEL` code: `roll_ran_out, material_defect, machine_issue, cutter_error, order_changed, other`; `note` required for `other`. Split creates a linked remainder batch; reduce **deletes** the un-cut units; recut re-opens cutting. Writes a `short_resolved` event |
 | POST | `/batches/:id/stickers-printed` | stamps `stickers_printed_at = now()` |
 | GET | `/rework` | query params `?status=open|all&route=admin|stitcher`. Returns `ReworkEntry[]` with signed photo URLs |
 | POST | `/rework/:id/decide` | `{decision: "to_stitcher"|"recut"|"write_off", note?}`. Directs admin-routed rework items. Recut spawns new 1-mat batch |
@@ -47,6 +47,11 @@ Ids next to names (U1): units `stitched_by`/`packed_by`; rework entries `flagged
 | GET/POST/PATCH | `/stock/rolls`, `/stock/rolls/:id` | rolls with `is_low`, `batch_count`; PATCH `{remaining_meters?, is_active?}` |
 | GET | `/stock/finished` | packed units grouped by model |
 | GET | `/reports/workers?from=YYYY-MM-DD&to=YYYY-MM-DD` | dates are factory days (`FACTORY_TZ`, default Asia/Kolkata), `to` inclusive; default last 7 days incl. today; per worker `batches_done, pieces_done, avg_duration_secs, currently_working` (open claim, window-independent); sorted pieces desc. Role-guarded |
+| GET | `/reports/overview?from&to` | R1. Default last 30 days (max 366). `days[]` (cut from `cut_completed` events, stitched/packed from unit scans), `totals`, `previous` (same length just before), `wip[]` per stage (`cutting, awaiting_assignment, stitching, packing`: batches, mats, `ageing` [<4 h, 4–24 h, 1–3 d, >3 d] since entering the stage, stuck), `stuck_count`, `fpy_packed/fpy_first_pass` + `fpy_weeks[]`, `items[]` (packed per car), `stuck_hours` |
+| GET | `/reports/stuck` | live batches whose last activity (newest event, scan, claim or rework step) is older than their stage's threshold; longest idle first |
+| GET | `/reports/worker-output?from&to` | default 7 days. Per worker: `mats` (cutters: pieces from completed cutting logs), `days_worked`, `active_secs` (scans: first→last per day; cutters: start→complete), `mats_per_hour` (≥ 15 min), stitchers: `rework_rounds`, quota `target/done/batches` (batches whose stitching completed in range), `currently_open` |
+| GET | `/reports/quality?from&to` | default 30 days. Rework rounds, `by_reason`, `by_stitcher` (rounds vs stitched), fixed count + `avg_fix_hours`, `cut_completions`, `short_cuts[]` by action × reason, `losses[]` write-off/recut by car, `loss_by_reason` |
+| GET / PUT | `/settings` · `/settings/stuck_hours` | `{stuck_hours: {cutting, awaiting_assignment, stitching, packing}}` hours 1–720 (default 24/24/48/48); PUT tx + audit (`app_setting`) |
 | PATCH | `/car-models/:id` | also `consumption_group_id` (active group only); tx + audit. List returns `consumption_group_id`, `consumption_group_name` |
 
 ### Materials (C1c · `internal/materials` · design `02-domain/materials.md`)

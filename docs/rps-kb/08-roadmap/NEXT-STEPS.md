@@ -6,7 +6,7 @@
 | C1 ✅ | Materials backend        | C1a schema (migration 015) + shared types · C1b recipe resolution + consumption engine · C1c endpoints                                                                                                               | U0 merged  | worktree `../rps-c1` |
 | U1 ✅ | Entity pages & navigation | Worker page (current work, pipeline history, output, rework caused/fixed, enrollment QR, PIN reset, activate), Unit/Mat, Car item, Lot pages; every worker/batch/unit/car/lot name clickable everywhere; breadcrumbs | U0         | main                 |
 | U2 ✅ | Lists                    | whole-row click on every table, header search (batch code, unit code, barcode, worker, car), filters+sort in URL, server pagination for batches                                                                      | U1         | main                 |
-| C2  | Materials admin screens   | Materials (types, variants, lots, receive/adjust, movements), Recipes grid, groups + overrides in car dialog, "Materials used" on batch                                                                              | C1, U1, U2 | main                 |
+| C2 ✅ | Materials admin screens  | Materials (types, variants, lots, receive/adjust, movements), Recipes grid, groups + overrides in car dialog, "Materials used" on batch                                                                              | C1, U1, U2 | main                 |
 | R1  | Reports v2                | WIP ageing + stuck batches (also on dashboard), throughput, cycle time per phase, first-pass yield, worker output/hour, short-cut rate; CSV export                                                                   | U2         | main                 |
 | U3  | Workflow gaps             | edit batch before cutting, cancel after cutting, reassign mid-stitching, supervisor undo last scan                                                                                                                   | U2         | main                 |
 | C3  | Cutter materials          | "You'll need …" panel, roll QR scan at cutting start, lot QR labels                                                                                                                                                  | C2         | main                 |
@@ -18,7 +18,8 @@ and only when they don't touch the same files. Merge order: U0 → C1 → U1 →
 
 ### Decisions taken (defaults until the owner says otherwise)
 
-- "Stuck" batch: no activity for 24 h in cutting, 48 h in stitching/packing (to be made configurable in R1).
+- "Stuck" batch: no activity for 24 h in cutting / ready for stitching, 48 h in stitching/packing — configurable on
+  Reports → Thresholds since R1 (`app_settings.stuck_hours`).
 - Search covers batch code, unit code, barcode, worker name, car name.
 - Worker pages are admin-only.
 - Deferred (not over-engineering now): ⌘K palette & keyboard shortcuts, audit-log viewer, live updates (WebSocket),

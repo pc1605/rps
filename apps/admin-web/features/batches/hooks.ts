@@ -1,4 +1,4 @@
-import type { BatchListParams } from "@rps/shared";
+import type { BatchListParams, ShortAction, ShortReason } from "@rps/shared";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { batchApi } from "./api";
 import type { AssignmentInput, CreateBatchInput, Phase } from "./types";
@@ -70,8 +70,8 @@ export function useMarkStickersPrinted() {
 export function useResolveShort(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ action, reason }: { action: "split" | "reduce" | "recut"; reason?: string }) =>
-      batchApi.resolveShort(id, action, reason),
+    mutationFn: ({ action, reason, note }: { action: ShortAction; reason: ShortReason; note?: string }) =>
+      batchApi.resolveShort(id, action, reason, note),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["batch", id] });
       qc.invalidateQueries({ queryKey: ["batches"] });

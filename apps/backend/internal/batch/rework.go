@@ -91,6 +91,11 @@ func completePackingIfDone(ctx context.Context, tx pgx.Tx, batchID uuid.UUID) (b
 	`, next, newStatus, batchID); err != nil {
 		return false, err
 	}
+	// Actor lives in the scan / decision audit row; the event marks the moment.
+	if err := writeEvent(ctx, tx, Event{BatchID: batchID, Kind: EvCompleted, FromPhase: PhasePacking, ToPhase: next,
+		FromStatus: status, ToStatus: newStatus}); err != nil {
+		return false, err
+	}
 
 	return true, nil
 }
@@ -490,6 +495,10 @@ func (s *Service) DecideRework(ctx context.Context, reworkID uuid.UUID, decision
 			SELECT $1, $2 || '-' || LPAD(gs.n::TEXT, 3, '0'), gs.n FROM generate_series(1, 1) AS gs(n)
 		`, newBatchID, code); err != nil {
 			return nil, fmt.Errorf("create recut units: %w", err)
+		}
+		if err := writeEvent(ctx, tx, Event{BatchID: newBatchID, Kind: EvCreated, ToPhase: PhaseCutting, ToStatus: StatusPending,
+			UserID: uid(adminID), Data: map[string]any{"quantity": 1, "parent": batchID, "via": "recut", "recut_of": unitCode}}); err != nil {
+			return nil, err
 		}
 		newBatchIDOut = &newBatchID
 		if _, err := completePackingIfDone(ctx, tx, batchID); err != nil {

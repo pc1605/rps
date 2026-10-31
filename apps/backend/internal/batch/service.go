@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/pc1605/rps/apps/backend/internal/audit"
@@ -131,6 +132,11 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 	`, b.ID, b.BatchCode, in.Quantity)
 	if err != nil {
 		return nil, fmt.Errorf("insert units: %w", err)
+	}
+
+	if err := writeEvent(ctx, tx, Event{BatchID: b.ID, Kind: EvCreated, ToPhase: PhaseCutting, ToStatus: StatusPending,
+		UserID: uid(actorID), Data: map[string]any{"quantity": in.Quantity}}); err != nil {
+		return nil, err
 	}
 
 	// 6. Audit (same tx — Hard Rule #16)
@@ -348,7 +354,10 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 		  COUNT(*) FILTER (WHERE current_phase = 'stitching' AND status = 'awaiting_assignment'),
 		  COUNT(*) FILTER (WHERE current_phase = 'stitching' AND status IN ('pending','in_progress')),
 		  COUNT(*) FILTER (WHERE current_phase = 'packing'   AND status IN ('pending','in_progress')),
-		  COUNT(*) FILTER (WHERE status = 'completed' AND (updated_at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date),
+		  -- D5: the completion event's time, not updated_at (a later reprint/note doesn't move it to "today")
+		  (SELECT COUNT(DISTINCT e.batch_id) FROM batch_events e JOIN batches cb ON cb.id = e.batch_id
+		    WHERE e.kind = 'completed' AND cb.status = 'completed'
+		      AND (e.at AT TIME ZONE $1)::date = (NOW() AT TIME ZONE $1)::date),
 		  COUNT(*) FILTER (WHERE status NOT IN ('completed','cancelled')),
 		  (SELECT COUNT(*) FROM rework_logs WHERE fixed_at IS NULL AND (decision IS NULL OR decision = 'to_stitcher')),
 		  (SELECT COUNT(*) FROM rework_logs WHERE route = 'admin' AND decision IS NULL),
@@ -583,10 +592,19 @@ func (s *Service) StartPhase(ctx context.Context, batchID, workerID uuid.UUID, s
 		return ErrAlreadyStarted // cutting raced, or per-worker index backstop
 	}
 
-	if _, err := tx.Exec(ctx,
+	tag, err := tx.Exec(ctx,
 		`UPDATE batches SET status='in_progress', version=version+1 WHERE id=$1 AND status='pending'`,
-		batchID); err != nil {
+		batchID)
+	if err != nil {
 		return err
+	}
+	// Cutting: every claim is a start. Stitching/packing: the first join starts the phase.
+	startKind := map[Phase]EventKind{PhaseCutting: EvCutStarted, PhaseStitching: EvStitchingStarted, PhasePacking: EvPackingStarted}[phase]
+	if phase == PhaseCutting || tag.RowsAffected() == 1 {
+		if err := writeEvent(ctx, tx, Event{BatchID: batchID, Kind: startKind, FromPhase: phase, ToPhase: phase,
+			FromStatus: b.Status, ToStatus: StatusInProgress, WorkerID: uid(workerID)}); err != nil {
+			return err
+		}
 	}
 
 	if err := audit.Write(ctx, tx, audit.Entry{
@@ -684,6 +702,10 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 		}
 	}
 
+	before, err := assignmentTargets(ctx, tx, batchID, phase)
+	if err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM batch_assignments WHERE batch_id=$1 AND phase=$2`, batchID, phase); err != nil {
 		return err
 	}
@@ -696,17 +718,34 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 		}
 	}
 
+	ev := Event{BatchID: batchID, Kind: EvAssigned, UserID: uid(adminID)}
 	if phase == PhaseStitching {
+		var tag pgconn.CommandTag
 		if len(entries) > 0 {
-			_, err = tx.Exec(ctx, `UPDATE batches SET status='pending', version=version+1
+			tag, err = tx.Exec(ctx, `UPDATE batches SET status='pending', version=version+1
 				WHERE id=$1 AND current_phase='stitching' AND status='awaiting_assignment'`, batchID)
+			ev.FromStatus, ev.ToStatus = StatusAwaitingAssignment, StatusPending
 		} else {
-			_, err = tx.Exec(ctx, `UPDATE batches SET status='awaiting_assignment', version=version+1
+			tag, err = tx.Exec(ctx, `UPDATE batches SET status='awaiting_assignment', version=version+1
 				WHERE id=$1 AND current_phase='stitching' AND status='pending'`, batchID)
+			ev.FromStatus, ev.ToStatus = StatusPending, StatusAwaitingAssignment
 		}
 		if err != nil {
 			return err
 		}
+		if tag.RowsAffected() == 0 {
+			ev.FromStatus, ev.ToStatus = "", ""
+		} else {
+			ev.FromPhase, ev.ToPhase = PhaseStitching, PhaseStitching
+		}
+	}
+	after, err := assignmentTargets(ctx, tx, batchID, phase)
+	if err != nil {
+		return err
+	}
+	ev.Data = map[string]any{"phase": phase, "before": before, "after": after}
+	if err := writeEvent(ctx, tx, ev); err != nil {
+		return err
 	}
 
 	if err := audit.Write(ctx, tx, audit.Entry{
@@ -729,9 +768,30 @@ const (
 	ShortRecut  ShortAction = "recut"
 )
 
+// ShortReasonLabel: the reasons a short cut can be resolved with (W5). Mirrors SHORT_REASON_LABEL in @rps/shared.
+var ShortReasonLabel = map[string]string{
+	"roll_ran_out":    "Roll ran out",
+	"material_defect": "Material defect",
+	"machine_issue":   "Machine issue",
+	"cutter_error":    "Cutter error",
+	"order_changed":   "Order changed",
+	"other":           "Other",
+}
+
 // ResolveShort is the admin's decision on a batch that came out of cutting short.
 // Allowed only while parked (awaiting_assignment) with cut_qty < quantity.
-func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action ShortAction, reason string, adminID uuid.UUID, ip string) (string, error) {
+// reason is a ShortReasonLabel code (required for every action); note is required for "other".
+func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action ShortAction, reason, note string, adminID uuid.UUID, ip string) (string, error) {
+	label, ok := ShortReasonLabel[reason]
+	if !ok {
+		return "", fmt.Errorf("%w: pick a reason for the short cut", ErrInvalidInput)
+	}
+	if reason == "other" && note == "" {
+		return "", fmt.Errorf("%w: describe the reason when it is Other", ErrInvalidInput)
+	}
+	if note != "" {
+		label += ": " + note
+	}
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return "", err
@@ -772,7 +832,7 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 		if _, err := tx.Exec(ctx, `DELETE FROM batch_units WHERE batch_id = $1 AND unit_number > $2`, batchID, b.CutQty); err != nil {
 			return "", err
 		}
-		note := fmt.Sprintf("Reduced from %d to %d", b.Quantity, b.CutQty)
+		msg := fmt.Sprintf("Reduced from %d to %d (%s)", b.Quantity, b.CutQty, label)
 		if action == ShortSplit {
 			if err := tx.QueryRow(ctx, `SELECT next_batch_code()`).Scan(&remainderCode); err != nil {
 				return "", err
@@ -786,20 +846,22 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 				b.CreatedBy, batchID).Scan(&remID); err != nil {
 				return "", fmt.Errorf("remainder batch: %w", err)
 			}
+			if err := writeEvent(ctx, tx, Event{BatchID: remID, Kind: EvCreated, ToPhase: PhaseCutting, ToStatus: StatusPending,
+				UserID: uid(adminID), Data: map[string]any{"quantity": short, "parent": batchID, "via": "split"}}); err != nil {
+				return "", err
+			}
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO batch_units (batch_id, unit_code, unit_number)
 				SELECT $1, $2 || '-' || LPAD(gs.n::TEXT, 3, '0'), gs.n FROM generate_series(1, $3::int) AS gs(n)`,
 				remID, remainderCode, short); err != nil {
 				return "", fmt.Errorf("remainder units: %w", err)
 			}
-			note = fmt.Sprintf("Short cut %d of %d — remainder → %s", b.CutQty, b.Quantity, remainderCode)
-		} else if reason != "" {
-			note += " (" + reason + ")"
+			msg = fmt.Sprintf("Short cut %d of %d — remainder → %s (%s)", b.CutQty, b.Quantity, remainderCode, label)
 		}
 		if _, err := tx.Exec(ctx, `
 			UPDATE batches SET quantity = $1, short_reason = NULLIF($2,''),
 			  notes = CONCAT_WS(E'\n', NULLIF(notes,''), $3::text), version = version + 1
-			WHERE id = $4`, b.CutQty, reason, note, batchID); err != nil {
+			WHERE id = $4`, b.CutQty, label, msg, batchID); err != nil {
 			return "", err
 		}
 
@@ -808,7 +870,7 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 		if _, err := tx.Exec(ctx, `
 			UPDATE batches SET current_phase = 'cutting', status = 'pending',
 			  notes = CONCAT_WS(E'\n', NULLIF(notes,''), $1::text), version = version + 1
-			WHERE id = $2`, fmt.Sprintf("Sent back to cut remaining %d", short), batchID); err != nil {
+			WHERE id = $2`, fmt.Sprintf("Sent back to cut remaining %d (%s)", short, label), batchID); err != nil {
 			return "", err
 		}
 	default:
@@ -819,9 +881,24 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 		ActorID: adminID.String(), ActorRole: "admin",
 		EntityType: "batch", EntityID: batchID.String(),
 		Action: audit.ActionTransition,
-		After:  map[string]any{"event": "short_cut_" + string(action), "cut": b.CutQty, "quantity": b.Quantity, "remainder": remainderCode, "reason": reason},
+		After:  map[string]any{"event": "short_cut_" + string(action), "cut": b.CutQty, "quantity": b.Quantity, "remainder": remainderCode, "reason": reason, "note": note},
 		IP:     ip,
 	}); err != nil {
+		return "", err
+	}
+	ev := Event{BatchID: batchID, Kind: EvShortResolved, FromPhase: b.Phase, ToPhase: b.Phase,
+		FromStatus: b.Status, ToStatus: b.Status, UserID: uid(adminID),
+		Data: map[string]any{"action": action, "reason": reason, "cut": b.CutQty, "quantity": b.Quantity}}
+	if note != "" {
+		ev.Data["note"] = note
+	}
+	if action == ShortRecut {
+		ev.ToPhase, ev.ToStatus = PhaseCutting, StatusPending
+	}
+	if remainderCode != "" {
+		ev.Data["remainder"] = remainderCode
+	}
+	if err := writeEvent(ctx, tx, ev); err != nil {
 		return "", err
 	}
 	return remainderCode, tx.Commit(ctx)
@@ -907,6 +984,13 @@ func (s *Service) CompletePhase(ctx context.Context, batchID, workerID uuid.UUID
 	if _, err := tx.Exec(ctx,
 		`UPDATE batches SET current_phase = $1, status = $2, cut_qty = cut_qty + $3, version = version + 1 WHERE id = $4`,
 		next, newStatus, quantityCompleted, batchID); err != nil {
+		return err
+	}
+
+	if err := writeEvent(ctx, tx, Event{BatchID: batchID, Kind: EvCutCompleted, FromPhase: phase, ToPhase: next,
+		FromStatus: cur.Status, ToStatus: newStatus, WorkerID: uid(workerID),
+		Data: map[string]any{"cut": quantityCompleted, "cut_total": cur.CutQty + quantityCompleted, "quantity": cur.Quantity,
+			"short": cur.CutQty+quantityCompleted < cur.Quantity}}); err != nil {
 		return err
 	}
 
@@ -1226,6 +1310,10 @@ func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.U
 			if _, err := tx.Exec(ctx,
 				`UPDATE batches SET current_phase=$1, status=$2, version=version+1 WHERE id=$3`,
 				next, newStatus, batchID); err != nil {
+				return nil, err
+			}
+			if err := writeEvent(ctx, tx, Event{BatchID: batchID, Kind: EvStitchingCompleted, FromPhase: PhaseStitching,
+				ToPhase: next, FromStatus: batchStatus, ToStatus: newStatus, WorkerID: uid(workerID)}); err != nil {
 				return nil, err
 			}
 			res.PhaseCompleted = true
