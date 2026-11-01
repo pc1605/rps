@@ -90,6 +90,18 @@ export function useCancelBatch(id: string) {
   });
 }
 
+export function useReleaseClaim(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => batchApi.releaseClaim(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["batch", id] });
+      qc.invalidateQueries({ queryKey: ["batches"] });
+      qc.invalidateQueries({ queryKey: ["batch-stats"] });
+    },
+  });
+}
+
 export function useSetAssignments(id: string) {
   const qc = useQueryClient();
   return useMutation({

@@ -146,7 +146,12 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
 
       <section>
         <SectionTitle>Production timeline</SectionTitle>
-        <BatchTimeline timeline={batch.timeline} />
+        <BatchTimeline
+          timeline={batch.timeline}
+          releaseBatchId={
+            batch.current_phase === "cutting" && batch.status === "in_progress" ? batch.id : undefined
+          }
+        />
       </section>
     </div>
   );

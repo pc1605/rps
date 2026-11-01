@@ -261,9 +261,12 @@ func transitionResponse(c *fiber.Ctx, err error, okMsg string) error {
 		return httpx.Error(c, fiber.StatusForbidden, "not_assigned", ErrNotAssigned.Error())
 	case errors.Is(err, ErrNotYours):
 		return httpx.Forbidden(c, ErrNotYours.Error())
+	case errors.Is(err, ErrNoClaim):
+		return httpx.Error(c, fiber.StatusConflict, "no_claim", ErrNoClaim.Error())
 	case errors.Is(err, ErrInvalidInput):
 		return httpx.BadRequest(c, err.Error())
 	default:
+		log.Error().Err(err).Msg("batch transition")
 		return httpx.Internal(c, "transition failed")
 	}
 }
@@ -828,4 +831,35 @@ func (h *Handler) WriteOffSpares(c *fiber.Ctx) error {
 		log.Error().Err(err).Msg("write off spares")
 		return httpx.Internal(c, "failed to write off spares")
 	}
+}
+
+// AdminReleaseClaim — POST /batches/:id/release-claim: free a stuck cutting claim.
+func (h *Handler) AdminReleaseClaim(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	userID, ok := auth.UserID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "missing user context")
+	}
+	err = h.svc.ReleaseClaim(c.Context(), id, &userID, nil, auth.RoleFromCtx(c), c.IP())
+	return transitionResponse(c, err, "claim released")
+}
+
+// WorkerReleaseClaim — POST /worker/batches/:id/release: the cutter gives back their own claim.
+func (h *Handler) WorkerReleaseClaim(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "worker" {
+		return httpx.Forbidden(c, "worker token required")
+	}
+	if auth.StationFromCtx(c) != "cutter" {
+		return httpx.Forbidden(c, "only cutters can release a cutting claim")
+	}
+	wid, _ := auth.WorkerID(c)
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	err = h.svc.ReleaseClaim(c.Context(), id, nil, &wid, "cutter", c.IP())
+	return transitionResponse(c, err, "claim released")
 }

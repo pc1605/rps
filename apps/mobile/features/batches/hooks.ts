@@ -25,6 +25,14 @@ export function useCompleteBatch() {
   });
 }
 
+export function useReleaseBatch() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => batchApi.release(id),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["my-batches"] }),
+  });
+}
+
 export function useScanUnit() {
   const qc = useQueryClient();
   return useMutation({

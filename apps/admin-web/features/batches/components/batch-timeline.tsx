@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import type { Phase, PhaseLogEntry } from "../types";
 import { fmtStamp } from "./unit-card";
 import { WorkerLink } from "@/components/rps/entity-link";
+import { ReleaseClaimButton } from "./release-claim-button";
 
 const phaseIcon: Partial<Record<Phase, React.ElementType>> = {
   cutting: Scissors,
@@ -24,7 +25,14 @@ function fmtDuration(s?: number) {
   return `${s}s`;
 }
 
-export function BatchTimeline({ timeline }: { timeline: PhaseLogEntry[] }) {
+/** `releaseBatchId`: show Release on the open cutting claim (admin, only while the batch is in cutting). */
+export function BatchTimeline({
+  timeline,
+  releaseBatchId,
+}: {
+  timeline: PhaseLogEntry[];
+  releaseBatchId?: string;
+}) {
   if (!timeline.length)
     return (
       <EmptyState
@@ -68,9 +76,14 @@ export function BatchTimeline({ timeline }: { timeline: PhaseLogEntry[] }) {
                     </span>
                   </div>
                   {open ? (
-                    <span className="inline-flex items-center gap-1.5 text-caption text-working">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-working" aria-hidden />
-                      In progress
+                    <span className="inline-flex items-center gap-3">
+                      <span className="inline-flex items-center gap-1.5 text-caption text-working">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-working" aria-hidden />
+                        In progress
+                      </span>
+                      {releaseBatchId && e.phase === "cutting" && (
+                        <ReleaseClaimButton batchId={releaseBatchId} workerName={e.worker_name} />
+                      )}
                     </span>
                   ) : (
                     dur && <span className="tabular text-caption text-muted-foreground">{dur}</span>

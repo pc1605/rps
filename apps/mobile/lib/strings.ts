@@ -19,6 +19,14 @@ export const strings = {
     peekFailed: "Couldn't check this mat — try again",
     checking: "Checking…",
   },
+  cutting: {
+    release: "Give back this batch",
+    releaseTitle: "Give back this batch?",
+    releaseBody: "It goes back to the cutting queue so any cutter can start it. Nothing is reported as cut.",
+    releaseConfirm: "Give back",
+    keep: "Keep it",
+    released: (code: string) => `${code} is back in the cutting queue.`,
+  },
   rework: {
     sendToRework: "Send to rework",
     photosTitle: "Photos (1–3)",

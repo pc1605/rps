@@ -45,6 +45,7 @@ export const batchApi = {
     (await http.get(`/batches/${id}/cancel-preview`)).data.data,
   cancel: async (id: string, input: CancelBatchInput): Promise<CancelOutcome> =>
     (await http.post(`/batches/${id}/cancel`, input)).data.data,
+  releaseClaim: async (id: string) => (await http.post(`/batches/${id}/release-claim`)).data.data,
   carModels: async (): Promise<CarModel[]> => {
     const res = await http.get("/car-models");
     return res.data?.data ?? res.data;

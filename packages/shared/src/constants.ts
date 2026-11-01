@@ -137,5 +137,6 @@ export type ApiErrorCode =
   | "spare"
   | "not_editable"
   | "not_cancellable"
+  | "no_claim"
   | "unauthorized"
   | "internal";
