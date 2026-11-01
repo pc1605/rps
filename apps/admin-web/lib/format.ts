@@ -41,3 +41,8 @@ export function fmtAgo(iso?: string | null) {
   if (s < 86400) return `${Math.round(s / 3600)} h ago`;
   return `${Math.round(s / 86400)} d ago`;
 }
+
+/** 1 → "1 mat", 4 → "4 mats". */
+export function mats(n: number) {
+  return `${n} ${n === 1 ? "mat" : "mats"}`;
+}

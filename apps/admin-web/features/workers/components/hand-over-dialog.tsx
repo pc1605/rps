@@ -17,6 +17,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useHandOver, useOpenStitching, useStitcherLoads } from "@/features/batches/hooks";
+import { mats } from "@/lib/format";
 
 const SAME = "same";
 
@@ -72,7 +73,7 @@ function HandOverForm({ worker, onDone }: { worker: WorkerDetail; onDone: () => 
       const moved = res.reduce((s, r) => s + r.moved, 0);
       toast.success(
         `Handed over ${res.length} batch${res.length === 1 ? "" : "es"} from ${worker.name}` +
-          (moved ? ` (${moved} mats)` : ""),
+          (moved ? ` (${mats(moved)})` : ""),
       );
       onDone();
     } catch (err) {
@@ -155,7 +156,7 @@ function HandOverForm({ worker, onDone }: { worker: WorkerDetail; onDone: () => 
           Cancel
         </Button>
         <Button type="submit" disabled={!ready || handOver.isPending || others.length === 0}>
-          {quotaMats ? `Hand over ${quotaMats} mats` : "Hand over"}
+          {quotaMats ? `Hand over ${mats(quotaMats)}` : "Hand over"}
         </Button>
       </DialogFooter>
     </form>

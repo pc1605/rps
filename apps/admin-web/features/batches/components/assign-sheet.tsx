@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fmtDuration } from "@/lib/format";
+import { fmtDuration, mats } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { fill, rebalance, sumOf, type Targets } from "../assign-split";
 import { useBatch, useHandOver, useSetAssignments, useStitcherLoads } from "../hooks";
@@ -259,7 +259,7 @@ function AssignForm({
         from_worker_id: from.worker_id,
         moves: [{ batch_id: batch.id, to_worker_id: to.worker_id }],
       });
-      toast.success(`Moved ${r?.moved ?? 0} mats from ${from.name} to ${to.name}`);
+      toast.success(`Moved ${mats(r?.moved ?? 0)} from ${from.name} to ${to.name}`);
     } catch (e) {
       toast.error("Couldn't move the mats", { description: (e as Error).message });
     }
@@ -295,7 +295,7 @@ function AssignForm({
   };
 
   const busy = setAssignments.isPending || handOver.isPending;
-  let label = `Assign ${qty} mats`;
+  let label = `Assign ${mats(qty)}`;
   if (!awaiting) label = ids.length ? "Save changes" : "Unassign — back to Ready";
   const canSubmit = !busy && balanced && (awaiting ? ids.length > 0 : dirty);
 
@@ -446,7 +446,7 @@ function AssignForm({
             <div className="flex items-center justify-between gap-2 text-small">
               <span className="text-muted-foreground">
                 {ids.length === 1
-                  ? `${rows.find((r) => r.worker_id === ids[0])?.name} gets all ${qty} mats`
+                  ? `${rows.find((r) => r.worker_id === ids[0])?.name} gets all ${mats(qty)}`
                   : ids
                       .map((id) => `${rows.find((r) => r.worker_id === id)?.name} ${quotaTargets[id]}`)
                       .join(" · ")}
