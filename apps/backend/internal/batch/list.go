@@ -10,12 +10,14 @@ import (
 // Batch list (U2): filters, sort and offset pagination — all driven by URL params in the admin.
 
 // Views mirror apps/admin-web/features/batches/views.ts (the sidebar phase tabs).
+// A cancelled batch keeps the phase it stopped in, so it is only in the "cancelled" view.
 var listViews = map[string]string{
-	"cutting":   `b.current_phase = 'cutting'`,
+	"cutting":   `b.current_phase = 'cutting' AND b.status <> 'cancelled'`,
 	"ready":     `b.current_phase = 'stitching' AND b.status = 'awaiting_assignment'`,
-	"stitching": `b.current_phase = 'stitching' AND b.status <> 'awaiting_assignment'`,
-	"packing":   `b.current_phase = 'packing'`,
+	"stitching": `b.current_phase = 'stitching' AND b.status NOT IN ('awaiting_assignment', 'cancelled')`,
+	"packing":   `b.current_phase = 'packing' AND b.status <> 'cancelled'`,
 	"completed": `b.current_phase = 'completed'`,
+	"cancelled": `b.status = 'cancelled'`,
 }
 
 // readySinceExpr: for a batch waiting for a stitching assignment, when cutting last finished
@@ -63,7 +65,7 @@ type ListPage struct {
 func ValidateListFilter(f ListFilter) error {
 	if f.View != "" {
 		if _, ok := listViews[f.View]; !ok {
-			return fmt.Errorf("%w: view must be one of cutting, ready, stitching, packing, completed", ErrInvalidInput)
+			return fmt.Errorf("%w: view must be one of cutting, ready, stitching, packing, completed, cancelled", ErrInvalidInput)
 		}
 	}
 	if f.Sort != "" {

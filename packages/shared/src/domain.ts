@@ -2,7 +2,8 @@
 
 export type Phase = "cutting" | "stitching" | "packing" | "completed";
 export type BatchStatus = "pending" | "in_progress" | "awaiting_assignment" | "completed" | "cancelled";
-export type UnitStatus = "pending" | "packed" | "defective" | "dispatched" | "rework";
+/** "spare": a cut or stitched mat from a cancelled batch, kept as spare stock (U3). */
+export type UnitStatus = "pending" | "packed" | "defective" | "dispatched" | "rework" | "spare";
 export type Station = "cutter" | "stitcher" | "packer";
 export type SizeClass = "small" | "medium" | "large";
 
@@ -10,6 +11,8 @@ export type SizeClass = "small" | "medium" | "large";
 export type ShortReason =
   "roll_ran_out" | "material_defect" | "machine_issue" | "cutter_error" | "order_changed" | "other";
 export type ShortAction = "split" | "reduce" | "recut";
+export type CancelReason =
+  "order_cancelled" | "order_changed" | "created_by_mistake" | "material_problem" | "other";
 
 export type ReworkReason = "stitching_fault" | "stain" | "cutting_fault" | "material_defect" | "other";
 export type ReworkRoute = "stitcher" | "admin";
@@ -149,6 +152,26 @@ export interface BatchEditInput {
   notes?: string;
 }
 
+/** GET /batches/:id/cancel-preview and POST /batches/:id/cancel — what cancelling does to the mats. */
+export interface CancelOutcome {
+  /** Stitched mats → spare stock (they keep their unit code). */
+  spare_stitched: number;
+  /** Cut, not yet stitched → spare stock. */
+  spare_unstitched: number;
+  /** Never cut → removed. */
+  removed: number;
+  /** In open rework → written off. */
+  written_off: number;
+  already_written_off: number;
+  /** Set when the batch can't be cancelled (e.g. a mat is already packed). */
+  blocked?: string;
+}
+
+export interface CancelBatchInput {
+  reason: CancelReason;
+  note?: string;
+}
+
 export interface BatchStats {
   in_cutting: number;
   awaiting_assignment: number;
@@ -189,7 +212,8 @@ export interface Worker {
   badge_token?: string; // only on create
 }
 
-export type PeekReason = "already_packed" | "in_rework" | "written_off" | "wrong_phase" | "not_started";
+export type PeekReason =
+  "already_packed" | "in_rework" | "written_off" | "spare" | "wrong_phase" | "not_started";
 
 export interface UnitPeek {
   unit_code: string;
@@ -784,7 +808,7 @@ export interface MaterialLotDetail extends MaterialLotRow {
 
 // ───── Lists & search (U2) ─────
 
-export type BatchListView = "cutting" | "ready" | "stitching" | "packing" | "completed";
+export type BatchListView = "cutting" | "ready" | "stitching" | "packing" | "completed" | "cancelled";
 export type BatchSort = "created" | "code" | "quantity" | "phase" | "car" | "waiting";
 
 /** GET /batches query params — every one is also the admin's URL state. */

@@ -173,6 +173,10 @@ export default function ScanScreen() {
           flashAndUnlock({ kind: "written_off" });
           return;
         }
+        if (e instanceof ApiError && e.code === "spare") {
+          flashAndUnlock({ kind: "err", msg: strings.scanner.spare });
+          return;
+        }
         if (e instanceof ApiError && e.code === "quota_reached") {
           flashAndUnlock({
             kind: "quota",
@@ -235,6 +239,10 @@ export default function ScanScreen() {
           }
           if (peek.reason === "written_off") {
             flashAndUnlock({ kind: "written_off" });
+            return;
+          }
+          if (peek.reason === "spare") {
+            flashAndUnlock({ kind: "err", msg: strings.scanner.spare });
             return;
           }
           if (peek.reason === "wrong_phase") {

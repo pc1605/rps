@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StitchingAssignmentCard } from "@/features/batches/components/stitching-assignment-card";
 import { BatchMaterials } from "@/features/batches/components/batch-materials";
+import { CancelBatchDialog } from "@/features/batches/components/cancel-batch-dialog";
 import { EditBatchDialog } from "@/features/batches/components/edit-batch-dialog";
 import { BatchTimeline } from "@/features/batches/components/batch-timeline";
 import { ShortCutPanel } from "@/features/batches/components/short-cut-panel";
@@ -49,6 +50,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
     );
 
   const tone = batchTone(batch.current_phase, batch.status);
+  const spare = batch.units.filter((u) => u.status === "spare").length;
   const view = batchViews.find((v) => v.filter(batch));
 
   return (
@@ -91,6 +93,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
               {tone.label}
             </Chip>
             <EditBatchDialog batch={batch} />
+            <CancelBatchDialog batch={batch} />
             <Button variant="outline" onClick={() => generateLabelPdf(batch)}>
               <FileDown className="h-4 w-4" /> Labels PDF
             </Button>
@@ -120,6 +123,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
         {batch.units_written_off > 0 && (
           <Stat size="sm" value={batch.units_written_off} label="written off" tone="text-danger" />
         )}
+        {spare > 0 && <Stat size="sm" value={spare} label="spare" tone="text-muted-foreground" />}
         {(batch.rework_open ?? 0) > 0 && (
           <Stat size="sm" value={batch.rework_open ?? 0} label="in rework" tone="text-danger" />
         )}

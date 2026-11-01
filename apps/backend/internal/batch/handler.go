@@ -335,6 +335,8 @@ func (h *Handler) ScanUnit(c *fiber.Ctx) error {
 			return httpx.Error(c, fiber.StatusConflict, "in_rework", "This mat is waiting for rework")
 		case errors.Is(err, ErrUnitWrittenOff):
 			return httpx.Error(c, fiber.StatusConflict, "written_off", err.Error())
+		case errors.Is(err, ErrUnitSpare):
+			return httpx.Error(c, fiber.StatusConflict, "spare", err.Error())
 		case errors.Is(err, ErrReworkPendingDecision):
 			return httpx.Error(c, fiber.StatusConflict, "rework_pending_decision", "Rework is awaiting admin decision")
 		case errors.Is(err, ErrNotYourRework):
@@ -733,5 +735,56 @@ func (h *Handler) Edit(c *fiber.Ctx) error {
 	default:
 		log.Error().Err(err).Msg("edit batch")
 		return httpx.Internal(c, "failed to edit batch")
+	}
+}
+
+// CancelPreview — GET /batches/:id/cancel-preview: what cancelling would do to the mats.
+func (h *Handler) CancelPreview(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	o, err := h.svc.CancelPreview(c.Context(), id)
+	switch {
+	case err == nil:
+		return httpx.OK(c, o)
+	case errors.Is(err, ErrNotFound):
+		return httpx.Error(c, fiber.StatusNotFound, "not_found", "batch not found")
+	default:
+		log.Error().Err(err).Msg("cancel preview")
+		return httpx.Internal(c, "failed to preview cancel")
+	}
+}
+
+// Cancel — POST /batches/:id/cancel {reason, note?}: allowed until the first mat is packed.
+func (h *Handler) Cancel(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	var in struct {
+		Reason string `json:"reason"`
+		Note   string `json:"note"`
+	}
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	actorID, ok := auth.UserID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "missing user context")
+	}
+	o, err := h.svc.Cancel(c.Context(), id, strings.TrimSpace(in.Reason), strings.TrimSpace(in.Note), actorID, auth.RoleFromCtx(c), c.IP())
+	switch {
+	case err == nil:
+		return httpx.OK(c, o)
+	case errors.Is(err, ErrNotFound):
+		return httpx.Error(c, fiber.StatusNotFound, "not_found", "batch not found")
+	case errors.Is(err, ErrNotCancellable):
+		return httpx.Error(c, fiber.StatusConflict, "not_cancellable", strings.TrimPrefix(err.Error(), ErrNotCancellable.Error()+": "))
+	case errors.Is(err, ErrInvalidInput):
+		return httpx.BadRequest(c, err.Error())
+	default:
+		log.Error().Err(err).Msg("cancel batch")
+		return httpx.Internal(c, "failed to cancel batch")
 	}
 }

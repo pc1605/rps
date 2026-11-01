@@ -10,6 +10,7 @@ export const strings = {
   scanner: {
     inRework: "Waiting for rework",
     writtenOff: "Written off — keep it aside",
+    spare: "Spare stock — keep it aside",
     sentToRework: "Sent to rework",
     alreadyPacked: "Already packed",
     wrongPhase: "This batch is not in packing",

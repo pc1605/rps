@@ -1061,6 +1061,8 @@ func (s *Service) PeekUnit(ctx context.Context, unitCode string, workerID uuid.U
 			r = "in_rework"
 		} else if unitStatus == UnitDefective {
 			r = "written_off"
+		} else if unitStatus == UnitSpare {
+			r = "spare"
 		} else if batchPhase != PhasePacking {
 			r = "wrong_phase"
 		} else if !joined || batchStatus != StatusInProgress {
@@ -1209,6 +1211,9 @@ func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.U
 
 	if unitStatus == UnitDefective {
 		return nil, ErrUnitWrittenOff
+	}
+	if unitStatus == UnitSpare {
+		return nil, ErrUnitSpare
 	}
 
 	// Idempotent paths
