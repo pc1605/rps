@@ -15,14 +15,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { MATERIAL_UNIT_LABEL } from "@rps/shared";
-import { useCarItems } from "@/features/catalog/hooks";
-import { useLots, useMaterialTypes, useResolve } from "@/features/materials/hooks";
+import { useResolve } from "@/features/materials/hooks";
 import { cn } from "@/lib/utils";
 import { useCreateBatch } from "../hooks";
 import { CarModelSelect } from "./car-model-select";
+import { RollSelect } from "./roll-select";
 
 export function CreateBatchDialog() {
   const [open, setOpen] = useState(false);
@@ -31,15 +30,6 @@ export function CreateBatchDialog() {
   const [quantity, setQuantity] = useState<string>("");
   const [notes, setNotes] = useState("");
 
-  // Roll = a lot of the car's sheet material (type code = product line code, migration 015).
-  const { data: cars } = useCarItems();
-  const { data: lots } = useLots({ active: true });
-  const { data: types } = useMaterialTypes();
-  const car = cars?.find((c) => c.id === carModelId);
-  const sheetTypes = new Set((types ?? []).filter((t) => t.has_variants).map((t) => t.code));
-  const rolls = (lots ?? []).filter((l) =>
-    car?.line_code ? l.type_code === car.line_code : sheetTypes.has(l.type_code),
-  );
   const createBatch = useCreateBatch();
 
   const qty = Number(quantity);
@@ -123,23 +113,7 @@ export function CreateBatchDialog() {
                   (optional — otherwise oldest stock first)
                 </span>
               </Label>
-              <Select value={rollId || "none"} onValueChange={(v) => setRollId(v === "none" ? "" : v)}>
-                <SelectTrigger id="batch-roll" className="w-full">
-                  <SelectValue placeholder="Unassigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Unassigned</SelectItem>
-                  {rolls.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      <span className="font-mono">{r.lot_code}</span> · {r.type_name}
-                      {r.variant_name ? ` ${r.variant_name}` : ""} · {r.color} ·{" "}
-                      <span className="tabular">
-                        {r.qty_remaining} {MATERIAL_UNIT_LABEL[r.unit]}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <RollSelect id="batch-roll" carModelId={carModelId} value={rollId} onChange={setRollId} />
             </div>
 
             {carModelId && qty >= 1 && (

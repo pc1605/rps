@@ -1,4 +1,4 @@
-import type { BatchListParams, HandOverInput, ShortAction, ShortReason } from "@rps/shared";
+import type { BatchEditInput, BatchListParams, HandOverInput, ShortAction, ShortReason } from "@rps/shared";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { batchApi } from "./api";
 import type { AssignmentInput, CreateBatchInput, Phase } from "./types";
@@ -44,6 +44,19 @@ export function useCreateBatch() {
   return useMutation({
     mutationFn: (input: CreateBatchInput) => batchApi.create(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["batches"] }),
+  });
+}
+
+/** Edit a batch before cutting (car, quantity, roll, notes). */
+export function useEditBatch(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: BatchEditInput) => batchApi.edit(id, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["batch", id] });
+      qc.invalidateQueries({ queryKey: ["batches"] });
+      qc.invalidateQueries({ queryKey: ["batch-materials", id] });
+    },
   });
 }
 

@@ -22,6 +22,9 @@ const (
 	EvStitchingCompleted EventKind = "stitching_completed"
 	EvPackingStarted     EventKind = "packing_started"
 	EvCompleted          EventKind = "completed"
+	EvCancelled          EventKind = "cancelled"
+	EvEdited             EventKind = "edited"
+	EvClaimReleased      EventKind = "claim_released"
 )
 
 // Event is one typed batch transition. Written in the SAME tx as the change it records.

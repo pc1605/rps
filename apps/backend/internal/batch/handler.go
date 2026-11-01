@@ -700,3 +700,38 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 	}
 	return httpx.OK(c, out)
 }
+
+// Edit — PATCH /batches/:id {car_model_id?, quantity?, roll_id?, notes?}: only before cutting starts.
+func (h *Handler) Edit(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	var in EditInput
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	actorID, ok := auth.UserID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "missing user context")
+	}
+	err = h.svc.Edit(c.Context(), id, in, actorID, auth.RoleFromCtx(c), c.IP())
+	switch {
+	case err == nil:
+		detail, err := h.svc.Get(c.Context(), id)
+		if err != nil {
+			log.Error().Err(err).Msg("get batch after edit")
+			return httpx.Internal(c, "failed to load batch")
+		}
+		return httpx.OK(c, detail)
+	case errors.Is(err, ErrNotFound):
+		return httpx.Error(c, fiber.StatusNotFound, "not_found", "batch not found")
+	case errors.Is(err, ErrNotEditable):
+		return httpx.Error(c, fiber.StatusConflict, "not_editable", ErrNotEditable.Error())
+	case errors.Is(err, ErrInvalidInput):
+		return httpx.BadRequest(c, err.Error())
+	default:
+		log.Error().Err(err).Msg("edit batch")
+		return httpx.Internal(c, "failed to edit batch")
+	}
+}

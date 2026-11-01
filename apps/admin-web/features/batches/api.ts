@@ -1,4 +1,5 @@
 import type {
+  BatchEditInput,
   BatchListParams,
   BatchPage,
   HandOverInput,
@@ -36,6 +37,8 @@ export const batchApi = {
     const res = await http.post("/batches", input);
     return res.data?.data ?? res.data;
   },
+  edit: async (id: string, input: BatchEditInput): Promise<BatchDetail> =>
+    (await http.patch(`/batches/${id}`, input)).data.data,
   carModels: async (): Promise<CarModel[]> => {
     const res = await http.get("/car-models");
     return res.data?.data ?? res.data;

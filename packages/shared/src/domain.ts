@@ -141,6 +141,14 @@ export interface BatchDetail extends Batch {
   assignments: AssignmentEntry[];
 }
 
+/** PATCH /batches/:id — only while the batch waits to be cut. Omitted = unchanged; roll_id "" clears it. */
+export interface BatchEditInput {
+  car_model_id?: number;
+  quantity?: number;
+  roll_id?: string;
+  notes?: string;
+}
+
 export interface BatchStats {
   in_cutting: number;
   awaiting_assignment: number;

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StitchingAssignmentCard } from "@/features/batches/components/stitching-assignment-card";
 import { BatchMaterials } from "@/features/batches/components/batch-materials";
+import { EditBatchDialog } from "@/features/batches/components/edit-batch-dialog";
 import { BatchTimeline } from "@/features/batches/components/batch-timeline";
 import { ShortCutPanel } from "@/features/batches/components/short-cut-panel";
 import { UnitCard } from "@/features/batches/components/unit-card";
@@ -89,6 +90,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
             <Chip tone={tone} dot>
               {tone.label}
             </Chip>
+            <EditBatchDialog batch={batch} />
             <Button variant="outline" onClick={() => generateLabelPdf(batch)}>
               <FileDown className="h-4 w-4" /> Labels PDF
             </Button>
