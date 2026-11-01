@@ -863,3 +863,35 @@ func (h *Handler) WorkerReleaseClaim(c *fiber.Ctx) error {
 	err = h.svc.ReleaseClaim(c.Context(), id, nil, &wid, "cutter", c.IP())
 	return transitionResponse(c, err, "claim released")
 }
+
+// UndoScan — POST /units/:code/undo-scan {reason}: owner/supervisor reverse a mat's last stitch/pack scan.
+func (h *Handler) UndoScan(c *fiber.Ctx) error {
+	code := strings.TrimSpace(c.Params("code"))
+	if code == "" {
+		return httpx.BadRequest(c, "unit code required")
+	}
+	var in struct {
+		Reason string `json:"reason"`
+	}
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	actorID, ok := auth.UserID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "missing user context")
+	}
+	res, err := h.svc.UndoScan(c.Context(), code, strings.TrimSpace(in.Reason), actorID, auth.RoleFromCtx(c), c.IP())
+	switch {
+	case err == nil:
+		return httpx.OK(c, res)
+	case errors.Is(err, ErrUnitNotFound):
+		return httpx.Error(c, fiber.StatusNotFound, "unit_not_found", "unit not found")
+	case errors.Is(err, ErrCantUndo):
+		return httpx.Error(c, fiber.StatusConflict, "cannot_undo", strings.TrimPrefix(err.Error(), ErrCantUndo.Error()+": "))
+	case errors.Is(err, ErrInvalidInput):
+		return httpx.BadRequest(c, err.Error())
+	default:
+		log.Error().Err(err).Msg("undo scan")
+		return httpx.Internal(c, "failed to undo scan")
+	}
+}

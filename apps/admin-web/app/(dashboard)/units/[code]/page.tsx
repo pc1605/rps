@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PhotoLightbox } from "@/features/rework/components/photo-lightbox";
 import { ReasonChip } from "@/features/rework/components/reason-chip";
 import { RemoteImage } from "@/features/rework/components/remote-image";
+import { UndoScanButton } from "@/features/units/components/undo-scan-button";
 import { useUnit } from "@/features/units/hooks";
 import { fmtStamp } from "@/lib/format";
 import { batchTone, sizeLabel, unitTone } from "@/lib/tokens";
@@ -215,6 +216,7 @@ export default function UnitPage({ params }: { params: Promise<{ code: string }>
             <Chip tone={bTone} dot>
               Batch: {bTone.label}
             </Chip>
+            <UndoScanButton unit={u} />
           </>
         }
       />

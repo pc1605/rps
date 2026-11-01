@@ -137,7 +137,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
         <SectionTitle aside={`${batch.units_total} mats`}>Units</SectionTitle>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {batch.units.map((u) => (
-            <UnitCard key={u.id} unit={u} />
+            <UnitCard key={u.id} unit={u} allowUndo={batch.status !== "cancelled"} />
           ))}
         </div>
       </section>

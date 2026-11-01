@@ -212,6 +212,17 @@ export interface SpareWriteOffInput {
   note?: string;
 }
 
+/** POST /units/:code/undo-scan — what was undone. */
+export interface UndoScanResult {
+  unit_code: string;
+  batch_id: string;
+  batch_code: string;
+  scan: "stitch" | "pack";
+  /** The batch went back a stage (to stitching or packing). */
+  moved_back: boolean;
+  phase: Phase;
+}
+
 export interface BatchStats {
   in_cutting: number;
   awaiting_assignment: number;

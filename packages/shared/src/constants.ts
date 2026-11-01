@@ -138,5 +138,6 @@ export type ApiErrorCode =
   | "not_editable"
   | "not_cancellable"
   | "no_claim"
+  | "cannot_undo"
   | "unauthorized"
   | "internal";

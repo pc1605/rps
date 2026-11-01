@@ -29,6 +29,7 @@ func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 	api.Post("/batches/:id/cancel", admin, h.Cancel)
 	api.Post("/spares/write-off", admin, h.WriteOffSpares)
 	api.Post("/batches/:id/release-claim", admin, h.AdminReleaseClaim)
+	api.Post("/units/:code/undo-scan", admin, h.UndoScan)
 	api.Post("/batches/:id/stickers-printed", admin, h.MarkStickersPrinted)
 	api.Post("/batches/:id/resolve-short", admin, h.ResolveShort)
 	api.Put("/batches/:id/assignments", admin, h.SetAssignments)
