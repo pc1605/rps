@@ -687,6 +687,24 @@ export interface WorkerDayOutput {
   active_seconds: number;
 }
 
+/** GET /worker/me/summary — the phone's "My work" card (no ₹ yet). */
+export interface MyWorkSummary {
+  station: Station;
+  /** "pieces cut" | "mats stitched" | "mats packed" */
+  unit: string;
+  today: number;
+  /** Since Monday (factory week). */
+  week: number;
+  /** That Monday, YYYY-MM-DD. */
+  week_of: string;
+  days: WorkerDayOutput[];
+  /** Stitchers: mats they stitched that came back for rework this week / waiting for them now. */
+  rework_returned?: number;
+  rework_open?: number;
+  /** Packers: rework rounds they flagged this week. */
+  flagged?: number;
+}
+
 /** GET /workers/:id/summary?from&to (factory days, inclusive; default last 14) */
 export interface WorkerSummary {
   worker_id: string;

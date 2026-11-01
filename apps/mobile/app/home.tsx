@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { AuthImage } from "../components/AuthImage";
+import { MyWorkCard } from "../components/MyWorkCard";
 import { AppButton } from "../components/ui/AppButton";
 import { Banner } from "../components/ui/Banner";
 import { Card } from "../components/ui/Card";
@@ -15,6 +16,7 @@ import { Stat } from "../components/ui/Stat";
 import { useAuth } from "../features/auth/store";
 import { useMyBatches } from "../features/batches/hooks";
 import type { Batch } from "../features/batches/types";
+import { useMySummary } from "../features/me/hooks";
 import { useMyRework } from "../features/rework/hooks";
 import { strings } from "../lib/strings";
 import { useOnline } from "../lib/use-online";
@@ -189,6 +191,7 @@ export default function Home() {
   const { worker, restore, logout } = useAuth();
   const { data: batches, isPending, isError, isRefetching, refetch } = useMyBatches();
   const { data: reworkItems, refetch: refetchRework } = useMyRework();
+  const { refetch: refetchSummary } = useMySummary();
   const isOnline = useOnline();
 
   // Cold-start: token exists but profile not loaded yet
@@ -202,6 +205,7 @@ export default function Home() {
 
   const handleRefresh = () => {
     refetch();
+    refetchSummary();
     if (worker?.station === "stitcher") {
       refetchRework();
     }
@@ -254,21 +258,28 @@ export default function Home() {
           data={batches ?? []}
           keyExtractor={(b) => b.id}
           ListHeaderComponent={
-            hasRework ? (
-              <View style={styles.reworkSection}>
-                <View style={styles.reworkSectionHeader}>
-                  <Text style={styles.reworkSectionTitle}>{strings.rework.homeSectionTitle}</Text>
-                  <View style={styles.reworkCountBadge}>
-                    <Text style={styles.reworkCountBadgeText}>{reworkItems?.length}</Text>
+            <>
+              <MyWorkCard />
+              {hasRework ? (
+                <View style={styles.reworkSection}>
+                  <View style={styles.reworkSectionHeader}>
+                    <Text style={styles.reworkSectionTitle}>{strings.rework.homeSectionTitle}</Text>
+                    <View style={styles.reworkCountBadge}>
+                      <Text style={styles.reworkCountBadgeText}>{reworkItems?.length}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.reworkList}>
+                    {reworkItems?.map((item) => (
+                      <ReworkCard
+                        key={item.id}
+                        item={item}
+                        onOpen={(it) => router.push(`/rework/${it.id}`)}
+                      />
+                    ))}
                   </View>
                 </View>
-                <View style={styles.reworkList}>
-                  {reworkItems?.map((item) => (
-                    <ReworkCard key={item.id} item={item} onOpen={(it) => router.push(`/rework/${it.id}`)} />
-                  ))}
-                </View>
-              </View>
-            ) : null
+              ) : null}
+            </>
           }
           renderItem={({ item }) => (
             <BatchCard batch={item} station={worker?.station} onOpen={(b) => router.push(`/batch/${b.id}`)} />

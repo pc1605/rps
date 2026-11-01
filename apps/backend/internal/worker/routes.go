@@ -14,6 +14,7 @@ func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 
 	// Worker-authenticated
 	api.Get("/worker/me", h.Me)
+	api.Get("/worker/me/summary", h.MySummary)
 
 	// Admin only — manage workers
 	api.Post("/workers", authSvc.RequireRole("owner", "supervisor"), h.Create)

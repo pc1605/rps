@@ -19,6 +19,18 @@ export const strings = {
     peekFailed: "Couldn't check this mat — try again",
     checking: "Checking…",
   },
+  myWork: {
+    title: "My work",
+    today: "today",
+    thisWeek: "this week",
+    unit: { cutter: "pieces cut", stitcher: "mats stitched", packer: "mats packed" } as Record<
+      string,
+      string
+    >,
+    reworkReturned: (n: number) => `${n} came back for rework this week`,
+    reworkOpen: (n: number) => `${n} waiting for you`,
+    flagged: (n: number) => `${n} sent to rework this week`,
+  },
   cutting: {
     release: "Give back this batch",
     releaseTitle: "Give back this batch?",
