@@ -8,7 +8,7 @@ import { useCallback, useMemo } from "react";
 // `phase` keeps its old name (sidebar tabs, dashboard pipeline links); the API calls it `view`.
 export const PAGE_SIZE = 50;
 const VIEWS: BatchListView[] = ["cutting", "ready", "stitching", "packing", "completed"];
-const SORTS: BatchSort[] = ["created", "code", "quantity", "phase", "car"];
+const SORTS: BatchSort[] = ["created", "code", "quantity", "phase", "car", "waiting"];
 
 export type UrlState = {
   phase?: BatchListView;

@@ -90,6 +90,8 @@ export interface Batch {
   assigned_to_me?: boolean;
   my_target_qty?: number;
   my_done_qty?: number;
+  /** GET /batches only: when an awaiting_assignment batch became ready to assign. */
+  ready_since?: string;
 }
 
 export interface Unit {
@@ -749,7 +751,7 @@ export interface MaterialLotDetail extends MaterialLotRow {
 // ───── Lists & search (U2) ─────
 
 export type BatchListView = "cutting" | "ready" | "stitching" | "packing" | "completed";
-export type BatchSort = "created" | "code" | "quantity" | "phase" | "car";
+export type BatchSort = "created" | "code" | "quantity" | "phase" | "car" | "waiting";
 
 /** GET /batches query params — every one is also the admin's URL state. */
 export interface BatchListParams {

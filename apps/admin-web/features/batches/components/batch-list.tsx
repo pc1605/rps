@@ -136,6 +136,7 @@ const firstOrder: Record<BatchSort, "asc" | "desc"> = {
   code: "asc",
   car: "asc",
   phase: "asc",
+  waiting: "asc",
 };
 
 export function BatchList() {

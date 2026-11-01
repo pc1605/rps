@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/pc1605/rps/apps/backend/internal/testutil"
 )
@@ -42,17 +43,7 @@ func TestStitcherLoads(t *testing.T) {
 	}
 	a, b := newStitcher("A"), newStitcher("B")
 
-	var groupID, carModelID int
-	if err := pool.QueryRow(ctx, `INSERT INTO consumption_groups (name) VALUES ($1) RETURNING id`,
-		fmt.Sprintf("T load %d", sfx)).Scan(&groupID); err != nil {
-		t.Fatal(err)
-	}
-	if err := pool.QueryRow(ctx, `
-		INSERT INTO car_models (brand_id, name, size_class, pieces_per_set, product_line_id, consumption_group_id)
-		SELECT (SELECT id FROM car_brands LIMIT 1), $1, 'medium', 4, (SELECT id FROM product_lines LIMIT 1), $2
-		RETURNING id`, fmt.Sprintf("T load car %d", sfx), groupID).Scan(&carModelID); err != nil {
-		t.Fatal(err)
-	}
+	carModelID := testCar(t, pool, "load")
 	bt, err := s.Create(ctx, CreateInput{CarModelID: carModelID, Quantity: 5}, adminID, "owner", ip)
 	if err != nil {
 		t.Fatalf("create: %v", err)
@@ -60,8 +51,6 @@ func TestStitcherLoads(t *testing.T) {
 	defer func() {
 		_, _ = pool.Exec(ctx, `DELETE FROM batches WHERE id = $1`, bt.ID)
 		_, _ = pool.Exec(ctx, `DELETE FROM workers WHERE id = ANY($1)`, []uuid.UUID{a, b})
-		_, _ = pool.Exec(ctx, `DELETE FROM car_models WHERE id = $1`, carModelID)
-		_, _ = pool.Exec(ctx, `DELETE FROM consumption_groups WHERE id = $1`, groupID)
 	}()
 
 	load := func() map[uuid.UUID]StitcherLoad {
@@ -134,5 +123,127 @@ func TestStitcherLoads(t *testing.T) {
 	}
 	if ia < 0 || ib < 0 || ia > ib {
 		t.Fatalf("order: A at %d, B at %d", ia, ib)
+	}
+}
+
+// testCar inserts an isolated car model in a consumption group with no recipe (a cut consumes
+// no seed stock) and removes both when the test ends. Delete the test's batches first.
+func testCar(t *testing.T, pool *pgxpool.Pool, tag string) int {
+	t.Helper()
+	ctx := context.Background()
+	sfx := time.Now().UnixNano()
+	var groupID, carModelID int
+	if err := pool.QueryRow(ctx, `INSERT INTO consumption_groups (name) VALUES ($1) RETURNING id`,
+		fmt.Sprintf("T %s %d", tag, sfx)).Scan(&groupID); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(ctx, `
+		INSERT INTO car_models (brand_id, name, size_class, pieces_per_set, product_line_id, consumption_group_id)
+		SELECT (SELECT id FROM car_brands LIMIT 1), $1, 'medium', 4, (SELECT id FROM product_lines LIMIT 1), $2
+		RETURNING id`, fmt.Sprintf("T %s car %d", tag, sfx), groupID).Scan(&carModelID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(ctx, `DELETE FROM car_models WHERE id = $1`, carModelID)
+		_, _ = pool.Exec(ctx, `DELETE FROM consumption_groups WHERE id = $1`, groupID)
+	})
+	return carModelID
+}
+
+// TestReadySince pins ready_since on GET /batches and sort=waiting: set only while
+// awaiting_assignment, from the latest event into that status.
+func TestReadySince(t *testing.T) {
+	ctx := context.Background()
+	pool := testutil.DB(t)
+	s := NewService(pool, t.TempDir())
+	const ip = "127.0.0.1"
+	var adminID, cutterID, stitcherID uuid.UUID
+	for q, dst := range map[string]*uuid.UUID{
+		`SELECT id FROM users LIMIT 1`:                                          &adminID,
+		`SELECT id FROM workers WHERE station='cutter' AND is_active LIMIT 1`:   &cutterID,
+		`SELECT id FROM workers WHERE station='stitcher' AND is_active LIMIT 1`: &stitcherID,
+	} {
+		if err := pool.QueryRow(ctx, q).Scan(dst); err != nil {
+			t.Fatal(err)
+		}
+	}
+	carModelID := testCar(t, pool, "ready")
+	bt, err := s.Create(ctx, CreateInput{CarModelID: carModelID, Quantity: 2}, adminID, "owner", ip)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	defer func() { _, _ = pool.Exec(ctx, `DELETE FROM batches WHERE id = $1`, bt.ID) }()
+
+	find := func(view string) *Batch {
+		t.Helper()
+		pg, err := s.ListPage(ctx, ListFilter{View: view, Q: bt.BatchCode})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := range pg.Items {
+			if pg.Items[i].ID == bt.ID {
+				return &pg.Items[i]
+			}
+		}
+		return nil
+	}
+	eventAt := func() time.Time {
+		t.Helper()
+		var at time.Time
+		if err := pool.QueryRow(ctx, `SELECT MAX(at) FROM batch_events
+			WHERE batch_id = $1 AND to_status = 'awaiting_assignment'`, bt.ID).Scan(&at); err != nil {
+			t.Fatal(err)
+		}
+		return at
+	}
+
+	if b := find("cutting"); b == nil || b.ReadySince != nil {
+		t.Fatalf("cutting: want no ready_since, got %+v", b)
+	}
+	if err := s.StartPhase(ctx, bt.ID, cutterID, "cutter", ip); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CompletePhase(ctx, bt.ID, cutterID, "cutter", 2, "", ip); err != nil {
+		t.Fatal(err)
+	}
+	b := find("ready")
+	if b == nil || b.ReadySince == nil || !b.ReadySince.Equal(eventAt()) {
+		t.Fatalf("after cut: ready_since %v, event %v", b, eventAt())
+	}
+	cutAt := *b.ReadySince
+
+	if err := s.SetAssignments(ctx, bt.ID, PhaseStitching, []AssignmentInput{{WorkerID: stitcherID}}, adminID, ip); err != nil {
+		t.Fatal(err)
+	}
+	if b := find("stitching"); b == nil || b.ReadySince != nil {
+		t.Fatalf("assigned: want no ready_since, got %+v", b)
+	}
+	// Clearing the assignment parks it again: waiting restarts from that event.
+	if err := s.SetAssignments(ctx, bt.ID, PhaseStitching, nil, adminID, ip); err != nil {
+		t.Fatal(err)
+	}
+	if b := find("ready"); b == nil || b.ReadySince == nil || !b.ReadySince.After(cutAt) {
+		t.Fatalf("cleared: ready_since should move past %v, got %+v", cutAt, b)
+	}
+
+	// sort=waiting asc: oldest first, non-waiting batches last.
+	pg, err := s.ListPage(ctx, ListFilter{Sort: "waiting"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	seenNil := false
+	var prev *time.Time
+	for _, it := range pg.Items {
+		if it.ReadySince == nil {
+			seenNil = true
+			continue
+		}
+		if seenNil {
+			t.Fatal("sort=waiting: a waiting batch sorted after a non-waiting one")
+		}
+		if prev != nil && it.ReadySince.Before(*prev) {
+			t.Fatal("sort=waiting: not oldest first")
+		}
+		prev = it.ReadySince
 	}
 }
