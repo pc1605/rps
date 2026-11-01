@@ -284,6 +284,14 @@
     {
       "key": "u2Barcode",
       "value": ""
+    },
+    {
+      "key": "u3StitcherId",
+      "value": ""
+    },
+    {
+      "key": "u3OtherStitcherId",
+      "value": ""
     }
   ],
   "item": [
@@ -9460,6 +9468,239 @@
               }
             ],
             "url": "{{baseUrl}}/reports/quality"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stitching assignment (U3)",
+      "item": [
+        {
+          "name": "Stitcher load",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('array of stitchers', () => pm.expect(d).to.be.an('array'));",
+                  "pm.test('fields', () => d.forEach(x => { pm.expect(x.open_mats).to.be.a('number'); pm.expect(x.on_floor).to.be.a('boolean'); pm.expect(x.mats_today).to.be.a('number'); }));",
+                  "pm.test('least open first', () => d.slice(1).forEach((x, i) => pm.expect(x.open_mats).to.be.at.least(d[i].open_mats)));",
+                  "pm.collectionVariables.set('u3StitcherId', d[0] ? d[0].worker_id : '');",
+                  "pm.collectionVariables.set('u3OtherStitcherId', d[1] ? d[1].worker_id : '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/stitchers/load"
+          }
+        },
+        {
+          "name": "Open stitching for a stitcher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('rows have done/left', () => d.forEach(x => { pm.expect(x.done_qty).to.be.a('number'); pm.expect(x.left_qty).to.be.at.least(0); }));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/stitchers/{{u3StitcherId}}/open"
+          }
+        },
+        {
+          "name": "Ready list, longest waiting first",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const items = pm.response.json().data.items;",
+                  "pm.test('every ready batch has ready_since', () => items.forEach(b => pm.expect(b.ready_since).to.be.a('string')));",
+                  "pm.test('oldest first', () => items.slice(1).forEach((b, i) => pm.expect(Date.parse(b.ready_since)).to.be.at.least(Date.parse(items[i].ready_since))));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?view=ready&sort=waiting&order=asc"
+          }
+        },
+        {
+          "name": "Bad sort \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?sort=nope"
+          }
+        },
+        {
+          "name": "Hand-over with no moves \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/stitching/hand-over",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_worker_id\": \"{{u3StitcherId}}\",\n  \"moves\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "Hand-over to self \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/stitching/hand-over",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_worker_id\": \"{{u3StitcherId}}\",\n  \"moves\": [\n    {\n      \"batch_id\": \"00000000-0000-0000-0000-000000000001\",\n      \"to_worker_id\": \"{{u3StitcherId}}\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Hand-over on unknown batch \u2192 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// needs two active stitchers (seed has them); with one, the 'to' check answers 400 first",
+                  "pm.test('status 404 (or 400 with < 2 stitchers)', () => pm.expect(pm.response.code).to.be.oneOf(pm.collectionVariables.get('u3OtherStitcherId') ? [404] : [400]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/stitching/hand-over",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from_worker_id\": \"{{u3StitcherId}}\",\n  \"moves\": [\n    {\n      \"batch_id\": \"00000000-0000-0000-0000-000000000001\",\n      \"to_worker_id\": \"{{u3OtherStitcherId}}\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Worker token can't read loads",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401/403', () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{stitcherToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/stitchers/load"
           }
         }
       ]

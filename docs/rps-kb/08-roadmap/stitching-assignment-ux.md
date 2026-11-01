@@ -1,6 +1,6 @@
 # Stitching assignment UX — hand-off (Nov 2026)
 
-Status: **proposal, not started.** Read `AGENTS.md` and `NEXT-STEPS.md` first. Master has C1, U1, U2, C2, R1 merged
+Status: **built on `agent/slice-u3` (Nov 2026)** — owner answers and what shipped are at the end. Original hand-off below. Read `AGENTS.md` and `NEXT-STEPS.md` first. Master has C1, U1, U2, C2, R1 merged
 (local, not pushed); the `rps` dev DB is on migration 016.
 
 ## Where it lives today
@@ -68,3 +68,14 @@ on floor now (open phase_log), last scan, mats today. Hand-over endpoint for C. 
 - Absent stitcher mid-batch: remaining quota is reassigned to someone else (→ C above).
 - Workers should see their own output (and later earnings) on the phone — planned for U3 / Slice D.
 - The wider U3 plan (edit/cancel batch, release claim, undo last scan, My work screen) is paused until this is done.
+
+## Owner answers (Nov 2026) → what was built
+1. List + side panel (no board) → Ready list `?phase=ready` with **Assign** → `AssignSheet`; same panel on the batch page.
+2. Default **fixed share each**; shared pile is a toggle.
+3. Labels print **at assignment** → "Print labels after" checkbox on the first assignment, remembered.
+4. **Packing assignment dropped** (owner: it would complicate the process) → D31. Part E is not planned.
+
+Built: `GET /stitchers/load`, `ready_since` + `sort=waiting` on `GET /batches`, `POST /stitching/hand-over`,
+`GET /stitchers/:id/open` (API in `03-backend/api-reference.md`); panel rules in `04-admin-web/screens.md`;
+decisions D31–D32. Problems 1–7 addressed; 8 dropped (D31). No migration.
+

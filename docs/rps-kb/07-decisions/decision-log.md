@@ -122,3 +122,18 @@ Shared TypeScript package (`packages/shared/`) contains phase labels, status lab
 **Decision**: Split, Reduce and Re-cut are confirmed in a dialog and require a reason code (+ note for Other).
 **Why**: Audit W5 — actions ran with one tap, and only Reduce had an (optional) reason, so short-cut frequency by cause was unknowable.
 **Status**: Built (R1). Older resolutions show as "Not recorded".
+
+### D31 — Assignment UI is stitching only (Nov 2026)
+**Decision**: The assign panel, load view and hand-over exist for stitching only. Packing stays an open queue with no
+assignment UI (the backend still accepts packing assignments; nothing in the admin sets them).
+**Why**: Owner (U3): assigning packers would make the process more complicated.
+**Status**: Built (U3).
+
+### D32 — Stitching assignment defaults and hand-over (Nov 2026)
+**Decision**: Assign from the Ready list in a side panel (not a board). Fixed share each is the default, shared pile an
+option. Taffeta labels print at the first assignment (remembered checkbox). An absent or stuck stitcher's remaining
+mats are handed over: they keep a target equal to what they've stitched (removed if 0), the new stitcher gets the rest;
+on the worker page one person takes everything by default, with a per-batch override. Load "open mats" in a shared-pile
+batch counts every unstitched mat for each assignee.
+**Why**: Owner answers to the U3 hand-off questions (Nov 2026); answers the audit question "absent stitcher's quota".
+**Status**: Built (U3).
