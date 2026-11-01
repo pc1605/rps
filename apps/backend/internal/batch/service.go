@@ -64,6 +64,13 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 	if in.CarModelID <= 0 || in.Quantity <= 0 {
 		return nil, ErrInvalidInput
 	}
+	if in.SparesStitched < 0 || in.SparesUnstitched < 0 {
+		return nil, fmt.Errorf("%w: spare counts can't be negative", ErrInvalidInput)
+	}
+	spares := in.SparesStitched + in.SparesUnstitched
+	if spares > in.Quantity {
+		return nil, fmt.Errorf("%w: %d spare mats is more than the batch quantity (%d)", ErrInvalidInput, spares, in.Quantity)
+	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -124,22 +131,59 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 		b.RollCode = &rollCode
 	}
 
-	// 5. Insert N units in one statement (Hard Rule #18)
+	// 5. Reused spares (U3, D36) move in first as units 1..k — already cut, so the cutter cuts the rest
+	// (cut units are the lowest numbers). Unstitched ones get this batch's code; stitched ones keep
+	// theirs (the label is on the mat) and count as stitched, credit staying with their stitcher.
+	evData := map[string]any{"quantity": in.Quantity}
+	if spares > 0 {
+		ids, oldCodes, err := pickSpares(ctx, tx, in.CarModelID, in.SparesStitched, in.SparesUnstitched)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE batch_units bu SET reused_from = bu.batch_id, batch_id = $1, unit_number = o.n, status = 'pending',
+			  prestitched = bu.stitched_at IS NOT NULL,
+			  unit_code = CASE WHEN bu.stitched_at IS NULL THEN $2 || '-' || LPAD(o.n::TEXT, 3, '0') ELSE bu.unit_code END
+			FROM unnest($3::uuid[]) WITH ORDINALITY AS o(id, n)
+			WHERE bu.id = o.id`, b.ID, b.BatchCode, ids); err != nil {
+			return nil, fmt.Errorf("reuse spares: %w", err)
+		}
+		evData["spares_stitched"] = in.SparesStitched
+		evData["spares_unstitched"] = in.SparesUnstitched
+		evData["spare_codes"] = oldCodes
+	}
+
+	// 6. Insert the remaining units in one statement (Hard Rule #18)
 	_, err = tx.Exec(ctx, `
 		INSERT INTO batch_units (batch_id, unit_code, unit_number)
 		SELECT $1, $2 || '-' || LPAD(gs.n::TEXT, 3, '0'), gs.n
-		FROM generate_series(1, $3::int) AS gs(n)
-	`, b.ID, b.BatchCode, in.Quantity)
+		FROM generate_series($4::int + 1, $3::int) AS gs(n)
+	`, b.ID, b.BatchCode, in.Quantity, spares)
 	if err != nil {
 		return nil, fmt.Errorf("insert units: %w", err)
 	}
 
-	if err := writeEvent(ctx, tx, Event{BatchID: b.ID, Kind: EvCreated, ToPhase: PhaseCutting, ToStatus: StatusPending,
-		UserID: uid(actorID), Data: map[string]any{"quantity": in.Quantity}}); err != nil {
+	// Spares covering the whole batch skip cutting; all of them stitched → straight to packing.
+	if spares > 0 {
+		b.CutQty = spares
+		if spares == in.Quantity {
+			b.CurrentPhase, b.Status = PhaseStitching, StatusAwaitingAssignment
+			if in.SparesStitched == in.Quantity {
+				b.CurrentPhase, b.Status = PhasePacking, StatusPending
+			}
+		}
+		if _, err := tx.Exec(ctx, `UPDATE batches SET cut_qty = $2, current_phase = $3, status = $4 WHERE id = $1`,
+			b.ID, b.CutQty, b.CurrentPhase, b.Status); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := writeEvent(ctx, tx, Event{BatchID: b.ID, Kind: EvCreated, ToPhase: b.CurrentPhase, ToStatus: b.Status,
+		UserID: uid(actorID), Data: evData}); err != nil {
 		return nil, err
 	}
 
-	// 6. Audit (same tx — Hard Rule #16)
+	// 7. Audit (same tx — Hard Rule #16)
 	if err := audit.Write(ctx, tx, audit.Entry{
 		ActorID:    actorID.String(),
 		ActorRole:  actorRole,
@@ -158,6 +202,8 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 
 	b.UnitsTotal = in.Quantity
 	b.UnitsPacked = 0
+	b.UnitsStitched = in.SparesStitched
+	b.UnitsPrestitched = in.SparesStitched
 	return &b, nil
 }
 
@@ -209,10 +255,12 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 
 	rows, err := s.pool.Query(ctx, `
 		SELECT bu.id, bu.batch_id, bu.unit_code, bu.unit_number, bu.status,
-		       bu.stitched_at, bu.stitched_by, ws.name, bu.packed_at, bu.packed_by, wp.name, bu.created_at
+		       bu.stitched_at, bu.stitched_by, ws.name, bu.packed_at, bu.packed_by, wp.name, bu.created_at,
+		       bu.reused_from, rb.batch_code, bu.prestitched
 		FROM batch_units bu
 		LEFT JOIN workers ws ON ws.id = bu.stitched_by
 		LEFT JOIN workers wp ON wp.id = bu.packed_by
+		LEFT JOIN batches rb ON rb.id = bu.reused_from
 		WHERE bu.batch_id = $1 ORDER BY bu.unit_number
 	`, id)
 	if err != nil {
@@ -223,10 +271,14 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 	detail := &BatchDetail{Batch: b, Units: []Unit{}}
 	for rows.Next() {
 		var u Unit
-		if err := rows.Scan(&u.ID, &u.BatchID, &u.UnitCode, &u.UnitNumber, &u.Status, &u.StitchedAt, &u.StitchedBy, &u.StitchedByName, &u.PackedAt, &u.PackedBy, &u.PackedByName, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.BatchID, &u.UnitCode, &u.UnitNumber, &u.Status, &u.StitchedAt, &u.StitchedBy, &u.StitchedByName, &u.PackedAt, &u.PackedBy, &u.PackedByName, &u.CreatedAt,
+			&u.ReusedFrom, &u.ReusedFromCode, &u.Prestitched); err != nil {
 			return nil, err
 		}
 		u.Rework = []ReworkEntry{}
+		if u.Prestitched {
+			detail.UnitsPrestitched++
+		}
 		detail.Units = append(detail.Units, u)
 		detail.UnitsTotal++
 		switch u.Status {
@@ -323,7 +375,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 	aRows, err := s.pool.Query(ctx, `
 			SELECT ba.phase, ba.worker_id, w.name, ba.target_qty,
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = ba.batch_id
-		          AND ((ba.phase = 'stitching' AND bu.stitched_by = ba.worker_id)
+		          AND ((ba.phase = 'stitching' AND bu.stitched_by = ba.worker_id AND NOT bu.prestitched)
 		            OR (ba.phase = 'packing'   AND bu.packed_by   = ba.worker_id)))
 		FROM batch_assignments ba JOIN workers w ON w.id = ba.worker_id
 		WHERE ba.batch_id = $1 ORDER BY ba.phase, w.name
@@ -447,7 +499,7 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UU
 		        WHERE ba.batch_id = b.id AND ba.phase = b.current_phase
 		          AND ba.worker_id = $2),
 		       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id
-		          AND ((b.current_phase = 'stitching' AND bu.stitched_by = $2)
+		          AND ((b.current_phase = 'stitching' AND bu.stitched_by = $2 AND NOT bu.prestitched)
 		            OR (b.current_phase = 'packing'   AND bu.packed_by   = $2)))
 		FROM batches b
 		JOIN car_models cm ON cm.id = b.car_model_id
@@ -657,7 +709,19 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 	if withQuota > 0 && withQuota != len(entries) {
 		return fmt.Errorf("%w: give every assignee a quota, or none", ErrInvalidInput)
 	}
-	if withQuota > 0 && sum != quantity {
+	// Stitching quotas cover the mats still to stitch: reused spares that came in stitched are left out (D36).
+	toDo := quantity
+	if phase == PhaseStitching {
+		var pre int
+		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM batch_units WHERE batch_id=$1 AND prestitched`, batchID).Scan(&pre); err != nil {
+			return err
+		}
+		toDo -= pre
+	}
+	if withQuota > 0 && sum != toDo {
+		if toDo != quantity {
+			return fmt.Errorf("%w: quotas total %d but %d mats are left to stitch (%d came in stitched)", ErrInvalidInput, sum, toDo, quantity-toDo)
+		}
 		return fmt.Errorf("%w: quotas total %d but batch has %d mats", ErrInvalidInput, sum, quantity)
 	}
 
@@ -665,7 +729,7 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 	if attrCol != "" {
 		rows, err := tx.Query(ctx, `
 			SELECT w.id, w.name, COUNT(*) FROM batch_units bu JOIN workers w ON w.id = bu.`+attrCol+`
-			WHERE bu.batch_id=$1 GROUP BY w.id, w.name`, batchID)
+			WHERE bu.batch_id=$1 AND NOT (bu.prestitched AND $2 = 'stitching') GROUP BY w.id, w.name`, batchID, phase)
 		if err != nil {
 			return err
 		}
@@ -1061,6 +1125,8 @@ func (s *Service) PeekUnit(ctx context.Context, unitCode string, workerID uuid.U
 			r = "in_rework"
 		} else if unitStatus == UnitDefective {
 			r = "written_off"
+		} else if unitStatus == UnitSpare {
+			r = "spare"
 		} else if batchPhase != PhasePacking {
 			r = "wrong_phase"
 		} else if !joined || batchStatus != StatusInProgress {
@@ -1210,6 +1276,9 @@ func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.U
 	if unitStatus == UnitDefective {
 		return nil, ErrUnitWrittenOff
 	}
+	if unitStatus == UnitSpare {
+		return nil, ErrUnitSpare
+	}
 
 	// Idempotent paths
 	if phase == PhaseStitching && (stitchedAt != nil || unitStatus == UnitPacked || unitStatus == UnitDispatched) {
@@ -1252,7 +1321,7 @@ func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.U
 		var mine int
 		err := tx.QueryRow(ctx, `
 			SELECT (SELECT target_qty FROM batch_assignments WHERE batch_id=$1 AND phase=$2 AND worker_id=$3),
-			       (SELECT COUNT(*) FROM batch_units WHERE batch_id=$1 AND `+attrCol+`=$3)
+			       (SELECT COUNT(*) FROM batch_units WHERE batch_id=$1 AND `+attrCol+`=$3 AND NOT (prestitched AND $2 = 'stitching'))
 		`, batchID, phase, workerID).Scan(&target, &mine)
 		if err != nil {
 			return nil, err
@@ -1301,7 +1370,7 @@ func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.U
 				UPDATE phase_logs pl
 				SET completed_at = NOW(),
 				    quantity_completed = (SELECT COUNT(*) FROM batch_units bu
-				                          WHERE bu.batch_id=$1 AND bu.stitched_by=pl.worker_id)
+				                          WHERE bu.batch_id=$1 AND bu.stitched_by=pl.worker_id AND NOT bu.prestitched)
 				WHERE pl.batch_id=$1 AND pl.phase='stitching' AND pl.completed_at IS NULL
 			`, batchID); err != nil {
 				return nil, err

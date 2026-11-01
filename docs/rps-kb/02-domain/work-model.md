@@ -22,7 +22,10 @@ Packing scans: verification of the finished physical mat.
 - A stitcher's queue shows **only their own** batches — never "assigned to someone else" cards (owner: no cherry-picking).
 
 ## 3. Quotas (`target_qty`)
-- Optional per assignee. If any assignee on a phase has one, **all must**, and they **sum to `batches.quantity`**.
+- Optional per assignee. If any assignee on a phase has one, **all must**, and they **sum to `batches.quantity`** — for
+  stitching, minus the reused spares that came in stitched (`prestitched`, U3/D36).
+- `prestitched` units are left out of every per-batch per-stitcher count (quota gate, done counts, removal guard,
+  hand-over, load, completion log counts); they still count as stitched for batch progress and completion.
 - Enforced at scan: `ScanUnit` counts units already attributed to the worker in that phase; `>= target_qty` → `ErrQuotaReached`
   (409 `quota_reached`, "your share of this batch is complete (8/8)"). Mobile shows a blue "Your share is complete ✓" flash.
 - Reassignment = edit numbers. `SetAssignments` enforces: target ≥ already-done; a worker with scans can't be removed
@@ -36,7 +39,18 @@ Packing scans: verification of the finished physical mat.
 - Stitching/packing Join when already joined → no-op 200.
 - `ScanUnit` is idempotent: already-stitched (or already-packed) mat → `already_done: true` with current progress, no writes.
 - Scans must belong to the batch the scanner was opened for — enforced **client-side** via unit-code prefix (the server has
-  no batch context on a scan). See `05-mobile/screens-and-flows.md`.
+  no batch context on a scan). See `05-mobile/screens-and-flows.md`. U3: packers check the peek's `batch_id` instead,
+  since a reused stitched spare keeps the code of its old batch.
+
+## 4b. Corrections (U3)
+- **Release claim (D37)** — a cutter who started a batch and can't finish gives it back on the phone ("Give back this
+  batch"), or the admin releases it from the open timeline entry. The open cutting log is deleted (nothing was
+  reported on it); the `claim_released` event + audit keep the record.
+- **Undo scan (D38)** — owner/supervisor only, from the admin (unit page, batch unit cards), with a reason. Undoes the
+  mat's latest stitch or pack scan; when that scan finished the stage, the batch moves back and the logs that
+  completion closed reopen — but only while nothing has happened in the next stage (no packer joined, nothing packed;
+  nothing dispatched after completion). Refused for mats in rework, fixed in rework after the stitch, written off,
+  spare, or prestitched.
 
 ## 5. Phase completion
 When a scan makes `done_count == total_units`:
@@ -58,7 +72,9 @@ Per batch beyond display fields: `units_total`, `units_packed`, `units_stitched`
 ### Unit Lifecycle & States
 In addition to `pending` and `packed`, `batch_units` supports:
 - `rework`: The mat was flagged by a packer during packing inspection and paused for defect correction.
-- `defective`: The mat was permanently written off (by admin decision `write_off` or after recut creation).
+- `defective`: The mat was permanently written off (by admin decision `write_off` or after recut creation; U3: open
+  rework on a cancelled batch, or a spare written off).
+- `spare` (U3, migration 017): cut or stitched mat of a cancelled batch, kept as spare stock until reused.
 - **Completion condition**: A batch at packing advances to `completed` **only when every unit is either `packed` or `defective`** (`status IN ('packed', 'defective', 'dispatched')`). Units in `rework` or `pending` block batch completion.
 
 ### Inspection & Flagging Flow

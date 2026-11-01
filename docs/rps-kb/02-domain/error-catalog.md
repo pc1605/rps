@@ -20,6 +20,11 @@ mapping: `handler.go` (`transitionResponse` for start/complete; dedicated switch
 | `ErrReworkPendingDecision` | Rework is awaiting admin decision | 409 `rework_pending_decision` | stitcher scans a rework unit routed to admin before decision |
 | `ErrNotYourRework` | This rework is assigned to another stitcher | 403 `not_your_rework` | stitcher other than the original `stitched_by` scans rework |
 | `ErrReworkNotOpen` | Rework round is not open | 409 `rework_not_open` | stitcher fix scan or admin decision on closed rework entry |
+| `ErrUnitSpare` (U3) | this mat is spare stock from a cancelled batch — keep it aside | 409 `spare` | scan / peek of a `spare` unit |
+| `ErrNotEditable` (U3, `edit.go`) | this batch can only be edited while it is waiting to be cut | 409 `not_editable` | PATCH after the cutting claim / cutting / cancel |
+| `ErrNotCancellable` (U3, `cancel.go`) | e.g. "2 mats already packed — a batch can only be cancelled before packing starts." | 409 `not_cancellable` | cancel after packing, of a completed or cancelled batch |
+| `ErrNoClaim` (U3, `release.go`) | nobody is cutting this batch right now | 409 `no_claim` | release with no open cutting log |
+| `ErrCantUndo` (U3, `undo.go`) | e.g. "packing has started on this batch", "the mat is in rework — …" | 409 `cannot_undo` | undo-scan refused (D38) |
 | `files.Verify` failure | invalid or expired signature | 403 `invalid_signature` | accessing rework photo URL with tampered sig or expired timestamp |
 | Guard | missing bearer token / invalid token | 401 | any protected route, including unknown paths under `/api/v1` |
 | Role guard | forbidden | 403 | worker token on admin route; non-owner/supervisor on reports |

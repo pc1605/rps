@@ -1,6 +1,9 @@
 import type { Batch, BatchStats } from "./types";
 
-export type BatchView = "cutting" | "ready" | "stitching" | "packing" | "completed";
+export type BatchView = "cutting" | "ready" | "stitching" | "packing" | "completed" | "cancelled";
+
+// A cancelled batch keeps the phase it stopped in; it only shows under "Cancelled" (mirrors list.go).
+const live = (b: Batch) => b.status !== "cancelled";
 
 export const batchViews: {
   key: BatchView;
@@ -13,7 +16,7 @@ export const batchViews: {
     key: "cutting",
     label: "Cutting",
     dot: "bg-phase-cutting",
-    filter: (b) => b.current_phase === "cutting",
+    filter: (b) => b.current_phase === "cutting" && live(b),
     count: (s) => s.in_cutting,
   },
   {
@@ -27,14 +30,14 @@ export const batchViews: {
     key: "stitching",
     label: "Stitching",
     dot: "bg-phase-stitching",
-    filter: (b) => b.current_phase === "stitching" && b.status !== "awaiting_assignment",
+    filter: (b) => b.current_phase === "stitching" && b.status !== "awaiting_assignment" && live(b),
     count: (s) => s.in_stitching,
   },
   {
     key: "packing",
     label: "Packing",
     dot: "bg-phase-packing",
-    filter: (b) => b.current_phase === "packing",
+    filter: (b) => b.current_phase === "packing" && live(b),
     count: (s) => s.in_packing,
   },
   {
@@ -42,5 +45,11 @@ export const batchViews: {
     label: "Completed",
     dot: "bg-phase-completed",
     filter: (b) => b.current_phase === "completed",
+  },
+  {
+    key: "cancelled",
+    label: "Cancelled",
+    dot: "bg-muted-foreground",
+    filter: (b) => !live(b),
   },
 ];

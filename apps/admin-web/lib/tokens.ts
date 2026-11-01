@@ -69,6 +69,7 @@ export const unitTone = {
   defective: { text: "text-danger", border: "border-danger/30", label: "Defective" },
   rework: { text: "text-danger", border: "border-danger/30", label: "Rework" },
   dispatched: { text: "text-info", border: "border-info/30", label: "Dispatched" },
+  spare: { text: "text-muted-foreground", border: "border-dashed border-border", label: "Spare" },
 } as const;
 
 export const sizeLabel = SIZE_LABEL;

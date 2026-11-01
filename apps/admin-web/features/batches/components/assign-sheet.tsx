@@ -117,6 +117,12 @@ function Body({ batchId, readySince, onDone }: { batchId: string; readySince?: s
       </SheetTitle>
       <SheetDescription>
         {batch.brand_name} {batch.model_name} · <span className="tabular">{batch.quantity}</span> mats
+        {(batch.units_prestitched ?? 0) > 0 && (
+          <>
+            {" "}
+            (<span className="tabular">{batch.units_prestitched}</span> came in stitched)
+          </>
+        )}
         {waiting && <> · waiting {waiting}</>}
       </SheetDescription>
     </SheetHeader>
@@ -168,7 +174,8 @@ function AssignForm({
 }) {
   const setAssignments = useSetAssignments(batch.id);
   const handOver = useHandOver();
-  const qty = batch.quantity;
+  // Quotas cover the mats still to stitch: reused spares that came in stitched are left out (D36).
+  const qty = batch.quantity - (batch.units_prestitched ?? 0);
   const awaiting = batch.status === "awaiting_assignment";
   const saved = batch.assignments.filter((a) => a.phase === "stitching");
   const done: Record<string, number> = Object.fromEntries(saved.map((a) => [a.worker_id, a.done_qty]));

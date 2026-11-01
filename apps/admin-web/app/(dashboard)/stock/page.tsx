@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/rps/section";
 import { FinishedGoods } from "@/features/stock/components/finished-goods";
+import { SparesLink } from "@/features/stock/components/spares-link";
 
 export default function StockPage() {
   return (
@@ -17,6 +18,7 @@ export default function StockPage() {
           </>
         }
       />
+      <SparesLink />
       <FinishedGoods />
     </div>
   );

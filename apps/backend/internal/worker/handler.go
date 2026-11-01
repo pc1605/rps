@@ -209,3 +209,16 @@ func (h *Handler) ResetPIN(c *fiber.Ctx) error {
 	}
 	return httpx.OK(c, fiber.Map{"pin": pin})
 }
+
+// MySummary — GET /worker/me/summary: the calling worker's own output (phone "My work" card).
+func (h *Handler) MySummary(c *fiber.Ctx) error {
+	wid, ok := auth.WorkerID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "not a worker token")
+	}
+	out, err := h.svc.MySummary(c.Context(), wid, time.Now())
+	if err != nil {
+		return workerErr(c, err, "load my summary")
+	}
+	return httpx.OK(c, out)
+}

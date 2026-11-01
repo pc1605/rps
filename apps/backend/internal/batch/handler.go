@@ -261,9 +261,12 @@ func transitionResponse(c *fiber.Ctx, err error, okMsg string) error {
 		return httpx.Error(c, fiber.StatusForbidden, "not_assigned", ErrNotAssigned.Error())
 	case errors.Is(err, ErrNotYours):
 		return httpx.Forbidden(c, ErrNotYours.Error())
+	case errors.Is(err, ErrNoClaim):
+		return httpx.Error(c, fiber.StatusConflict, "no_claim", ErrNoClaim.Error())
 	case errors.Is(err, ErrInvalidInput):
 		return httpx.BadRequest(c, err.Error())
 	default:
+		log.Error().Err(err).Msg("batch transition")
 		return httpx.Internal(c, "transition failed")
 	}
 }
@@ -335,6 +338,8 @@ func (h *Handler) ScanUnit(c *fiber.Ctx) error {
 			return httpx.Error(c, fiber.StatusConflict, "in_rework", "This mat is waiting for rework")
 		case errors.Is(err, ErrUnitWrittenOff):
 			return httpx.Error(c, fiber.StatusConflict, "written_off", err.Error())
+		case errors.Is(err, ErrUnitSpare):
+			return httpx.Error(c, fiber.StatusConflict, "spare", err.Error())
 		case errors.Is(err, ErrReworkPendingDecision):
 			return httpx.Error(c, fiber.StatusConflict, "rework_pending_decision", "Rework is awaiting admin decision")
 		case errors.Is(err, ErrNotYourRework):
@@ -699,4 +704,194 @@ func (h *Handler) Search(c *fiber.Ctx) error {
 		return httpx.Internal(c, "search failed")
 	}
 	return httpx.OK(c, out)
+}
+
+// Edit — PATCH /batches/:id {car_model_id?, quantity?, roll_id?, notes?}: only before cutting starts.
+func (h *Handler) Edit(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	var in EditInput
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	actorID, ok := auth.UserID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "missing user context")
+	}
+	err = h.svc.Edit(c.Context(), id, in, actorID, auth.RoleFromCtx(c), c.IP())
+	switch {
+	case err == nil:
+		detail, err := h.svc.Get(c.Context(), id)
+		if err != nil {
+			log.Error().Err(err).Msg("get batch after edit")
+			return httpx.Internal(c, "failed to load batch")
+		}
+		return httpx.OK(c, detail)
+	case errors.Is(err, ErrNotFound):
+		return httpx.Error(c, fiber.StatusNotFound, "not_found", "batch not found")
+	case errors.Is(err, ErrNotEditable):
+		return httpx.Error(c, fiber.StatusConflict, "not_editable", ErrNotEditable.Error())
+	case errors.Is(err, ErrInvalidInput):
+		return httpx.BadRequest(c, err.Error())
+	default:
+		log.Error().Err(err).Msg("edit batch")
+		return httpx.Internal(c, "failed to edit batch")
+	}
+}
+
+// CancelPreview — GET /batches/:id/cancel-preview: what cancelling would do to the mats.
+func (h *Handler) CancelPreview(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	o, err := h.svc.CancelPreview(c.Context(), id)
+	switch {
+	case err == nil:
+		return httpx.OK(c, o)
+	case errors.Is(err, ErrNotFound):
+		return httpx.Error(c, fiber.StatusNotFound, "not_found", "batch not found")
+	default:
+		log.Error().Err(err).Msg("cancel preview")
+		return httpx.Internal(c, "failed to preview cancel")
+	}
+}
+
+// Cancel — POST /batches/:id/cancel {reason, note?}: allowed until the first mat is packed.
+func (h *Handler) Cancel(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	var in struct {
+		Reason string `json:"reason"`
+		Note   string `json:"note"`
+	}
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	actorID, ok := auth.UserID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "missing user context")
+	}
+	o, err := h.svc.Cancel(c.Context(), id, strings.TrimSpace(in.Reason), strings.TrimSpace(in.Note), actorID, auth.RoleFromCtx(c), c.IP())
+	switch {
+	case err == nil:
+		return httpx.OK(c, o)
+	case errors.Is(err, ErrNotFound):
+		return httpx.Error(c, fiber.StatusNotFound, "not_found", "batch not found")
+	case errors.Is(err, ErrNotCancellable):
+		return httpx.Error(c, fiber.StatusConflict, "not_cancellable", strings.TrimPrefix(err.Error(), ErrNotCancellable.Error()+": "))
+	case errors.Is(err, ErrInvalidInput):
+		return httpx.BadRequest(c, err.Error())
+	default:
+		log.Error().Err(err).Msg("cancel batch")
+		return httpx.Internal(c, "failed to cancel batch")
+	}
+}
+
+// ListSpares — GET /spares[?car_model_id=]: spare mats (from cancelled batches) per car item.
+func (h *Handler) ListSpares(c *fiber.Ctx) error {
+	var car *int
+	if v := c.Query("car_model_id"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return httpx.BadRequest(c, "invalid car_model_id")
+		}
+		car = &n
+	}
+	out, err := h.svc.ListSpares(c.Context(), car)
+	if err != nil {
+		log.Error().Err(err).Msg("list spares")
+		return httpx.Internal(c, "failed to load spares")
+	}
+	return httpx.OK(c, out)
+}
+
+// WriteOffSpares — POST /spares/write-off {car_model_id, stitched, unstitched, note?}.
+func (h *Handler) WriteOffSpares(c *fiber.Ctx) error {
+	var in SpareWriteOffInput
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	actorID, ok := auth.UserID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "missing user context")
+	}
+	in.Note = strings.TrimSpace(in.Note)
+	codes, err := h.svc.WriteOffSpares(c.Context(), in, actorID, auth.RoleFromCtx(c), c.IP())
+	switch {
+	case err == nil:
+		return httpx.OK(c, fiber.Map{"unit_codes": codes})
+	case errors.Is(err, ErrInvalidInput):
+		return httpx.BadRequest(c, err.Error())
+	default:
+		log.Error().Err(err).Msg("write off spares")
+		return httpx.Internal(c, "failed to write off spares")
+	}
+}
+
+// AdminReleaseClaim — POST /batches/:id/release-claim: free a stuck cutting claim.
+func (h *Handler) AdminReleaseClaim(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	userID, ok := auth.UserID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "missing user context")
+	}
+	err = h.svc.ReleaseClaim(c.Context(), id, &userID, nil, auth.RoleFromCtx(c), c.IP())
+	return transitionResponse(c, err, "claim released")
+}
+
+// WorkerReleaseClaim — POST /worker/batches/:id/release: the cutter gives back their own claim.
+func (h *Handler) WorkerReleaseClaim(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "worker" {
+		return httpx.Forbidden(c, "worker token required")
+	}
+	if auth.StationFromCtx(c) != "cutter" {
+		return httpx.Forbidden(c, "only cutters can release a cutting claim")
+	}
+	wid, _ := auth.WorkerID(c)
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid batch id")
+	}
+	err = h.svc.ReleaseClaim(c.Context(), id, nil, &wid, "cutter", c.IP())
+	return transitionResponse(c, err, "claim released")
+}
+
+// UndoScan — POST /units/:code/undo-scan {reason}: owner/supervisor reverse a mat's last stitch/pack scan.
+func (h *Handler) UndoScan(c *fiber.Ctx) error {
+	code := strings.TrimSpace(c.Params("code"))
+	if code == "" {
+		return httpx.BadRequest(c, "unit code required")
+	}
+	var in struct {
+		Reason string `json:"reason"`
+	}
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	actorID, ok := auth.UserID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "missing user context")
+	}
+	res, err := h.svc.UndoScan(c.Context(), code, strings.TrimSpace(in.Reason), actorID, auth.RoleFromCtx(c), c.IP())
+	switch {
+	case err == nil:
+		return httpx.OK(c, res)
+	case errors.Is(err, ErrUnitNotFound):
+		return httpx.Error(c, fiber.StatusNotFound, "unit_not_found", "unit not found")
+	case errors.Is(err, ErrCantUndo):
+		return httpx.Error(c, fiber.StatusConflict, "cannot_undo", strings.TrimPrefix(err.Error(), ErrCantUndo.Error()+": "))
+	case errors.Is(err, ErrInvalidInput):
+		return httpx.BadRequest(c, err.Error())
+	default:
+		log.Error().Err(err).Msg("undo scan")
+		return httpx.Internal(c, "failed to undo scan")
+	}
 }

@@ -1,5 +1,6 @@
 import type {
   BatchStatus,
+  CancelReason,
   MaterialUnit,
   MovementKind,
   Phase,
@@ -82,6 +83,15 @@ export const SHORT_REASON_LABEL: Record<ShortReason, string> = {
   other: "Other",
 };
 
+/** Order = picker order. Mirrors CancelReasonLabel in the backend (batch/cancel.go). */
+export const CANCEL_REASON_LABEL: Record<CancelReason, string> = {
+  order_cancelled: "Order cancelled",
+  order_changed: "Order changed",
+  created_by_mistake: "Created by mistake",
+  material_problem: "Material problem",
+  other: "Other",
+};
+
 export const MATERIAL_UNIT_LABEL: Record<MaterialUnit, string> = {
   m: "m",
   sqm: "m²",
@@ -124,5 +134,10 @@ export type ApiErrorCode =
   | "not_your_rework"
   | "rework_not_open"
   | "written_off"
+  | "spare"
+  | "not_editable"
+  | "not_cancellable"
+  | "no_claim"
+  | "cannot_undo"
   | "unauthorized"
   | "internal";

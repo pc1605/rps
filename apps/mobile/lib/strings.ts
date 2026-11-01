@@ -10,12 +10,34 @@ export const strings = {
   scanner: {
     inRework: "Waiting for rework",
     writtenOff: "Written off — keep it aside",
+    spare: "Spare stock — keep it aside",
+    wrongBatch: (code: string) => `Wrong batch — this mat is from ${code}`,
     sentToRework: "Sent to rework",
     alreadyPacked: "Already packed",
     wrongPhase: "This batch is not in packing",
     notStarted: "Join this batch first",
     peekFailed: "Couldn't check this mat — try again",
     checking: "Checking…",
+  },
+  myWork: {
+    title: "My work",
+    today: "today",
+    thisWeek: "this week",
+    unit: { cutter: "pieces cut", stitcher: "mats stitched", packer: "mats packed" } as Record<
+      string,
+      string
+    >,
+    reworkReturned: (n: number) => `${n} came back for rework this week`,
+    reworkOpen: (n: number) => `${n} waiting for you`,
+    flagged: (n: number) => `${n} sent to rework this week`,
+  },
+  cutting: {
+    release: "Give back this batch",
+    releaseTitle: "Give back this batch?",
+    releaseBody: "It goes back to the cutting queue so any cutter can start it. Nothing is reported as cut.",
+    releaseConfirm: "Give back",
+    keep: "Keep it",
+    released: (code: string) => `${code} is back in the cutting queue.`,
   },
   rework: {
     sendToRework: "Send to rework",

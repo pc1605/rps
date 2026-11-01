@@ -1,4 +1,7 @@
 import type {
+  BatchEditInput,
+  CancelBatchInput,
+  CancelOutcome,
   BatchListParams,
   BatchPage,
   HandOverInput,
@@ -36,6 +39,13 @@ export const batchApi = {
     const res = await http.post("/batches", input);
     return res.data?.data ?? res.data;
   },
+  edit: async (id: string, input: BatchEditInput): Promise<BatchDetail> =>
+    (await http.patch(`/batches/${id}`, input)).data.data,
+  cancelPreview: async (id: string): Promise<CancelOutcome> =>
+    (await http.get(`/batches/${id}/cancel-preview`)).data.data,
+  cancel: async (id: string, input: CancelBatchInput): Promise<CancelOutcome> =>
+    (await http.post(`/batches/${id}/cancel`, input)).data.data,
+  releaseClaim: async (id: string) => (await http.post(`/batches/${id}/release-claim`)).data.data,
   carModels: async (): Promise<CarModel[]> => {
     const res = await http.get("/car-models");
     return res.data?.data ?? res.data;

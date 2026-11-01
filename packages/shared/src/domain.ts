@@ -2,7 +2,8 @@
 
 export type Phase = "cutting" | "stitching" | "packing" | "completed";
 export type BatchStatus = "pending" | "in_progress" | "awaiting_assignment" | "completed" | "cancelled";
-export type UnitStatus = "pending" | "packed" | "defective" | "dispatched" | "rework";
+/** "spare": a cut or stitched mat from a cancelled batch, kept as spare stock (U3). */
+export type UnitStatus = "pending" | "packed" | "defective" | "dispatched" | "rework" | "spare";
 export type Station = "cutter" | "stitcher" | "packer";
 export type SizeClass = "small" | "medium" | "large";
 
@@ -10,6 +11,8 @@ export type SizeClass = "small" | "medium" | "large";
 export type ShortReason =
   "roll_ran_out" | "material_defect" | "machine_issue" | "cutter_error" | "order_changed" | "other";
 export type ShortAction = "split" | "reduce" | "recut";
+export type CancelReason =
+  "order_cancelled" | "order_changed" | "created_by_mistake" | "material_problem" | "other";
 
 export type ReworkReason = "stitching_fault" | "stain" | "cutting_fault" | "material_defect" | "other";
 export type ReworkRoute = "stitcher" | "admin";
@@ -83,6 +86,8 @@ export interface Batch {
   units_stitched?: number;
   /** Mats written off as defective — never packed, but they do not block completion. */
   units_written_off: number;
+  /** Reused spares that came in already stitched (U3): left out of the stitching quotas. */
+  units_prestitched?: number;
   active_workers?: string;
   // worker-queue only (GET /worker/batches)
   joined_by_me?: boolean;
@@ -108,6 +113,11 @@ export interface Unit {
   packed_by?: string;
   packed_by_name?: string;
   rework?: ReworkEntry[];
+  /** Reused spare (U3): the cancelled batch it came from. */
+  reused_from?: string;
+  reused_from_code?: string;
+  /** Came in already stitched (keeps its code and its stitcher's credit). */
+  prestitched?: boolean;
 }
 
 export interface PhaseLogEntry {
@@ -139,6 +149,78 @@ export interface BatchDetail extends Batch {
   units: Unit[];
   timeline: PhaseLogEntry[];
   assignments: AssignmentEntry[];
+}
+
+/** POST /batches. Spare mats of the same car item can be reused: they join already cut (U3). */
+export interface CreateBatchInput {
+  car_model_id: number;
+  roll_id?: string;
+  quantity: number;
+  notes?: string;
+  spares_stitched?: number;
+  spares_unstitched?: number;
+}
+
+/** PATCH /batches/:id — only while the batch waits to be cut. Omitted = unchanged; roll_id "" clears it. */
+export interface BatchEditInput {
+  car_model_id?: number;
+  quantity?: number;
+  roll_id?: string;
+  notes?: string;
+}
+
+/** GET /batches/:id/cancel-preview and POST /batches/:id/cancel — what cancelling does to the mats. */
+export interface CancelOutcome {
+  /** Stitched mats → spare stock (they keep their unit code). */
+  spare_stitched: number;
+  /** Cut, not yet stitched → spare stock. */
+  spare_unstitched: number;
+  /** Never cut → removed. */
+  removed: number;
+  /** In open rework → written off. */
+  written_off: number;
+  already_written_off: number;
+  /** Set when the batch can't be cancelled (e.g. a mat is already packed). */
+  blocked?: string;
+}
+
+export interface CancelBatchInput {
+  reason: CancelReason;
+  note?: string;
+}
+
+/** GET /spares — spare mats (from cancelled batches) of one car item. */
+export interface SpareStock {
+  car_model_id: number;
+  brand_name: string;
+  model_name: string;
+  size_class: SizeClass;
+  line_name?: string;
+  barcode?: string;
+  stitched: number;
+  unstitched: number;
+  /** When the oldest of the source batches was cancelled. */
+  oldest_at: string;
+  sources: { batch_id: string; batch_code: string; count: number }[];
+}
+
+/** POST /spares/write-off — oldest first. */
+export interface SpareWriteOffInput {
+  car_model_id: number;
+  stitched: number;
+  unstitched: number;
+  note?: string;
+}
+
+/** POST /units/:code/undo-scan — what was undone. */
+export interface UndoScanResult {
+  unit_code: string;
+  batch_id: string;
+  batch_code: string;
+  scan: "stitch" | "pack";
+  /** The batch went back a stage (to stitching or packing). */
+  moved_back: boolean;
+  phase: Phase;
 }
 
 export interface BatchStats {
@@ -181,7 +263,8 @@ export interface Worker {
   badge_token?: string; // only on create
 }
 
-export type PeekReason = "already_packed" | "in_rework" | "written_off" | "wrong_phase" | "not_started";
+export type PeekReason =
+  "already_packed" | "in_rework" | "written_off" | "spare" | "wrong_phase" | "not_started";
 
 export interface UnitPeek {
   unit_code: string;
@@ -604,6 +687,24 @@ export interface WorkerDayOutput {
   active_seconds: number;
 }
 
+/** GET /worker/me/summary — the phone's "My work" card (no ₹ yet). */
+export interface MyWorkSummary {
+  station: Station;
+  /** "pieces cut" | "mats stitched" | "mats packed" */
+  unit: string;
+  today: number;
+  /** Since Monday (factory week). */
+  week: number;
+  /** That Monday, YYYY-MM-DD. */
+  week_of: string;
+  days: WorkerDayOutput[];
+  /** Stitchers: mats they stitched that came back for rework this week / waiting for them now. */
+  rework_returned?: number;
+  rework_open?: number;
+  /** Packers: rework rounds they flagged this week. */
+  flagged?: number;
+}
+
 /** GET /workers/:id/summary?from&to (factory days, inclusive; default last 14) */
 export interface WorkerSummary {
   worker_id: string;
@@ -776,7 +877,7 @@ export interface MaterialLotDetail extends MaterialLotRow {
 
 // ───── Lists & search (U2) ─────
 
-export type BatchListView = "cutting" | "ready" | "stitching" | "packing" | "completed";
+export type BatchListView = "cutting" | "ready" | "stitching" | "packing" | "completed" | "cancelled";
 export type BatchSort = "created" | "code" | "quantity" | "phase" | "car" | "waiting";
 
 /** GET /batches query params — every one is also the admin's URL state. */

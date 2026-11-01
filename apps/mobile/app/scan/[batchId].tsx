@@ -173,6 +173,10 @@ export default function ScanScreen() {
           flashAndUnlock({ kind: "written_off" });
           return;
         }
+        if (e instanceof ApiError && e.code === "spare") {
+          flashAndUnlock({ kind: "err", msg: strings.scanner.spare });
+          return;
+        }
         if (e instanceof ApiError && e.code === "quota_reached") {
           flashAndUnlock({
             kind: "quota",
@@ -205,11 +209,12 @@ export default function ScanScreen() {
       flashAndUnlock({ kind: "err", msg: "Not an RPS unit label" });
       return;
     }
-    if (batch && !code.startsWith(`${batch.batch_code}-`)) {
+    // Packers check against the server instead: a reused spare keeps the code of its old batch (U3).
+    if (!isPacker && batch && !code.startsWith(`${batch.batch_code}-`)) {
       const otherBatch = batchCodeOf(code);
       flashAndUnlock({
         kind: "err",
-        msg: `Wrong batch — this mat is from ${otherBatch}`,
+        msg: strings.scanner.wrongBatch(otherBatch),
       });
       return;
     }
@@ -219,6 +224,10 @@ export default function ScanScreen() {
       setFlash({ kind: "checking" });
       peekUnit(code)
         .then((peek) => {
+          if (peek.batch_id !== batchId) {
+            flashAndUnlock({ kind: "err", msg: strings.scanner.wrongBatch(peek.batch_code) });
+            return;
+          }
           if (peek.can_pack) {
             setFlash(null);
             triggerFeedback("tick");
@@ -235,6 +244,10 @@ export default function ScanScreen() {
           }
           if (peek.reason === "written_off") {
             flashAndUnlock({ kind: "written_off" });
+            return;
+          }
+          if (peek.reason === "spare") {
+            flashAndUnlock({ kind: "err", msg: strings.scanner.spare });
             return;
           }
           if (peek.reason === "wrong_phase") {

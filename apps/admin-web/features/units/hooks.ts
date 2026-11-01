@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { unitApi } from "./api";
 
 export const useUnit = (code: string) =>
@@ -8,3 +8,17 @@ export const useUnit = (code: string) =>
     refetchInterval: 10_000,
     refetchOnWindowFocus: true,
   });
+
+/** Owner/supervisor: reverse a mat's last stitch or pack scan. */
+export function useUndoScan(code: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reason: string) => unitApi.undoScan(code, reason),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["unit", code] });
+      qc.invalidateQueries({ queryKey: ["batch", res.batch_id] });
+      qc.invalidateQueries({ queryKey: ["batches"] });
+      qc.invalidateQueries({ queryKey: ["batch-stats"] });
+    },
+  });
+}

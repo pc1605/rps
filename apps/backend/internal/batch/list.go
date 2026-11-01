@@ -10,12 +10,14 @@ import (
 // Batch list (U2): filters, sort and offset pagination — all driven by URL params in the admin.
 
 // Views mirror apps/admin-web/features/batches/views.ts (the sidebar phase tabs).
+// A cancelled batch keeps the phase it stopped in, so it is only in the "cancelled" view.
 var listViews = map[string]string{
-	"cutting":   `b.current_phase = 'cutting'`,
+	"cutting":   `b.current_phase = 'cutting' AND b.status <> 'cancelled'`,
 	"ready":     `b.current_phase = 'stitching' AND b.status = 'awaiting_assignment'`,
-	"stitching": `b.current_phase = 'stitching' AND b.status <> 'awaiting_assignment'`,
-	"packing":   `b.current_phase = 'packing'`,
+	"stitching": `b.current_phase = 'stitching' AND b.status NOT IN ('awaiting_assignment', 'cancelled')`,
+	"packing":   `b.current_phase = 'packing' AND b.status <> 'cancelled'`,
 	"completed": `b.current_phase = 'completed'`,
+	"cancelled": `b.status = 'cancelled'`,
 }
 
 // readySinceExpr: for a batch waiting for a stitching assignment, when cutting last finished
@@ -63,7 +65,7 @@ type ListPage struct {
 func ValidateListFilter(f ListFilter) error {
 	if f.View != "" {
 		if _, ok := listViews[f.View]; !ok {
-			return fmt.Errorf("%w: view must be one of cutting, ready, stitching, packing, completed", ErrInvalidInput)
+			return fmt.Errorf("%w: view must be one of cutting, ready, stitching, packing, completed, cancelled", ErrInvalidInput)
 		}
 	}
 	if f.Sort != "" {
@@ -85,6 +87,7 @@ const listSelect = `
 	       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'packed'),
 	       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.stitched_at IS NOT NULL),
 	       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'defective'),
+	       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.prestitched),
 	       (SELECT COUNT(*) FROM rework_logs rl WHERE rl.batch_id = b.id AND rl.fixed_at IS NULL AND (rl.decision IS NULL OR rl.decision = 'to_stitcher')),
 	       -- who's working right now (open logs at the current phase)
 	       (SELECT string_agg(wk.name, ', ' ORDER BY plg.started_at)
@@ -196,7 +199,7 @@ func (s *Service) ListPage(ctx context.Context, f ListFilter) (*ListPage, error)
 			&b.ReworkCount, &b.CreatedBy, &b.CreatedByName,
 			&b.Version, &b.CreatedAt, &b.UpdatedAt,
 			&b.CutQty, &b.ParentBatchID, &b.ParentBatchCode, &b.ShortReason, &b.StickersPrintedAt,
-			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched, &b.UnitsWrittenOff, &b.ReworkOpen,
+			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched, &b.UnitsWrittenOff, &b.UnitsPrestitched, &b.ReworkOpen,
 			&b.ActiveWorkers, &b.ReadySince,
 		); err != nil {
 			return nil, err

@@ -74,7 +74,7 @@ func (s *Service) Detail(ctx context.Context, id uuid.UUID) (*WorkerDetail, erro
 	rows, err := s.pool.Query(ctx, `
 		SELECT b.id, b.batch_code, `+carName+`, l.phase::text, l.started_at,
 		       CASE l.phase WHEN 'cutting' THEN 0
-		         WHEN 'stitching' THEN (SELECT COUNT(*) FROM batch_units u WHERE u.batch_id = b.id AND u.stitched_by = $1)
+		         WHEN 'stitching' THEN (SELECT COUNT(*) FROM batch_units u WHERE u.batch_id = b.id AND u.stitched_by = $1 AND NOT u.prestitched)
 		         ELSE (SELECT COUNT(*) FROM batch_units u WHERE u.batch_id = b.id AND u.packed_by = $1) END,
 		       (SELECT a.target_qty FROM batch_assignments a WHERE a.batch_id = b.id AND a.phase = l.phase AND a.worker_id = $1)
 		FROM phase_logs l
@@ -101,7 +101,7 @@ func (s *Service) Detail(ctx context.Context, id uuid.UUID) (*WorkerDetail, erro
 
 	rows, err = s.pool.Query(ctx, `
 		SELECT b.id, b.batch_code, `+carName+`, a.phase::text, a.target_qty,
-		       CASE a.phase WHEN 'stitching' THEN (SELECT COUNT(*) FROM batch_units u WHERE u.batch_id = b.id AND u.stitched_by = $1)
+		       CASE a.phase WHEN 'stitching' THEN (SELECT COUNT(*) FROM batch_units u WHERE u.batch_id = b.id AND u.stitched_by = $1 AND NOT u.prestitched)
 		         WHEN 'packing' THEN (SELECT COUNT(*) FROM batch_units u WHERE u.batch_id = b.id AND u.packed_by = $1) ELSE 0 END
 		FROM batch_assignments a
 		JOIN batches b ON b.id = a.batch_id
@@ -380,12 +380,12 @@ func (s *Service) History(ctx context.Context, id uuid.UUID, limit int, cursor s
 	rows, err := s.pool.Query(ctx, `
 		SELECT l.id, b.id, b.batch_code, cm.id, `+carName+`, l.phase::text, l.started_at, l.completed_at,
 		       CASE l.phase WHEN 'cutting' THEN COALESCE(l.quantity_completed, 0)
-		         WHEN 'stitching' THEN (SELECT COUNT(*) FROM batch_units u WHERE u.batch_id = b.id AND u.stitched_by = $1)
+		         WHEN 'stitching' THEN (SELECT COUNT(*) FROM batch_units u WHERE u.batch_id = b.id AND u.stitched_by = $1 AND NOT u.prestitched)
 		         ELSE (SELECT COUNT(*) FROM batch_units u WHERE u.batch_id = b.id AND u.packed_by = $1) END::int,
 		       (SELECT a.target_qty FROM batch_assignments a WHERE a.batch_id = b.id AND a.phase = l.phase AND a.worker_id = $1),
-		       CASE l.phase WHEN 'stitching' THEN (SELECT MIN(u.stitched_at) FROM batch_units u WHERE u.batch_id = b.id AND u.stitched_by = $1)
+		       CASE l.phase WHEN 'stitching' THEN (SELECT MIN(u.stitched_at) FROM batch_units u WHERE u.batch_id = b.id AND u.stitched_by = $1 AND NOT u.prestitched)
 		         WHEN 'packing' THEN (SELECT MIN(u.packed_at) FROM batch_units u WHERE u.batch_id = b.id AND u.packed_by = $1) END,
-		       CASE l.phase WHEN 'stitching' THEN (SELECT MAX(u.stitched_at) FROM batch_units u WHERE u.batch_id = b.id AND u.stitched_by = $1)
+		       CASE l.phase WHEN 'stitching' THEN (SELECT MAX(u.stitched_at) FROM batch_units u WHERE u.batch_id = b.id AND u.stitched_by = $1 AND NOT u.prestitched)
 		         WHEN 'packing' THEN (SELECT MAX(u.packed_at) FROM batch_units u WHERE u.batch_id = b.id AND u.packed_by = $1) END,
 		       CASE l.phase WHEN 'stitching' THEN (SELECT COUNT(*) FROM rework_logs rl JOIN batch_units u ON u.id = rl.unit_id
 		                                             WHERE rl.batch_id = b.id AND u.stitched_by = $1) ELSE 0 END::int
@@ -437,7 +437,7 @@ func openWork(ctx context.Context, tx pgx.Tx, id uuid.UUID) (claims, assigned in
 		       (SELECT COUNT(*) FROM batch_assignments a JOIN batches b ON b.id = a.batch_id
 		         WHERE a.worker_id = $1 AND b.current_phase = a.phase AND b.status IN ('pending','in_progress','awaiting_assignment')
 		           AND (a.target_qty IS NULL OR a.target_qty > (SELECT COUNT(*) FROM batch_units u WHERE u.batch_id = b.id
-		                 AND ((a.phase = 'stitching' AND u.stitched_by = $1) OR (a.phase = 'packing' AND u.packed_by = $1)))))::int`,
+		                 AND ((a.phase = 'stitching' AND u.stitched_by = $1 AND NOT u.prestitched) OR (a.phase = 'packing' AND u.packed_by = $1)))))::int`,
 		id).Scan(&claims, &assigned)
 	return
 }

@@ -11,7 +11,8 @@ import { AssignSheet } from "./assign-sheet";
 // Batch page summary of the stitching assignment (U3); all changes happen in the AssignSheet.
 export function StitchingAssignmentCard({ batch }: { batch: BatchDetail }) {
   const [open, setOpen] = useState(false);
-  if (batch.current_phase !== "stitching") return null;
+  // A cancelled batch keeps its phase (U3) but has nothing left to assign.
+  if (batch.current_phase !== "stitching" || batch.status === "cancelled") return null;
   // The short-cut panel above owns this state.
   if (batch.status === "awaiting_assignment" && batch.cut_qty < batch.quantity) return null;
 

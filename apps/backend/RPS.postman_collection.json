@@ -292,6 +292,58 @@
     {
       "key": "u3OtherStitcherId",
       "value": ""
+    },
+    {
+      "key": "u3bSfx",
+      "value": ""
+    },
+    {
+      "key": "u3bLineId",
+      "value": ""
+    },
+    {
+      "key": "u3bBrandId",
+      "value": ""
+    },
+    {
+      "key": "u3bCarId",
+      "value": ""
+    },
+    {
+      "key": "u3bCutterBadge",
+      "value": ""
+    },
+    {
+      "key": "u3bCutterToken",
+      "value": ""
+    },
+    {
+      "key": "u3bStitcherBadge",
+      "value": ""
+    },
+    {
+      "key": "u3bStitcherId",
+      "value": ""
+    },
+    {
+      "key": "u3bStitcherToken",
+      "value": ""
+    },
+    {
+      "key": "u3bBatchId",
+      "value": ""
+    },
+    {
+      "key": "u3bCode1",
+      "value": ""
+    },
+    {
+      "key": "u3bCode2",
+      "value": ""
+    },
+    {
+      "key": "u3bReuseId",
+      "value": ""
     }
   ],
   "item": [
@@ -9701,6 +9753,1533 @@
               }
             ],
             "url": "{{baseUrl}}/stitchers/load"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workflow corrections (U3b)",
+      "description": "U3 rest: edit before cutting, release claim (cutter + admin), undo scan, cancel \u2192 spare stock, reuse on New batch, spare write-off, My work. Self-contained: creates its own car item and workers. Run after Auth.",
+      "item": [
+        {
+          "name": "Setup \u00b7 admin login",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('u3bSfx', String(Date.now()).slice(-7));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('accessToken', d.tokens.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"owner@ambika.local\",\n  \"password\": \"admin123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Setup \u00b7 product line",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('u3bLineId', d[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/product-lines"
+          }
+        },
+        {
+          "name": "Setup \u00b7 brand",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('u3bBrandId', d[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/car-brands"
+          }
+        },
+        {
+          "name": "Setup \u00b7 fresh car item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('u3bCarId', d.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/car-models",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"brand_id\": {{u3bBrandId}},\n  \"name\": \"U3b car {{u3bSfx}}\",\n  \"size_class\": \"medium\",\n  \"pieces_per_set\": 4,\n  \"product_line_id\": {{u3bLineId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Setup \u00b7 cutter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('u3bCutterBadge', d.badge_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/workers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PM U3b cutter {{u3bSfx}}\",\n  \"station\": \"cutter\",\n  \"pin\": \"4321\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Setup \u00b7 cutter login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('u3bCutterToken', d.tokens.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badge_token\": \"{{u3bCutterBadge}}\",\n  \"pin\": \"4321\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Setup \u00b7 stitcher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('u3bStitcherBadge', d.badge_token); pm.collectionVariables.set('u3bStitcherId', d.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/workers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PM U3b stitcher {{u3bSfx}}\",\n  \"station\": \"stitcher\",\n  \"pin\": \"4321\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Setup \u00b7 stitcher login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('u3bStitcherToken', d.tokens.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"badge_token\": \"{{u3bStitcherBadge}}\",\n  \"pin\": \"4321\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Create batch (4)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('u3bBatchId', d.id);",
+                  "pm.test('4 mats waiting to be cut', () => { pm.expect(d.units_total).to.eql(4); pm.expect(d.current_phase).to.eql('cutting'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": {{u3bCarId}},\n  \"quantity\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Edit before cutting \u00b7 quantity 6 + notes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('6 units now', () => { pm.expect(d.quantity).to.eql(6); pm.expect(d.units.length).to.eql(6); });",
+                  "pm.test('notes saved', () => pm.expect(d.notes).to.eql('rush order'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 6,\n  \"notes\": \"rush order\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Edit \u00b7 quantity 0 \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cutter start",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bCutterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/batches/{{u3bBatchId}}/start"
+          }
+        },
+        {
+          "name": "Edit while claimed \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code not_editable', () => pm.expect(pm.response.json().code).to.eql('not_editable'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cutter gives back the claim",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bCutterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/batches/{{u3bBatchId}}/release"
+          }
+        },
+        {
+          "name": "Cutter start again",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bCutterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/batches/{{u3bBatchId}}/start"
+          }
+        },
+        {
+          "name": "Admin releases the claim",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}/release-claim"
+          }
+        },
+        {
+          "name": "Release with no claim \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code no_claim', () => pm.expect(pm.response.json().code).to.eql('no_claim'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}/release-claim"
+          }
+        },
+        {
+          "name": "Batch is back in the cutting queue",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('cutting / pending', () => { pm.expect(d.current_phase).to.eql('cutting'); pm.expect(d.status).to.eql('pending'); });",
+                  "pm.test('released claims leave no timeline rows', () => pm.expect(d.timeline.length).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}"
+          }
+        },
+        {
+          "name": "Cutter start (third time)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bCutterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/batches/{{u3bBatchId}}/start"
+          }
+        },
+        {
+          "name": "Cutter completes 6",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bCutterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/batches/{{u3bBatchId}}/complete",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity_completed\": 6\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Assign the stitcher (shared pile)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}/assignments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phase\": \"stitching\",\n  \"assignments\": [\n    {\n      \"worker_id\": \"{{u3bStitcherId}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Stitcher joins",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bStitcherToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/batches/{{u3bBatchId}}/start"
+          }
+        },
+        {
+          "name": "Unit codes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('u3bCode1', d.units[0].unit_code); pm.collectionVariables.set('u3bCode2', d.units[1].unit_code);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}"
+          }
+        },
+        {
+          "name": "Stitch mat 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bStitcherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/units/scan",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_code\": \"{{u3bCode1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Stitch mat 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bStitcherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/units/scan",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_code\": \"{{u3bCode2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Undo scan \u00b7 no reason \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/units/{{u3bCode2}}/undo-scan",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Undo scan \u00b7 unknown mat \u2192 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));",
+                  "pm.test('code unit_not_found', () => pm.expect(pm.response.json().code).to.eql('unit_not_found'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/units/B-1999-999-999/undo-scan",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"test\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Undo stitch of mat 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('stitch undone, batch stays', () => { pm.expect(d.scan).to.eql('stitch'); pm.expect(d.moved_back).to.eql(false); pm.expect(d.phase).to.eql('stitching'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/units/{{u3bCode2}}/undo-scan",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"scanned the wrong mat\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Undo again \u00b7 nothing to undo \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code cannot_undo', () => pm.expect(pm.response.json().code).to.eql('cannot_undo'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/units/{{u3bCode2}}/undo-scan",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"again\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Stitcher can't undo (admin route)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bStitcherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/units/{{u3bCode1}}/undo-scan",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"me\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cancel preview",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('1 stitched + 5 cut \u2192 spare', () => { pm.expect(d.spare_stitched).to.eql(1); pm.expect(d.spare_unstitched).to.eql(5); pm.expect(d.removed).to.eql(0); pm.expect(d.blocked).to.be.undefined; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}/cancel-preview"
+          }
+        },
+        {
+          "name": "Cancel \u00b7 bad reason \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"nope\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cancel \u00b7 other without note \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"other\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cancel the batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('outcome', () => { pm.expect(d.spare_stitched).to.eql(1); pm.expect(d.spare_unstitched).to.eql(5); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"order_cancelled\",\n  \"note\": \"Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cancel again \u2192 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code not_cancellable', () => pm.expect(pm.response.json().code).to.eql('not_cancellable'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}/cancel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"order_cancelled\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Cancelled view lists it",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('only cancelled batches', () => d.items.forEach((b) => pm.expect(b.status).to.eql('cancelled')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches?view=cancelled&q={{u3bSfx}}&limit=200"
+          }
+        },
+        {
+          "name": "Scanning a spare \u2192 409 spare",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));",
+                  "pm.test('code spare', () => pm.expect(pm.response.json().code).to.eql('spare'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bStitcherToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/units/scan",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"unit_code\": \"{{u3bCode1}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Spares for the car item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('1 stitched + 5 unstitched', () => { pm.expect(d.length).to.eql(1); pm.expect(d[0].stitched).to.eql(1); pm.expect(d[0].unstitched).to.eql(5); pm.expect(d[0].sources[0].count).to.eql(6); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/spares?car_model_id={{u3bCarId}}"
+          }
+        },
+        {
+          "name": "New batch \u00b7 more spares than quantity \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": {{u3bCarId}},\n  \"quantity\": 2,\n  \"spares_unstitched\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "New batch reusing 1 stitched + 3 spares",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.collectionVariables.set('u3bReuseId', d.id);",
+                  "pm.test('starts cut 4 of 8, 1 stitched', () => { pm.expect(d.cut_qty).to.eql(4); pm.expect(d.units_stitched).to.eql(1); pm.expect(d.units_prestitched).to.eql(1); pm.expect(d.current_phase).to.eql('cutting'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": {{u3bCarId}},\n  \"quantity\": 8,\n  \"spares_stitched\": 1,\n  \"spares_unstitched\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reused units",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('stitched spare keeps its code', () => { pm.expect(d.units[0].unit_code).to.eql(pm.collectionVariables.get('u3bCode1')); pm.expect(d.units[0].prestitched).to.eql(true); });",
+                  "pm.test('unstitched spares get new codes', () => d.units.slice(1, 4).forEach((u) => { pm.expect(u.unit_code.startsWith(d.batch_code + '-')).to.eql(true); pm.expect(u.reused_from).to.be.a('string'); }));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bReuseId}}"
+          }
+        },
+        {
+          "name": "Write off the last 2 spares",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('2 codes', () => pm.expect(d.unit_codes.length).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/spares/write-off",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": {{u3bCarId}},\n  \"stitched\": 0,\n  \"unstitched\": 2,\n  \"note\": \"Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Write off more than exist \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/spares/write-off",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"car_model_id\": {{u3bCarId}},\n  \"stitched\": 0,\n  \"unstitched\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "No spares left",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('empty', () => pm.expect(d.length).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/spares?car_model_id={{u3bCarId}}"
+          }
+        },
+        {
+          "name": "My work (stitcher)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('stitcher output', () => { pm.expect(d.station).to.eql('stitcher'); pm.expect(d.unit).to.eql('mats stitched'); pm.expect(d.today).to.eql(1); pm.expect(d.week).to.be.at.least(1); pm.expect(d.rework_open).to.eql(0); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bStitcherToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/me/summary"
+          }
+        },
+        {
+          "name": "My work \u00b7 admin token \u2192 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/me/summary"
           }
         }
       ]

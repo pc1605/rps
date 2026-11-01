@@ -7,7 +7,7 @@ import { useCallback, useMemo } from "react";
 // URL is the single source of truth for the batch list (U2): shareable, back-button safe.
 // `phase` keeps its old name (sidebar tabs, dashboard pipeline links); the API calls it `view`.
 export const PAGE_SIZE = 50;
-const VIEWS: BatchListView[] = ["cutting", "ready", "stitching", "packing", "completed"];
+const VIEWS: BatchListView[] = ["cutting", "ready", "stitching", "packing", "completed", "cancelled"];
 const SORTS: BatchSort[] = ["created", "code", "quantity", "phase", "car", "waiting"];
 
 export type UrlState = {

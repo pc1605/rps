@@ -10,6 +10,14 @@ Home = cutting queue (open; blocked/dimmed cards for batches another cutter has 
 Batch → **Start cutting ▶** (exclusive) → same screen shows PIECES COMPLETED input (prefilled with quantity; short count
 asks to confirm) → **Complete → send for assignment** → Alert "sent to admin for stitching assignment" → back to queue.
 
+U3: while the cutter holds the claim, **Give back this batch** (ghost button under the stepper, confirm Alert) returns it
+to the cutting queue (`POST /worker/batches/:id/release`).
+
+## My work (U3, home)
+Card at the top of every home queue: "MY WORK · mats stitched" (or pieces cut / mats packed), **today** and **this week**
+(from Monday), stitchers "n came back for rework this week" + "n waiting for you", packers "n sent to rework this week".
+`GET /worker/me/summary`, refetched every minute and on pull-to-refresh. No ₹ until Slice D.
+
 ## Stitcher
 Home shows **only batches assigned to me** (server filters). Card: `📌 Your share: 3 / 8 · with Surya, Mahesh` (or
 `📌 Assigned to you` when uncapped), `👤 names` currently working, `▶ You're in — tap to continue` once joined.
@@ -22,7 +30,9 @@ Home = packing queue (open unless assigned). Join → `PACKED n / m` → **Open 
 1. `lock` ref: first line `if (lock.current) return; lock.current = true;` — never toggle `onBarcodeScanned` (camera restarts → black preview).
 2. Local validation before any network:
    - not `^B-\d{4}-\d{3}-\d{3}$` → red "Not an RPS unit label"
-   - not prefixed by this batch's code → red "Wrong batch — this mat is from B-2026-00X"
+   - not prefixed by this batch's code → red "Wrong batch — this mat is from B-2026-00X" (stitchers; U3: packers
+     peek first and compare `batch_id`, because a reused stitched spare keeps its old code)
+   - spare mat (409 `spare` / peek reason `spare`) → red "Spare stock — keep it aside"
 3. `POST /worker/units/scan` → flash:
    - green `✓ B-2026-005-003` (counted)
    - amber "Already scanned" + code

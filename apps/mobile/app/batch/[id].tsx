@@ -12,8 +12,9 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Stat } from "../../components/ui/Stat";
 import { useAuth } from "../../features/auth/store";
-import { useCompleteBatch, useMyBatches, useStartBatch } from "../../features/batches/hooks";
+import { useCompleteBatch, useMyBatches, useReleaseBatch, useStartBatch } from "../../features/batches/hooks";
 import { ApiError } from "../../lib/api-client";
+import { strings } from "../../lib/strings";
 import { useOnline } from "../../lib/use-online";
 
 export default function BatchAction() {
@@ -23,6 +24,7 @@ export default function BatchAction() {
   const { data: batches, isPending } = useMyBatches();
   const startBatch = useStartBatch();
   const completeBatch = useCompleteBatch();
+  const releaseBatch = useReleaseBatch();
   const isOnline = useOnline();
 
   const batch = useMemo(() => batches?.find((b) => b.id === id), [batches, id]);
@@ -105,6 +107,23 @@ export default function BatchAction() {
         onError,
       },
     );
+
+  const handleRelease = () =>
+    Alert.alert(strings.cutting.releaseTitle, strings.cutting.releaseBody, [
+      { text: strings.cutting.keep, style: "cancel" },
+      {
+        text: strings.cutting.releaseConfirm,
+        style: "destructive",
+        onPress: () =>
+          releaseBatch.mutate(batch.id, {
+            onSuccess: () => {
+              Alert.alert("Done ✓", strings.cutting.released(batch.batch_code));
+              router.back();
+            },
+            onError,
+          }),
+      },
+    ]);
 
   const stepDecrement = () => {
     const current = Number.isNaN(qtyNum) ? 1 : qtyNum;
@@ -256,6 +275,16 @@ export default function BatchAction() {
             {remaining} remaining of {batch.quantity}
           </Text>
         </Card>
+      )}
+
+      {isCutter && mine && (
+        <AppButton
+          title={strings.cutting.release}
+          variant="ghost"
+          size="md"
+          onPress={handleRelease}
+          loading={releaseBatch.isPending}
+        />
       )}
 
       {isCutter && !mine && batch.status === "in_progress" && (

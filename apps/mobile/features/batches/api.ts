@@ -20,6 +20,10 @@ export const batchApi = {
       notes,
     });
   },
+  /** Cutter gives back their own cutting claim (before reporting the cut). */
+  release: async (batchId: string): Promise<void> => {
+    await http.post(`/worker/batches/${batchId}/release`);
+  },
   scanUnit: async (unitCode: string): Promise<ScanResult> => {
     const res = await http.post("/worker/units/scan", { unit_code: unitCode });
     return res.data?.data ?? res.data;
