@@ -625,6 +625,20 @@ export interface WorkerSummary {
   flagged?: number;
 }
 
+/** GET /stitchers/load — one active stitcher's workload (assign panel, U3). Sorted least open work first. */
+export interface StitcherLoad {
+  worker_id: string;
+  name: string;
+  /** Mats still to stitch in live stitching batches. Shared-pile batches count every unstitched mat. */
+  open_mats: number;
+  open_batches: number;
+  /** Has joined a live stitching batch right now. */
+  on_floor: boolean;
+  last_scan_at: string | null;
+  /** Stitched since the start of the factory day. */
+  mats_today: number;
+}
+
 export interface WorkerHistoryRow {
   phase_log_id: string;
   batch_id: string;

@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -135,6 +136,16 @@ func (h *Handler) Stats(c *fiber.Ctx) error {
 		return httpx.Internal(c, "failed to load stats")
 	}
 	return httpx.OK(c, stats)
+}
+
+// StitcherLoads: GET /stitchers/load — active stitchers with open work, on-floor status and today's output.
+func (h *Handler) StitcherLoads(c *fiber.Ctx) error {
+	out, err := h.svc.StitcherLoads(c.Context(), time.Now())
+	if err != nil {
+		log.Error().Err(err).Msg("stitcher loads")
+		return httpx.Internal(c, "failed to load stitchers")
+	}
+	return httpx.OK(c, out)
 }
 
 type completeInput struct {
