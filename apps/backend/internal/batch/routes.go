@@ -19,12 +19,14 @@ func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 	api.Get("/units/:code", admin, h.UnitJourney)
 	api.Get("/search", admin, h.Search)
 	api.Get("/stitchers/load", admin, h.StitcherLoads)
+	api.Get("/stitchers/:id/open", admin, h.OpenStitching)
 
 	// Admin actions
 	api.Post("/batches", admin, h.Create)
 	api.Post("/batches/:id/stickers-printed", admin, h.MarkStickersPrinted)
 	api.Post("/batches/:id/resolve-short", admin, h.ResolveShort)
 	api.Put("/batches/:id/assignments", admin, h.SetAssignments)
+	api.Post("/stitching/hand-over", admin, h.HandOver)
 	api.Post("/rework/:id/decide", admin, h.AdminDecideRework)
 
 	// Worker (phone) routes — handlers check the worker token/station

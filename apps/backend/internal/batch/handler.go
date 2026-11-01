@@ -148,6 +148,68 @@ func (h *Handler) StitcherLoads(c *fiber.Ctx) error {
 	return httpx.OK(c, out)
 }
 
+type handOverInput struct {
+	FromWorkerID string `json:"from_worker_id"`
+	Moves        []struct {
+		BatchID    string `json:"batch_id"`
+		ToWorkerID string `json:"to_worker_id"`
+	} `json:"moves"`
+}
+
+// HandOver: POST /stitching/hand-over {from_worker_id, moves: [{batch_id, to_worker_id}]}.
+func (h *Handler) HandOver(c *fiber.Ctx) error {
+	if auth.ActorType(c) != "user" {
+		return httpx.Forbidden(c, "admin token required")
+	}
+	var in handOverInput
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	from, err := uuid.Parse(in.FromWorkerID)
+	if err != nil {
+		return httpx.BadRequest(c, "invalid from_worker_id")
+	}
+	moves := make([]HandOverMove, 0, len(in.Moves))
+	for _, m := range in.Moves {
+		bid, err := uuid.Parse(m.BatchID)
+		if err != nil {
+			return httpx.BadRequest(c, "invalid batch id")
+		}
+		to, err := uuid.Parse(m.ToWorkerID)
+		if err != nil {
+			return httpx.BadRequest(c, "invalid to_worker_id")
+		}
+		moves = append(moves, HandOverMove{BatchID: bid, ToWorkerID: to})
+	}
+	adminID, _ := auth.UserID(c)
+	res, err := h.svc.HandOver(c.Context(), from, moves, adminID, c.IP())
+	switch {
+	case err == nil:
+		return httpx.OK(c, res)
+	case errors.Is(err, ErrNotFound):
+		return httpx.Error(c, fiber.StatusNotFound, "not_found", "batch not found")
+	case errors.Is(err, ErrInvalidInput):
+		return httpx.BadRequest(c, err.Error())
+	default:
+		log.Error().Err(err).Msg("stitching hand-over")
+		return httpx.Internal(c, "failed to hand over")
+	}
+}
+
+// OpenStitching: GET /stitchers/:id/open — that stitcher's live stitching assignments.
+func (h *Handler) OpenStitching(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid worker id")
+	}
+	out, err := h.svc.OpenStitchingFor(c.Context(), id)
+	if err != nil {
+		log.Error().Err(err).Msg("open stitching")
+		return httpx.Internal(c, "failed to load open stitching")
+	}
+	return httpx.OK(c, out)
+}
+
 type completeInput struct {
 	QuantityCompleted int    `json:"quantity_completed"`
 	Notes             string `json:"notes,omitempty"`

@@ -641,6 +641,32 @@ export interface StitcherLoad {
   mats_today: number;
 }
 
+/** GET /stitchers/:id/open — a stitcher's live stitching assignments (hand-over dialog). */
+export interface OpenStitching {
+  batch_id: string;
+  batch_code: string;
+  car_name: string;
+  quantity: number;
+  /** null = shared pile */
+  target_qty: number | null;
+  done_qty: number;
+  /** Quota: target − done. Shared pile: unstitched mats of the batch. */
+  left_qty: number;
+}
+
+/** POST /stitching/hand-over body. */
+export interface HandOverInput {
+  from_worker_id: string;
+  moves: { batch_id: string; to_worker_id: string }[];
+}
+
+/** POST /stitching/hand-over response row. `moved` is 0 for a shared-pile batch. */
+export interface HandOverResult {
+  batch_id: string;
+  batch_code: string;
+  moved: number;
+}
+
 export interface WorkerHistoryRow {
   phase_log_id: string;
   batch_id: string;
