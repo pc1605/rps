@@ -31,6 +31,12 @@ cutting / pending ── cutter Start ──▶ cutting / in_progress
 | stitching → packing/pending | The scan that sets the last `stitched_at` | `ScanUnit` (closes all open stitching logs with per-worker counts) |
 | packing → completed | The scan that packs the last unit | `ScanUnit` |
 
+| edit before cutting (U3) | `PATCH /batches/:id` while cutting/pending | `Edit` (`edit.go`) |
+| cutting in_progress → pending (U3) | admin `POST /batches/:id/release-claim` or the cutter `POST /worker/batches/:id/release` | `ReleaseClaim` (`release.go`) — open cutting log deleted |
+| any (before the first pack) → cancelled (U3) | `POST /batches/:id/cancel` | `Cancel` (`cancel.go`) — phase kept, mats → spare / removed / written off |
+| packing → stitching, completed → packing (U3) | `POST /units/:code/undo-scan` | `UndoScan` (`undo.go`) — only while nothing happened in the next stage |
+| create straight into stitching / packing (U3) | `POST /batches` with spares covering the whole quantity | `Create` — awaiting_assignment, or packing/pending when all came in stitched |
+
 **Manual `complete` is cutting-only.** For stitching/packing it returns 400 "… completes automatically when all units are scanned".
 
 ## Short-Cut Handling
@@ -58,6 +64,13 @@ Cutter error · Order changed · Other (+ note, required for Other). The reason 
 | `stitching_started` / `packing_started` | first worker joins the phase | phase / in_progress | |
 | `stitching_completed` | last stitching scan | packing / pending | |
 | `completed` | last packing scan, or a write-off / re-cut decision that finishes packing | completed / completed | |
+| `edited` (U3) | PATCH before cutting | unchanged | fields, before, after |
+| `cancelled` (U3) | cancel | phase kept / cancelled | reason, note, spare_stitched, spare_unstitched, removed, written_off |
+| `claim_released` (U3) | admin or cutter release | cutting / pending | worker_id, worker_name, started_at, by (`admin`/`cutter`) |
+| `scan_undone` (U3, migration 019) | undo-scan | stitching or packing / in_progress when it moved back; else none | unit_code, scan, worker_id, scanned_at, reason, moved_back |
+
+`created` (U3) also carries `spares_stitched`, `spares_unstitched`, `spare_codes` when spares were reused, and its
+to_phase/to_status is wherever the batch started (cutting, or stitching/packing when spares covered it).
 
 - **Stage entry** (WIP ageing) = newest event with `to_phase` = current phase and `to_status` = the stage's entry status
   (`pending`; `awaiting_assignment` for Ready). **Last activity** (stuck) = newest of: any event, unit scan, phase claim,
@@ -65,6 +78,17 @@ Cutter error · Order changed · Other (+ note, required for Other). The reason 
 - "Completed today" (`/batches/stats`) counts `completed` events by factory day (D5), not `updated_at`.
 - Backfilled rows (`data.backfill`) are approximate: stitching/packing start = first scan, completion = last pack scan;
   old `assigned` rows only know the worker count.
+
+## Cancel & spare stock (U3 — D35, D36)
+- Cancel is allowed until the first mat is packed; owner and supervisors. Cut units are `unit_number ≤ cut_qty` (the
+  short-cut convention), so: stitched → `spare` (code + `stitched_by` kept) · cut, unstitched → `spare` · never cut →
+  deleted · open rework → `defective` (round closed `write_off`). Materials already consumed stay consumed.
+- A cancelled batch keeps the phase it stopped in; lists show it only under **Cancelled**.
+- Spares stay on the cancelled batch until reused or written off (`/spares`, Stock → Spare mats).
+- **Reuse**: New batch for the exact same car item offers them. They move to the new batch as units 1..k with
+  `reused_from` = the cancelled batch; `cut_qty` starts at k so the cutter cuts (and the engine consumes for) the rest.
+  Unstitched ones get the new batch's codes (new labels); stitched ones keep their codes and count as stitched
+  (`prestitched`), credit staying with their stitcher.
 
 ## Visibility per status
 - `awaiting_assignment`: admin only (Batches → Ready to stitch). Worker queues filter `status IN ('pending','in_progress')`.

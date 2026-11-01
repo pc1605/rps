@@ -72,3 +72,14 @@ curl -s -X PUT $API/batches/$BID/assignments -H "Authorization: Bearer $T" -H "C
   -d '{"phase":"stitching","assignments":[{"worker_id":"<surya>","target_qty":8},{"worker_id":"<raj>","target_qty":2}]}'
 curl -s -X POST $API/worker/units/scan -H "Authorization: Bearer $STITCHER" -H "Content-Type: application/json" -d '{"unit_code":"B-2026-005-001"}'
 ```
+
+### U3b folder — "Workflow corrections (U3b)"
+Self-contained (creates its own car item, cutter and stitcher; run after `Auth`): edit before cutting, cutter + admin
+release, undo scan, cancel → spare stock, cancelled view, scanning a spare, reuse on New batch, spare write-off,
+My work. `npx --no-install newman run RPS.postman_collection.json -e RPS-test.postman_environment.json --folder Auth
+--folder "Workflow corrections (U3b)"` → 50 requests, 77 assertions.
+
+Known failures on a full run (same on master, not U3): `Health / Healthz` calls `:8080` directly instead of
+`{{baseUrl}}`; `Rework Flow` needs `postman/fixtures/fault.jpg` relative to the working directory, and the following
+`Multi-Worker Scanning / Packer scans 4` step fails with it.
+

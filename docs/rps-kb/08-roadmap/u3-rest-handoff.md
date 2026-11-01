@@ -1,6 +1,9 @@
 # U3 (rest) — hand-off prompt (Nov 2026)
 
-Status: **planned, not started.** Paste the prompt below into a new agent session to continue U3.
+Status: **built (Nov 2026)** — branch `agent/slice-u3`, decisions D34–D39, migrations 017–019. The owner confirmed the
+three defaults (rework → written off on cancel, undo refused once the next stage started, spares match the exact car
+item), plus: spares that are all stitched send the new batch straight to packing, and releasing a claim deletes the open
+cutting log. The prompt below is kept for the record.
 The stitching-assignment part of U3 is done (see `stitching-assignment-ux.md`, decisions D31–D33).
 
 ```text

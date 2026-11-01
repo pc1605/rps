@@ -5,6 +5,7 @@ Stat cards: In cutting · **Ready for stitching** (amber; the admin's to-do) · 
 Attention cards include **N batches stuck** (R1, from `/reports/stuck`) → Reports overview.
 
 ## Batches (list) — `/batches[?phase=…]`
+(U3: a **Cancelled** tab under the sidebar views; cancelled batches are only there.)
 Sidebar sub-nav: Cutting · Ready to stitch · Stitching · Packing · Completed, each with a live count pill (from `/batches/stats`).
 No `phase` param → all batches. Table columns: Code (link) · Model/size · Qty · Phase badge (amber **ready** for parked) ·
 Packed n/m · Created. **Packing view only**: extra column **Print stickers** → downloads sticker PDF and POSTs
@@ -29,6 +30,13 @@ Right-side sheet: `Assign <code>` · car · mats · waiting. Stitchers from `GET
 
 ## Batch detail — `/batches/[id]`
 - Header: code, model · qty · size, notes; **Labels PDF** (taffeta reprint); badge shows `ready for stitching` when parked.
+  **U3**: **Edit** (`EditBatchDialog`, only while cutting/pending: item — fixed once some are cut —, quantity,
+  roll, notes) and **Cancel batch** (`CancelBatchDialog`, until the first pack: AlertDialog loads
+  `/cancel-preview` and shows the outcome, e.g. "4 mats → spare stock (2 stitched) · 2 never cut → removed", reason +
+  note). A cancelled batch shows a "spare" stat.
+- **U3 Release**: the open cutting entry on the timeline has **Release** (AlertDialog) while the batch is cutting/in_progress.
+- **U3 Undo last scan**: on stitched / packed unit cards (quiet ghost button) and on the unit page header; AlertDialog
+  with a required reason; the API refuses what can't be undone. Unit cards of reused spares say "↩ spare from B-…".
 - **Short-cut panel** (`ShortCutPanel`): renders when `cut_qty < quantity` and `current_phase === "stitching"`. Displays amber warning banner with short piece count, and three resolution actions (`Split`, `Reduce`, `Recut`) triggering `POST /batches/:id/resolve-short`.
 - **Stitching assignment card** (`StitchingAssignmentCard`, U3; only while `current_phase === "stitching"` and no
   unresolved short cut): who has what (`done / target` + bar, or shared pile) and one button — **Assign stitchers**
@@ -46,7 +54,15 @@ Table: name · station badge · active · last login · **QR icon** → Enrollme
 `RPS-ENROLL:` QR + copyable text). Create dialog → success view shows QR + text code + instructions.
 
 ## Stock — `/stock`
-Finished goods only (packed mats by item), with a pointer to Materials. The old Raw-material/Rolls tab was removed in C2.
+Finished goods (packed mats by item), with a pointer to Materials. The old Raw-material/Rolls tab was removed in C2.
+**U3**: a "N spare mats from cancelled batches → View" line when there are any.
+
+## Spare mats — `/stock/spares` (U3)
+DataTable per car item: stitched · cut-not-stitched · source batches (×count) · since · **Write off** (AlertDialog
+with stitched / unstitched counts, default all, oldest first, note). **New batch** dialog: after picking the item, an
+amber "N spare mats (k stitched) — use them" switch; it uses stitched first, never more than the quantity, says what
+the cutter still cuts (or "no cutting needed" / "straight to packing"), and the materials preview counts only the mats
+still to cut.
 
 ## Reports (R1) — `/reports`, `/reports/workers`, `/reports/quality`
 Tabs are routes; the date range is URL state (`?from&to`, default last 30 days) and travels between tabs. Every table

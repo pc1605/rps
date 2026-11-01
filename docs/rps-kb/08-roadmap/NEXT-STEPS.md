@@ -8,7 +8,7 @@
 | U2 ✅ | Lists                    | whole-row click on every table, header search (batch code, unit code, barcode, worker, car), filters+sort in URL, server pagination for batches                                                                      | U1         | main                 |
 | C2 ✅ | Materials admin screens  | Materials (types, variants, lots, receive/adjust, movements), Recipes grid, groups + overrides in car dialog, "Materials used" on batch                                                                              | C1, U1, U2 | main                 |
 | R1  | Reports v2                | WIP ageing + stuck batches (also on dashboard), throughput, cycle time per phase, first-pass yield, worker output/hour, short-cut rate; CSV export                                                                   | U2         | main                 |
-| U3  | Workflow gaps             | ✅ stitching assignment UX + reassign mid-stitching (hand-over) · still to do (hand-off: `u3-rest-handoff.md`): edit/cancel batch + spare stock, release claim, undo scan, My work card                                                                                                                   | U2         | main                 |
+| U3 ✅ | Workflow gaps            | stitching assignment UX + reassign mid-stitching (hand-over) · edit before cutting, cancel → spare stock + reuse on New batch, release claim, undo scan, My work card (D34–D39; migrations 017–019)                                                                                                            | U2         | main                 |
 | C3  | Cutter materials          | "You'll need …" panel, roll QR scan at cutting start, lot QR labels                                                                                                                                                  | C2         | main                 |
 | R2  | Material reports          | consumption vs recipe, waste, cost per mat                                                                                                                                                                           | C2         | main                 |
 | E   | Hardening & deploy        | E1 security · E2 deploy · E3 EAS · E4 factory pilot                                                                                                                                                                  | U3         | main                 |
@@ -28,6 +28,6 @@ and only when they don't touch the same files. Merge order: U0 → C1 → U1 →
 ### Open owner questions (from the audit)
 
 - ~~What happens to a stitcher's remaining quota when they're absent mid-batch?~~ Handed over to another stitcher (D32, built in U3).
-- Who may cancel a batch after cutting (owner only, or supervisors too)?
-- Should workers see their own output/earnings on the phone?
+- ~~Who may cancel a batch after cutting (owner only, or supervisors too)?~~ Owner and supervisors, until the first pack (D35, U3).
+- ~~Should workers see their own output/earnings on the phone?~~ Output yes (My work card, D39, U3); earnings come with Slice D.
 - What counts as a "late" batch (due dates per order?)

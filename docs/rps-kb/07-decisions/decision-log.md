@@ -143,3 +143,51 @@ batch counts every unstitched mat for each assignee.
 clearing a stitching assignment doesn't restart it; a re-cut does (cutting finishes again).
 **Why**: Owner (U3): a batch held up by a short cut has really been waiting since cutting ended.
 **Status**: Built (U3).
+
+### D34 — Edit a batch only before cutting starts (Nov 2026)
+**Decision**: Car item, quantity, roll and notes can be edited while the batch is `cutting/pending` (nobody holds the
+claim). Once some mats are cut (a re-cut after a short cut, or reused spares) the car is fixed and the quantity must
+stay above `cut_qty`. Quantity changes add / delete the highest-numbered units. `edited` event with before/after.
+**Why**: Audit gap (no way to fix a wrong entry); after cutting, the cut mats and consumed material make an edit a lie.
+**Status**: Built (U3).
+
+### D35 — Cancel keeps cut work as spare stock (Nov 2026)
+**Decision**: Owner and supervisors may cancel a batch until its first mat is packed. Stitched and cut-unstitched mats
+become `spare` (kept on the cancelled batch, codes kept); never-cut units are deleted; mats in open rework are written
+off (not kept as spares); open logs close, assignments are cleared, consumed materials stay consumed. The admin sees
+the outcome before confirming (`/cancel-preview`), and gives a reason.
+**Why**: Owner answers for U3 (Nov 2026): cut/stitched mats are real stock, not waste; rework mats are written off
+(owner confirmed the default). Answers the audit question "who may cancel a batch after cutting".
+**Status**: Built (U3).
+
+### D36 — Spares are reused on New batch for the exact same car item (Nov 2026)
+**Decision**: New batch offers spares of exactly the same car item (car_models row = model + product line). Used
+spares move into the new batch as units 1..k, already cut (`cut_qty = k`, so the cutter cuts and the engine consumes
+less). Unstitched spares get new codes; stitched spares keep theirs, count as stitched (`prestitched`) and keep their
+stitcher's credit without that stitcher being assigned. Stitching quotas total the mats still to stitch. Spares covering
+the whole batch skip cutting; all stitched → straight to packing. Spares can be written off from Stock → Spare mats.
+**Why**: Owner answers for U3; exact match is the owner-confirmed default (colour / material differs across lines).
+Straight-to-packing confirmed by the owner when the plan was approved.
+**Status**: Built (U3).
+
+### D37 — Releasing a cutting claim deletes the open log (Nov 2026)
+**Decision**: The admin (timeline) or the cutter holding it (phone, before Complete) can release a cutting claim; the
+batch returns to `cutting/pending` and the open cutting log is deleted rather than closed with 0, so cycle-time reports
+stay clean. The `claim_released` event + audit keep who held it and since when.
+**Why**: Owner approved (U3 plan). A stuck claim otherwise blocked the batch for every other cutter.
+**Status**: Built (U3).
+
+### D38 — Undo scan: admin only, only until the next stage starts (Nov 2026)
+**Decision**: Owner/supervisor can undo a mat's latest stitch or pack scan from the admin, with a reason. If that scan
+finished the stage, the batch moves back (and the logs it closed reopen) only while nothing happened in the next stage
+(no packer joined, nothing packed; nothing dispatched after completion). Refused for mats in rework, fixed in rework
+after the stitch, written off, spare, or prestitched. Workers can't undo.
+**Why**: Owner answers for U3; "refuse once the next stage started" is the owner-confirmed default.
+**Status**: Built (U3).
+
+### D39 — "My work" on the phone, counts only (Nov 2026)
+**Decision**: The phone home shows the worker's own output: today and this week (from Monday, factory time) at their
+station; stitchers also see mats that came back for rework this week and how many wait for them; packers how many they
+sent to rework. No money until Slice D.
+**Why**: Owner (U3); audit question "should workers see their own output".
+**Status**: Built (U3).

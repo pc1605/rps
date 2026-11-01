@@ -12,8 +12,8 @@ migrate -path apps/backend/migrations -database "$DATABASE_URL" up      # or: ve
 | `batch_phase` | cutting, stitching, packing, completed |
 | `batch_status` | pending, in_progress, completed, cancelled, **awaiting_assignment** (added 006) |
 | `worker_station` | cutter, stitcher, packer |
-| `unit_status` | pending, packed, defective, dispatched, **rework** (added 012) |
-| `batch_event_kind` | created, cut_started, cut_completed, short_resolved, assigned, stitching_started, stitching_completed, packing_started, completed, cancelled, edited, claim_released (016; the last three are for U3) |
+| `unit_status` | pending, packed, defective, dispatched, **rework** (added 012), **spare** (added 017) |
+| `batch_event_kind` | created, cut_started, cut_completed, short_resolved, assigned, stitching_started, stitching_completed, packing_started, completed, cancelled, edited, claim_released (016; the last three written from U3), **scan_undone** (019) |
 
 Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` must not be used by a statement in the same transaction.
 
@@ -120,11 +120,24 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
 - `app_settings(key pk, value jsonb, updated_at, updated_by)`; seeded `stuck_hours` = `{cutting:24, awaiting_assignment:24, stitching:48, packing:48}`.
 - `backfill_batch_events()` rebuilds history for batches with **no** events (idempotent; `data.backfill = true`); run by the migration and at the end of `seeds/02-demo.sql`.
 
+### 017 — spare_units (U3)
+- `ALTER TYPE unit_status ADD VALUE IF NOT EXISTS 'spare'` — cut / stitched mats of a cancelled batch (D35). Down turns spares into `defective`.
+
+### 018 — spare_reuse (U3)
+- `batch_units.reused_from UUID → batches ON DELETE SET NULL` (the cancelled batch a reused spare came from) and
+  `batch_units.prestitched BOOLEAN NOT NULL DEFAULT false` (it was already stitched when it moved; excluded from
+  per-batch stitcher counts and stitching quotas, D36).
+
+### 019 — scan_undone (U3)
+- `ALTER TYPE batch_event_kind ADD VALUE IF NOT EXISTS 'scan_undone'` (D38). Down deletes those rows.
+
 ## Key invariants
 - One open cutting log per batch; many open stitching/packing logs (one per joined worker).
 - `phase_logs.quantity_completed` for stitching/packing = that worker's scan count, set when the phase auto-completes.
 - Every unit's `stitched_by`/`packed_by` is set by the scan that completed it — the per-mat truth and the wage record.
-- Quotas, when present on a phase, must sum to `batches.quantity`.
+- Quotas, when present on a phase, must sum to `batches.quantity` (stitching: minus `prestitched` units, U3).
+- Cut units are always the lowest unit numbers (`unit_number ≤ cut_qty`): short cuts delete from the top, edits add /
+  remove at the top, reused spares take numbers 1..k (U3).
 - Short-cut policy: cutter reports cut count `N < Q`. Batch enters `awaiting_assignment` with short-cut banner. Admin chooses:
   1. `split`: batch quantity reduced to `N`, remainder batch `(Q - N)` created with `parent_batch_id`.
   2. `reduce`: batch quantity reduced to `N`, un-cut units marked cancelled, reason logged in `short_reason`.
