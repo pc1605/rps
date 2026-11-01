@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/rps/section";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EnrollmentQrDialog } from "@/features/workers/components/enrollment-qr-dialog";
+import { HandOverDialog } from "@/features/workers/components/hand-over-dialog";
 import { ActiveToggle, EditWorkerDialog, ResetPinDialog } from "@/features/workers/components/worker-actions";
 import { WorkerHistory, WorkerNow, WorkerOutput } from "@/features/workers/components/worker-sections";
 import { useWorker } from "@/features/workers/hooks";
@@ -82,6 +83,7 @@ export default function WorkerPage({ params }: { params: Promise<{ id: string }>
                 </Button>
               }
             />
+            <HandOverDialog worker={w} />
             <ResetPinDialog worker={w} />
             <EditWorkerDialog worker={w} />
             <ActiveToggle worker={w} />
