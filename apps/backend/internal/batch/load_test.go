@@ -151,7 +151,7 @@ func testCar(t *testing.T, pool *pgxpool.Pool, tag string) int {
 }
 
 // TestReadySince pins ready_since on GET /batches and sort=waiting: set only while
-// awaiting_assignment, from the latest event into that status.
+// awaiting_assignment, from when cutting last finished (not reset by short resolve / unassign).
 func TestReadySince(t *testing.T) {
 	ctx := context.Background()
 	pool := testutil.DB(t)
@@ -191,7 +191,7 @@ func TestReadySince(t *testing.T) {
 		t.Helper()
 		var at time.Time
 		if err := pool.QueryRow(ctx, `SELECT MAX(at) FROM batch_events
-			WHERE batch_id = $1 AND to_status = 'awaiting_assignment'`, bt.ID).Scan(&at); err != nil {
+			WHERE batch_id = $1 AND kind = 'cut_completed'`, bt.ID).Scan(&at); err != nil {
 			t.Fatal(err)
 		}
 		return at
@@ -218,16 +218,40 @@ func TestReadySince(t *testing.T) {
 	if b := find("stitching"); b == nil || b.ReadySince != nil {
 		t.Fatalf("assigned: want no ready_since, got %+v", b)
 	}
-	// Clearing the assignment parks it again: waiting restarts from that event.
+	// Clearing the assignment parks it again, but waiting still counts from when cutting finished.
 	if err := s.SetAssignments(ctx, bt.ID, PhaseStitching, nil, adminID, ip); err != nil {
 		t.Fatal(err)
 	}
-	if b := find("ready"); b == nil || b.ReadySince == nil || !b.ReadySince.After(cutAt) {
-		t.Fatalf("cleared: ready_since should move past %v, got %+v", cutAt, b)
+	if b := find("ready"); b == nil || b.ReadySince == nil || !b.ReadySince.Equal(cutAt) {
+		t.Fatalf("cleared: ready_since should stay %v, got %+v", cutAt, b)
+	}
+
+	// Short cut: resolving it doesn't restart the wait either.
+	sh, err := s.Create(ctx, CreateInput{CarModelID: carModelID, Quantity: 2}, adminID, "owner", ip)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _, _ = pool.Exec(ctx, `DELETE FROM batches WHERE id = $1 OR parent_batch_id = $1`, sh.ID) }()
+	if err := s.StartPhase(ctx, sh.ID, cutterID, "cutter", ip); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CompletePhase(ctx, sh.ID, cutterID, "cutter", 1, "", ip); err != nil {
+		t.Fatal(err)
+	}
+	var shortCutAt time.Time
+	if err := pool.QueryRow(ctx, `SELECT MAX(at) FROM batch_events WHERE batch_id=$1 AND kind='cut_completed'`, sh.ID).Scan(&shortCutAt); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ResolveShort(ctx, sh.ID, ShortReduce, "roll_ran_out", "", adminID, ip); err != nil {
+		t.Fatalf("resolve short: %v", err)
+	}
+	pg, err := s.ListPage(ctx, ListFilter{View: "ready", Q: sh.BatchCode})
+	if err != nil || len(pg.Items) != 1 || pg.Items[0].ReadySince == nil || !pg.Items[0].ReadySince.Equal(shortCutAt) {
+		t.Fatalf("after short resolved: want ready_since %v, got %+v %v", shortCutAt, pg, err)
 	}
 
 	// sort=waiting asc: oldest first, non-waiting batches last.
-	pg, err := s.ListPage(ctx, ListFilter{Sort: "waiting"})
+	pg, err = s.ListPage(ctx, ListFilter{Sort: "waiting"})
 	if err != nil {
 		t.Fatal(err)
 	}

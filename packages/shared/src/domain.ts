@@ -90,7 +90,7 @@ export interface Batch {
   assigned_to_me?: boolean;
   my_target_qty?: number;
   my_done_qty?: number;
-  /** GET /batches only: when an awaiting_assignment batch became ready to assign. */
+  /** GET /batches only: for an awaiting_assignment batch, when cutting last finished (waiting time). */
   ready_since?: string;
 }
 

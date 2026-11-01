@@ -137,3 +137,9 @@ on the worker page one person takes everything by default, with a per-batch over
 batch counts every unstitched mat for each assignee.
 **Why**: Owner answers to the U3 hand-off questions (Nov 2026); answers the audit question "absent stitcher's quota".
 **Status**: Built (U3).
+
+### D33 — "Waiting" counts from when cutting finished (Nov 2026)
+**Decision**: The Ready list's waiting time (`ready_since`) is the latest `cut_completed` event. Resolving a short cut or
+clearing a stitching assignment doesn't restart it; a re-cut does (cutting finishes again).
+**Why**: Owner (U3): a batch held up by a short cut has really been waiting since cutting ended.
+**Status**: Built (U3).

@@ -18,11 +18,12 @@ var listViews = map[string]string{
 	"completed": `b.current_phase = 'completed'`,
 }
 
-// readySinceExpr: for a batch waiting for a stitching assignment, when it last became
-// awaiting_assignment (cut completed, short resolved, or assignment cleared); NULL otherwise.
-// Falls back to updated_at for a batch with no such event.
+// readySinceExpr: for a batch waiting for a stitching assignment, when cutting last finished
+// (owner, U3: resolving a short cut or clearing an assignment does not restart the wait; a re-cut
+// does, since cutting finishes again). NULL when not awaiting_assignment. Falls back to updated_at
+// for a batch with no cut_completed event.
 const readySinceExpr = `CASE WHEN b.status = 'awaiting_assignment' THEN COALESCE(
-	  (SELECT MAX(e.at) FROM batch_events e WHERE e.batch_id = b.id AND e.to_status = 'awaiting_assignment'),
+	  (SELECT MAX(e.at) FROM batch_events e WHERE e.batch_id = b.id AND e.kind = 'cut_completed'),
 	  b.updated_at) END`
 
 // Sortable columns (whitelist). Every sort ends with created_at, id for a stable order.
