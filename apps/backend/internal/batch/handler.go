@@ -788,3 +788,44 @@ func (h *Handler) Cancel(c *fiber.Ctx) error {
 		return httpx.Internal(c, "failed to cancel batch")
 	}
 }
+
+// ListSpares — GET /spares[?car_model_id=]: spare mats (from cancelled batches) per car item.
+func (h *Handler) ListSpares(c *fiber.Ctx) error {
+	var car *int
+	if v := c.Query("car_model_id"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n <= 0 {
+			return httpx.BadRequest(c, "invalid car_model_id")
+		}
+		car = &n
+	}
+	out, err := h.svc.ListSpares(c.Context(), car)
+	if err != nil {
+		log.Error().Err(err).Msg("list spares")
+		return httpx.Internal(c, "failed to load spares")
+	}
+	return httpx.OK(c, out)
+}
+
+// WriteOffSpares — POST /spares/write-off {car_model_id, stitched, unstitched, note?}.
+func (h *Handler) WriteOffSpares(c *fiber.Ctx) error {
+	var in SpareWriteOffInput
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	actorID, ok := auth.UserID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "missing user context")
+	}
+	in.Note = strings.TrimSpace(in.Note)
+	codes, err := h.svc.WriteOffSpares(c.Context(), in, actorID, auth.RoleFromCtx(c), c.IP())
+	switch {
+	case err == nil:
+		return httpx.OK(c, fiber.Map{"unit_codes": codes})
+	case errors.Is(err, ErrInvalidInput):
+		return httpx.BadRequest(c, err.Error())
+	default:
+		log.Error().Err(err).Msg("write off spares")
+		return httpx.Internal(c, "failed to write off spares")
+	}
+}

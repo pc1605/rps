@@ -172,6 +172,29 @@ export interface CancelBatchInput {
   note?: string;
 }
 
+/** GET /spares — spare mats (from cancelled batches) of one car item. */
+export interface SpareStock {
+  car_model_id: number;
+  brand_name: string;
+  model_name: string;
+  size_class: SizeClass;
+  line_name?: string;
+  barcode?: string;
+  stitched: number;
+  unstitched: number;
+  /** When the oldest of the source batches was cancelled. */
+  oldest_at: string;
+  sources: { batch_id: string; batch_code: string; count: number }[];
+}
+
+/** POST /spares/write-off — oldest first. */
+export interface SpareWriteOffInput {
+  car_model_id: number;
+  stitched: number;
+  unstitched: number;
+  note?: string;
+}
+
 export interface BatchStats {
   in_cutting: number;
   awaiting_assignment: number;
