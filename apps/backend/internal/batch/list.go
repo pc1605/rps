@@ -18,8 +18,18 @@ var listViews = map[string]string{
 	"completed": `b.current_phase = 'completed'`,
 }
 
+// readySinceExpr: for a batch waiting for a stitching assignment, when cutting last finished
+// (owner, U3: resolving a short cut or clearing an assignment does not restart the wait; a re-cut
+// does, since cutting finishes again). NULL when not awaiting_assignment. Falls back to updated_at
+// for a batch with no cut_completed event.
+const readySinceExpr = `CASE WHEN b.status = 'awaiting_assignment' THEN COALESCE(
+	  (SELECT MAX(e.at) FROM batch_events e WHERE e.batch_id = b.id AND e.kind = 'cut_completed'),
+	  b.updated_at) END`
+
 // Sortable columns (whitelist). Every sort ends with created_at, id for a stable order.
 var listSorts = map[string]string{
+	// ascending = longest waiting first; batches not waiting sort last either way (NULLS LAST)
+	"waiting":  readySinceExpr,
 	"created":  `b.created_at`,
 	"code":     `b.batch_code`,
 	"quantity": `b.quantity`,
@@ -58,7 +68,7 @@ func ValidateListFilter(f ListFilter) error {
 	}
 	if f.Sort != "" {
 		if _, ok := listSorts[f.Sort]; !ok {
-			return fmt.Errorf("%w: sort must be one of created, code, quantity, phase, car", ErrInvalidInput)
+			return fmt.Errorf("%w: sort must be one of created, code, quantity, phase, car, waiting", ErrInvalidInput)
 		}
 	}
 	return nil
@@ -80,7 +90,8 @@ const listSelect = `
 	       (SELECT string_agg(wk.name, ', ' ORDER BY plg.started_at)
 	        FROM phase_logs plg JOIN workers wk ON wk.id = plg.worker_id
 	        WHERE plg.batch_id = b.id AND plg.phase = b.current_phase
-	          AND plg.completed_at IS NULL)`
+	          AND plg.completed_at IS NULL),
+	       ` + readySinceExpr
 
 const listFrom = `
 	FROM batches b
@@ -161,7 +172,7 @@ func (s *Service) ListPage(ctx context.Context, f ListFilter) (*ListPage, error)
 	if f.Desc {
 		dir = "DESC"
 	}
-	order := fmt.Sprintf(" ORDER BY %s %s, b.created_at DESC, b.id", listSorts[sortKey], dir)
+	order := fmt.Sprintf(" ORDER BY %s %s NULLS LAST, b.created_at DESC, b.id", listSorts[sortKey], dir)
 	page := ""
 	if f.Limit > 0 {
 		if f.Page < 1 {
@@ -186,7 +197,7 @@ func (s *Service) ListPage(ctx context.Context, f ListFilter) (*ListPage, error)
 			&b.Version, &b.CreatedAt, &b.UpdatedAt,
 			&b.CutQty, &b.ParentBatchID, &b.ParentBatchCode, &b.ShortReason, &b.StickersPrintedAt,
 			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched, &b.UnitsWrittenOff, &b.ReworkOpen,
-			&b.ActiveWorkers,
+			&b.ActiveWorkers, &b.ReadySince,
 		); err != nil {
 			return nil, err
 		}

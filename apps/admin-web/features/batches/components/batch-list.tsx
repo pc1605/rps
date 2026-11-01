@@ -1,8 +1,9 @@
 "use client";
 
 import type { BatchSort } from "@rps/shared";
-import { ChevronLeft, ChevronRight, Package, Printer, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Package, Printer, Search, UserPlus } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Chip } from "@/components/rps/chip";
 import { type Column, DataTable } from "@/components/rps/data-table";
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { batchApi } from "../api";
 import { useBatchPage, useMarkStickersPrinted } from "../hooks";
 import { PAGE_SIZE, useListParams } from "../use-list-params";
+import { AssignSheet, waitingFor } from "./assign-sheet";
 import { BatchFilters } from "./batch-filters";
 import { generateLabelPdf } from "../label-pdf";
 import type { Batch } from "../types";
@@ -129,6 +131,69 @@ const baseColumns: Column<Batch>[] = [
   },
 ];
 
+// Ready to stitch (U3): an assigning screen — car large, mats, waiting time, Assign.
+const isShort = (b: Batch) => b.status === "awaiting_assignment" && b.cut_qty < b.quantity;
+
+function readyColumns(onAssign: (b: Batch) => void): Column<Batch>[] {
+  return [
+    {
+      key: "model",
+      header: "Car",
+      sortKey: "car",
+      card: "title",
+      cell: (b) => (
+        <div>
+          <div className="text-h2">
+            {b.brand_name} {b.model_name}
+          </div>
+          <div className="text-caption text-muted-foreground">
+            <Link href={`/batches/${b.id}`} className="font-mono hover:underline">
+              {b.batch_code}
+            </Link>
+            {" · "}
+            {sizeLabel[b.size_class] ?? b.size_class}
+            {b.line_name ? ` · ${b.line_name}` : ""}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "qty",
+      header: "Mats",
+      sortKey: "quantity",
+      align: "center",
+      width: "w-[90px]",
+      cell: (b) => <span className="text-h2 tabular">{b.quantity}</span>,
+    },
+    {
+      key: "waiting",
+      header: "Waiting",
+      sortKey: "waiting",
+      align: "center",
+      width: "w-[120px]",
+      cell: (b) => <span className="tabular text-muted-foreground">{waitingFor(b.ready_since) ?? "—"}</span>,
+    },
+    {
+      key: "assign",
+      header: "",
+      align: "right",
+      width: "w-[200px]",
+      cell: (b) =>
+        isShort(b) ? (
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/batches/${b.id}`} title={`${b.cut_qty} of ${b.quantity} cut`}>
+              Resolve short cut
+            </Link>
+          </Button>
+        ) : (
+          <Button type="button" size="lg" onClick={() => onAssign(b)}>
+            <UserPlus aria-hidden /> Assign
+          </Button>
+        ),
+    },
+  ];
+}
+
 // Default direction when a column is first sorted.
 const firstOrder: Record<BatchSort, "asc" | "desc"> = {
   created: "desc",
@@ -136,6 +201,7 @@ const firstOrder: Record<BatchSort, "asc" | "desc"> = {
   code: "asc",
   car: "asc",
   phase: "asc",
+  waiting: "asc",
 };
 
 export function BatchList() {
@@ -143,6 +209,13 @@ export function BatchList() {
   const view = batchViews.find((v) => v.key === state.phase);
   const { data, isPending, isError, isPlaceholderData } = useBatchPage(params);
   const markPrinted = useMarkStickersPrinted();
+  // Assign panel: keep the last batch while the sheet animates closed.
+  const [assigning, setAssigning] = useState<Batch | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const openAssign = (b: Batch) => {
+    setAssigning(b);
+    setAssignOpen(true);
+  };
 
   const printStickers = async (b: Batch) => {
     try {
@@ -177,15 +250,20 @@ export function BatchList() {
     ),
   };
 
-  const sortKey = state.sort ?? "created";
-  const order = state.order ?? (state.sort ? firstOrder[state.sort] : "desc");
+  const sortKey = params.sort ?? "created";
+  const order = params.order ?? (params.sort ? firstOrder[params.sort] : "desc");
   const onSort = (key: string) => {
     const k = key as BatchSort;
     if (k === sortKey) set({ sort: k, order: order === "asc" ? "desc" : "asc" });
     else set({ sort: k, order: firstOrder[k] });
   };
 
-  const columns = view?.key === "packing" ? [...baseColumns, stickerColumn] : baseColumns;
+  const columns =
+    view?.key === "packing"
+      ? [...baseColumns, stickerColumn]
+      : view?.key === "ready"
+        ? readyColumns(openAssign)
+        : baseColumns;
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const page = params.page ?? 1;
@@ -286,6 +364,12 @@ export function BatchList() {
           </div>
         </nav>
       )}
+      <AssignSheet
+        batchId={assigning?.id ?? null}
+        readySince={assigning?.ready_since}
+        open={assignOpen}
+        onOpenChange={setAssignOpen}
+      />
     </div>
   );
 }

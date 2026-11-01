@@ -90,6 +90,8 @@ export interface Batch {
   assigned_to_me?: boolean;
   my_target_qty?: number;
   my_done_qty?: number;
+  /** GET /batches only: for an awaiting_assignment batch, when cutting last finished (waiting time). */
+  ready_since?: string;
 }
 
 export interface Unit {
@@ -625,6 +627,46 @@ export interface WorkerSummary {
   flagged?: number;
 }
 
+/** GET /stitchers/load — one active stitcher's workload (assign panel, U3). Sorted least open work first. */
+export interface StitcherLoad {
+  worker_id: string;
+  name: string;
+  /** Mats still to stitch in live stitching batches. Shared-pile batches count every unstitched mat. */
+  open_mats: number;
+  open_batches: number;
+  /** Has joined a live stitching batch right now. */
+  on_floor: boolean;
+  last_scan_at: string | null;
+  /** Stitched since the start of the factory day. */
+  mats_today: number;
+}
+
+/** GET /stitchers/:id/open — a stitcher's live stitching assignments (hand-over dialog). */
+export interface OpenStitching {
+  batch_id: string;
+  batch_code: string;
+  car_name: string;
+  quantity: number;
+  /** null = shared pile */
+  target_qty: number | null;
+  done_qty: number;
+  /** Quota: target − done. Shared pile: unstitched mats of the batch. */
+  left_qty: number;
+}
+
+/** POST /stitching/hand-over body. */
+export interface HandOverInput {
+  from_worker_id: string;
+  moves: { batch_id: string; to_worker_id: string }[];
+}
+
+/** POST /stitching/hand-over response row. `moved` is 0 for a shared-pile batch. */
+export interface HandOverResult {
+  batch_id: string;
+  batch_code: string;
+  moved: number;
+}
+
 export interface WorkerHistoryRow {
   phase_log_id: string;
   batch_id: string;
@@ -735,7 +777,7 @@ export interface MaterialLotDetail extends MaterialLotRow {
 // ───── Lists & search (U2) ─────
 
 export type BatchListView = "cutting" | "ready" | "stitching" | "packing" | "completed";
-export type BatchSort = "created" | "code" | "quantity" | "phase" | "car";
+export type BatchSort = "created" | "code" | "quantity" | "phase" | "car" | "waiting";
 
 /** GET /batches query params — every one is also the admin's URL state. */
 export interface BatchListParams {

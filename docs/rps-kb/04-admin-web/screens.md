@@ -12,16 +12,27 @@ Packed n/m · Created. **Packing view only**: extra column **Print stickers** �
 **U2 — URL is the state** (`features/batches/use-list-params.ts`): `phase`, `q` (debounced), `car`, `line`, `from`, `to`,
 `rework=1`, `short=1`, `sort`, `order`, `page` → server-side `GET /batches` (50 per page, "x–y of N", Prev/Next).
 Sortable headers (Code, Model, Qty, Phase, Created). Whole row opens the batch (ctrl/⌘/middle-click → new tab).
+**Ready to stitch view (U3)** — `?phase=ready` is the assigning screen: Car (large) + code · Mats · Waiting (`ready_since`)
+· **Assign** (opens the assign panel in place; the row drops out when assigned). Short-cut batches show **Resolve short
+cut** (→ batch page) instead. Opens longest-waiting first (`sort=waiting`).
+
+## Assign panel — `AssignSheet` (U3, shared by Ready list and batch page)
+Right-side sheet: `Assign <code>` · car · mats · waiting. Stitchers from `GET /stitchers/load` in load order, each with
+● On floor / Not seen today · `N open · M today`. **Fixed share each** (default) / **Shared pile** toggle.
+- Tick one → whole batch (number locked). Tick several → even split, remainder to the least busy (`assign-split.ts` `fill`).
+- Editing a number rebalances the others not edited by hand (`rebalance`); total always = quantity; floor = max(done, 1).
+- Split bar + `Mahesh 6 · Surya 6   12 / 12 ✓`; "Split evenly again".
+- Footer: **Print labels after** (first assignment only; remembered in localStorage `rps.assign.printLabels`) and one
+  button: **Assign N mats** · **Save changes** · **Unassign — back to Ready**.
+- Mid-stitching rows show `done /` + target and a ⇄ menu **Move N remaining from X to…** (`POST /stitching/hand-over`;
+  disabled while the draft has unsaved edits). Unticking someone with stitched mats is refused (toast).
 
 ## Batch detail — `/batches/[id]`
 - Header: code, model · qty · size, notes; **Labels PDF** (taffeta reprint); badge shows `ready for stitching` when parked.
 - **Short-cut panel** (`ShortCutPanel`): renders when `cut_qty < quantity` and `current_phase === "stitching"`. Displays amber warning banner with short piece count, and three resolution actions (`Split`, `Reduce`, `Recut`) triggering `POST /batches/:id/resolve-short`.
-- **Stitching assignment card** (only while `current_phase === "stitching"`):
-  - pulsing "Ready for stitching — assign to release" while parked
-  - one row per active stitcher: checkbox, `N done ·` (if any), quota input (`min` = done)
-  - footer `8 / 10 mats assigned · 2 left` (amber) → `10 / 10 ✓` (green); **Split evenly**
-  - **Save** (disabled unless balanced or empty) · **Assign & print labels** (disabled unless balanced) → PUT then taffeta PDF
-  - unchecking a stitcher with done > 0 is blocked with a toast (server enforces too)
+- **Stitching assignment card** (`StitchingAssignmentCard`, U3; only while `current_phase === "stitching"` and no
+  unresolved short cut): who has what (`done / target` + bar, or shared pile) and one button — **Assign stitchers**
+  while parked, **Change or move work** once assigned — both open the assign panel.
 - **Production timeline**: one card per phase_log (icon/color per phase, worker, times, duration, pcs, notes; dashed/pulsing when open).
 - **Units grid**: `unit_code` · badge `pending | stitched (pink) | packed (lime) | defective | dispatched` · `🧵 stitched_by_name` · `📦 packed_by_name`.
 
@@ -57,7 +68,8 @@ detail crumbs go back to the batch's own phase view.
 - **Worker — `/workers/[id]`**: Now (open claims with my_done/target, assigned-not-joined, open rework) · Output
   (range picker; today / 7 days / range / per active hour; stitchers rework caused (rate, reasons) + fixed (median
   turnaround); packers sent-to-rework; per-day bars in the station colour) · Work history (load more). Actions:
-  Enrollment QR, Reset PIN (shown once), Edit (name, phone, station), Deactivate/Reactivate (AlertDialog; refused
+  Enrollment QR, **Hand over open work** (U3, stitchers with open work: one person takes all by default, per-batch
+  override, one `POST /stitching/hand-over`), Reset PIN (shown once), Edit (name, phone, station), Deactivate/Reactivate (AlertDialog; refused
   while the worker has open work).
 - **Unit — `/units/[code]`**: journey — batch created → cut (who, pieces, roll) → stitched → rework rounds (reasons,
   note, photos/lightbox, decision, re-cut batch link, fixed by) → packed.

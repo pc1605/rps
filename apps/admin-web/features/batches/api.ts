@@ -1,4 +1,14 @@
-import type { BatchListParams, BatchPage, SearchResult, ShortAction, ShortReason } from "@rps/shared";
+import type {
+  BatchListParams,
+  BatchPage,
+  HandOverInput,
+  HandOverResult,
+  OpenStitching,
+  SearchResult,
+  ShortAction,
+  ShortReason,
+  StitcherLoad,
+} from "@rps/shared";
 import { http } from "@/lib/api-client";
 import type {
   AssignmentInput,
@@ -49,4 +59,10 @@ export const batchApi = {
     const res = await http.post(`/batches/${id}/resolve-short`, { action, reason, note });
     return res.data?.data ?? res.data;
   },
+  /** Active stitchers, least open work first (assign panel). */
+  stitcherLoads: async (): Promise<StitcherLoad[]> => (await http.get("/stitchers/load")).data.data,
+  openStitching: async (workerId: string): Promise<OpenStitching[]> =>
+    (await http.get(`/stitchers/${workerId}/open`)).data.data,
+  handOver: async (input: HandOverInput): Promise<HandOverResult[]> =>
+    (await http.post("/stitching/hand-over", input)).data.data,
 };

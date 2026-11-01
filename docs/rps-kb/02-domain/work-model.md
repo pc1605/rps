@@ -27,6 +27,9 @@ Packing scans: verification of the finished physical mat.
   (409 `quota_reached`, "your share of this batch is complete (8/8)"). Mobile shows a blue "Your share is complete ✓" flash.
 - Reassignment = edit numbers. `SetAssignments` enforces: target ≥ already-done; a worker with scans can't be removed
   (reduce their target instead); empty list on stitching parks the batch again.
+- **Hand-over (U3, D32)** — `POST /stitching/hand-over` does that maths server-side: the old stitcher keeps a target equal
+  to what they've stitched (removed if 0), the new one gets the rest. Shared pile: the new one is added. Batch page
+  "Move remaining to…" (one batch) and worker page "Hand over open work" (all their live batches, one tx).
 - A quota caps a **count**, it does not pre-assign specific units. Any 8 mats count for Surya's 8; labels are fungible until attached.
 
 ## 4. Join / idempotency

@@ -8,7 +8,7 @@ import { useCallback, useMemo } from "react";
 // `phase` keeps its old name (sidebar tabs, dashboard pipeline links); the API calls it `view`.
 export const PAGE_SIZE = 50;
 const VIEWS: BatchListView[] = ["cutting", "ready", "stitching", "packing", "completed"];
-const SORTS: BatchSort[] = ["created", "code", "quantity", "phase", "car"];
+const SORTS: BatchSort[] = ["created", "code", "quantity", "phase", "car", "waiting"];
 
 export type UrlState = {
   phase?: BatchListView;
@@ -59,8 +59,9 @@ export function useListParams() {
       to: state.to,
       has_rework: state.rework ? true : undefined,
       short: state.short ? true : undefined,
-      sort: state.sort,
-      order: state.order,
+      // Ready to stitch opens longest-waiting first.
+      sort: state.sort ?? (state.phase === "ready" ? "waiting" : undefined),
+      order: state.order ?? (!state.sort && state.phase === "ready" ? "asc" : undefined),
       page: Math.max(1, Number(state.page) || 1),
       limit: PAGE_SIZE,
     }),

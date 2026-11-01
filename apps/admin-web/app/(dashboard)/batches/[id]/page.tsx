@@ -9,7 +9,7 @@ import { PageHeader, SectionTitle } from "@/components/rps/section";
 import { Stat } from "@/components/rps/stat";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AssignStitchersCard } from "@/features/batches/components/assign-stitchers-card";
+import { StitchingAssignmentCard } from "@/features/batches/components/stitching-assignment-card";
 import { BatchMaterials } from "@/features/batches/components/batch-materials";
 import { BatchTimeline } from "@/features/batches/components/batch-timeline";
 import { ShortCutPanel } from "@/features/batches/components/short-cut-panel";
@@ -125,7 +125,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* The one thing the admin may need to do */}
       <ShortCutPanel batch={batch} />
-      <AssignStitchersCard batch={batch} />
+      <StitchingAssignmentCard batch={batch} />
 
       <section>
         <SectionTitle aside={`${batch.units_total} mats`}>Units</SectionTitle>

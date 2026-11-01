@@ -1,4 +1,4 @@
-import type { BatchListParams, ShortAction, ShortReason } from "@rps/shared";
+import type { BatchListParams, HandOverInput, ShortAction, ShortReason } from "@rps/shared";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { batchApi } from "./api";
 import type { AssignmentInput, CreateBatchInput, Phase } from "./types";
@@ -55,6 +55,36 @@ export function useSetAssignments(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["batch", id] });
       qc.invalidateQueries({ queryKey: ["batches"] });
+      qc.invalidateQueries({ queryKey: ["batch-stats"] });
+      qc.invalidateQueries({ queryKey: ["stitcher-load"] });
+    },
+  });
+}
+
+/** Stitcher workload for the assign panel. */
+export const useStitcherLoads = (enabled = true) =>
+  useQuery({ queryKey: ["stitcher-load"], queryFn: batchApi.stitcherLoads, enabled, ...LIVE });
+
+/** A stitcher's live stitching assignments (hand-over dialog). */
+export const useOpenStitching = (workerId: string, enabled = true) =>
+  useQuery({
+    queryKey: ["stitcher-open", workerId],
+    queryFn: () => batchApi.openStitching(workerId),
+    enabled: enabled && !!workerId,
+    ...LIVE,
+  });
+
+/** Move a stitcher's remaining mats to others (one or more batches, all or nothing). */
+export function useHandOver() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: HandOverInput) => batchApi.handOver(input),
+    onSuccess: (res) => {
+      for (const r of res) qc.invalidateQueries({ queryKey: ["batch", r.batch_id] });
+      qc.invalidateQueries({ queryKey: ["batches"] });
+      qc.invalidateQueries({ queryKey: ["stitcher-load"] });
+      qc.invalidateQueries({ queryKey: ["stitcher-open"] });
+      qc.invalidateQueries({ queryKey: ["worker"] });
     },
   });
 }

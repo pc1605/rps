@@ -74,6 +74,8 @@ type Batch struct {
 	ParentBatchID   *uuid.UUID `json:"parent_batch_id,omitempty"`
 	ParentBatchCode *string    `json:"parent_batch_code,omitempty"`
 	ShortReason     *string    `json:"short_reason,omitempty"`
+	// List only: for an awaiting_assignment batch, when cutting last finished (waiting time).
+	ReadySince *time.Time `json:"ready_since,omitempty"`
 }
 
 // Unit is one physical mat.
