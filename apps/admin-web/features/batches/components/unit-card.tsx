@@ -11,7 +11,7 @@ import { ReasonChip } from "@/features/rework/components/reason-chip";
 import { unitTone } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
 import type { Unit } from "../types";
-import { UnitLink, WorkerLink } from "@/components/rps/entity-link";
+import { BatchLink, UnitLink, WorkerLink } from "@/components/rps/entity-link";
 
 export function fmtStamp(iso?: string) {
   if (!iso) return null;
@@ -63,6 +63,12 @@ export function UnitCard({ unit: u }: { unit: Unit }) {
           <UnitLink code={u.unit_code} className="text-small" />
           <Chip tone={tone}>{tone.label}</Chip>
         </div>
+        {u.reused_from && u.reused_from_code && (
+          <p className="text-caption text-muted-foreground">
+            ↩ spare from <BatchLink id={u.reused_from} code={u.reused_from_code} />
+            {u.prestitched ? " · came in stitched" : ""}
+          </p>
+        )}
 
         <ul className="space-y-1">
           {events.map((e) =>

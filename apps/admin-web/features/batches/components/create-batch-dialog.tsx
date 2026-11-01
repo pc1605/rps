@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Layers, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MATERIAL_UNIT_LABEL } from "@rps/shared";
 import { useResolve } from "@/features/materials/hooks";
+import { useSpares } from "@/features/stock/hooks";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useCreateBatch } from "../hooks";
 import { CarModelSelect } from "./car-model-select";
@@ -29,10 +31,19 @@ export function CreateBatchDialog() {
   const [rollId, setRollId] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("");
   const [notes, setNotes] = useState("");
+  const [useSpare, setUseSpare] = useState(false);
 
   const createBatch = useCreateBatch();
 
   const qty = Number(quantity);
+  // Spares of exactly this car item (D36): stitched first, never more than the batch needs.
+  const { data: spareRows } = useSpares(carModelId || undefined, !!carModelId);
+  const spare = spareRows?.[0];
+  const spareTotal = spare ? spare.stitched + spare.unstitched : 0;
+  const qtyOk = Number.isInteger(qty) && qty >= 1;
+  const useSt = useSpare && spare && qtyOk ? Math.min(spare.stitched, qty) : 0;
+  const useUn = useSpare && spare && qtyOk ? Math.min(spare.unstitched, qty - useSt) : 0;
+  const toCut = qtyOk ? qty - useSt - useUn : 0;
   const canSubmit = !!carModelId && Number.isInteger(qty) && qty >= 1 && !createBatch.isPending;
 
   const reset = () => {
@@ -40,6 +51,7 @@ export function CreateBatchDialog() {
     setRollId("");
     setQuantity("");
     setNotes("");
+    setUseSpare(false);
   };
 
   const submit = async (e?: React.FormEvent) => {
@@ -51,9 +63,16 @@ export function CreateBatchDialog() {
         roll_id: rollId || undefined,
         quantity: qty,
         notes: notes.trim() || undefined,
+        spares_stitched: useSt || undefined,
+        spares_unstitched: useUn || undefined,
       });
       toast.success(`Batch ${batch.batch_code} created`, {
-        description: `${batch.units_total} mats waiting for cutting.`,
+        description:
+          useSt + useUn === 0
+            ? `${batch.units_total} mats waiting for cutting.`
+            : toCut > 0
+              ? `${useSt + useUn} spare mats reused · ${toCut} to cut.`
+              : `All ${batch.units_total} mats from spares — no cutting needed.`,
       });
       reset();
       setOpen(false);
@@ -106,6 +125,28 @@ export function CreateBatchDialog() {
               />
             </div>
 
+            {spare && spareTotal > 0 && (
+              <div className="flex items-start justify-between gap-3 rounded-md border border-brand/40 bg-brand/5 p-3">
+                <div className="min-w-0 text-small">
+                  <Label htmlFor="batch-use-spares" className="inline-flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-brand" aria-hidden />
+                    {spareTotal} spare {spareTotal === 1 ? "mat" : "mats"}
+                    {spare.stitched > 0 && ` (${spare.stitched} stitched)`} — use them
+                  </Label>
+                  <p className="mt-1 text-caption text-muted-foreground">
+                    {useSpare && qtyOk
+                      ? toCut > 0
+                        ? `Uses ${useSt + useUn}; the cutter cuts ${toCut}.`
+                        : useSt === qty
+                          ? "All already stitched — goes straight to packing."
+                          : "No cutting needed — goes straight to Ready to stitch."
+                      : "From cancelled batches of this item. They join the batch already cut."}
+                  </p>
+                </div>
+                <Switch id="batch-use-spares" checked={useSpare} onCheckedChange={setUseSpare} />
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="batch-roll">
                 Roll{" "}
@@ -116,8 +157,8 @@ export function CreateBatchDialog() {
               <RollSelect id="batch-roll" carModelId={carModelId} value={rollId} onChange={setRollId} />
             </div>
 
-            {carModelId && qty >= 1 && (
-              <MaterialsPreview carId={Number(carModelId)} qty={qty} lotId={rollId || undefined} />
+            {carModelId && toCut >= 1 && (
+              <MaterialsPreview carId={Number(carModelId)} qty={toCut} lotId={rollId || undefined} />
             )}
 
             <div className="space-y-2">

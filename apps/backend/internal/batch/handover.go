@@ -42,7 +42,7 @@ type OpenStitching struct {
 func (s *Service) OpenStitchingFor(ctx context.Context, workerID uuid.UUID) ([]OpenStitching, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT b.id, b.batch_code, cb.name || ' ' || cm.name, b.quantity, ba.target_qty,
-		       (SELECT COUNT(*)::int FROM batch_units bu WHERE bu.batch_id = b.id AND bu.stitched_by = ba.worker_id),
+		       (SELECT COUNT(*)::int FROM batch_units bu WHERE bu.batch_id = b.id AND bu.stitched_by = ba.worker_id AND NOT bu.prestitched),
 		       (SELECT COUNT(*)::int FROM batch_units bu WHERE bu.batch_id = b.id AND bu.stitched_at IS NULL)
 		FROM batch_assignments ba
 		JOIN batches b     ON b.id = ba.batch_id
@@ -139,7 +139,7 @@ func (s *Service) HandOver(ctx context.Context, fromID uuid.UUID, moves []HandOv
 			       (SELECT target_qty FROM batch_assignments WHERE batch_id=$1 AND phase='stitching' AND worker_id=$2),
 			       EXISTS (SELECT 1 FROM batch_assignments WHERE batch_id=$1 AND phase='stitching' AND worker_id=$3),
 			       (SELECT target_qty FROM batch_assignments WHERE batch_id=$1 AND phase='stitching' AND worker_id=$3),
-			       (SELECT COUNT(*)::int FROM batch_units WHERE batch_id=$1 AND stitched_by=$2)`,
+			       (SELECT COUNT(*)::int FROM batch_units WHERE batch_id=$1 AND stitched_by=$2 AND NOT prestitched)`,
 			m.BatchID, fromID, m.ToWorkerID).Scan(&fromAssigned, &fromTarget, &toAssigned, &toTarget, &fromDone); err != nil {
 			return nil, err
 		}

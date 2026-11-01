@@ -143,7 +143,7 @@ func (s *Service) Cancel(ctx context.Context, batchID uuid.UUID, reason, note st
 	if _, err := tx.Exec(ctx, `
 		UPDATE phase_logs pl SET completed_at = NOW(),
 		  quantity_completed = CASE pl.phase
-		    WHEN 'stitching' THEN (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = $1 AND bu.stitched_by = pl.worker_id)
+		    WHEN 'stitching' THEN (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = $1 AND bu.stitched_by = pl.worker_id AND NOT bu.prestitched)
 		    WHEN 'packing'   THEN (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = $1 AND bu.packed_by = pl.worker_id)
 		    ELSE 0 END,
 		  notes = CONCAT_WS(E'\n', NULLIF(pl.notes,''), 'Batch cancelled')

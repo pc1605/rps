@@ -60,6 +60,8 @@ type Batch struct {
 	UnitsStitched int `json:"units_stitched"`
 	// Written-off (defective) mats: they never get packed but do not block completion.
 	UnitsWrittenOff int `json:"units_written_off"`
+	// Reused spares that came in already stitched (U3): not part of the stitching quotas.
+	UnitsPrestitched int `json:"units_prestitched"`
 	// Open claim on the current phase, if any
 	ActiveWorkers     *string    `json:"active_workers,omitempty"` // "Surya, Mahesh"
 	JoinedByMe        bool       `json:"joined_by_me"`
@@ -93,6 +95,10 @@ type Unit struct {
 	PackedBy       *uuid.UUID    `json:"packed_by,omitempty"`
 	PackedByName   *string       `json:"packed_by_name,omitempty"`
 	Rework         []ReworkEntry `json:"rework"`
+	// Reused spare (U3): the cancelled batch it came from; Prestitched = it was already stitched then.
+	ReusedFrom     *uuid.UUID `json:"reused_from,omitempty"`
+	ReusedFromCode *string    `json:"reused_from_code,omitempty"`
+	Prestitched    bool       `json:"prestitched,omitempty"`
 }
 
 type BatchDetail struct {
@@ -108,6 +114,9 @@ type CreateInput struct {
 	RollID     *string `json:"roll_id,omitempty"`
 	Quantity   int     `json:"quantity"`
 	Notes      string  `json:"notes,omitempty"`
+	// Spare mats of the same car item to reuse (U3, D36): they join the batch already cut.
+	SparesStitched   int `json:"spares_stitched,omitempty"`
+	SparesUnstitched int `json:"spares_unstitched,omitempty"`
 }
 
 // PhaseForStation maps a worker's station to the phase they operate.

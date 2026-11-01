@@ -86,6 +86,8 @@ export interface Batch {
   units_stitched?: number;
   /** Mats written off as defective — never packed, but they do not block completion. */
   units_written_off: number;
+  /** Reused spares that came in already stitched (U3): left out of the stitching quotas. */
+  units_prestitched?: number;
   active_workers?: string;
   // worker-queue only (GET /worker/batches)
   joined_by_me?: boolean;
@@ -111,6 +113,11 @@ export interface Unit {
   packed_by?: string;
   packed_by_name?: string;
   rework?: ReworkEntry[];
+  /** Reused spare (U3): the cancelled batch it came from. */
+  reused_from?: string;
+  reused_from_code?: string;
+  /** Came in already stitched (keeps its code and its stitcher's credit). */
+  prestitched?: boolean;
 }
 
 export interface PhaseLogEntry {
@@ -142,6 +149,16 @@ export interface BatchDetail extends Batch {
   units: Unit[];
   timeline: PhaseLogEntry[];
   assignments: AssignmentEntry[];
+}
+
+/** POST /batches. Spare mats of the same car item can be reused: they join already cut (U3). */
+export interface CreateBatchInput {
+  car_model_id: number;
+  roll_id?: string;
+  quantity: number;
+  notes?: string;
+  spares_stitched?: number;
+  spares_unstitched?: number;
 }
 
 /** PATCH /batches/:id — only while the batch waits to be cut. Omitted = unchanged; roll_id "" clears it. */

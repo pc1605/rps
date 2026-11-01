@@ -32,7 +32,7 @@ func (s *Service) StitcherLoads(ctx context.Context, now time.Time) ([]StitcherL
 		              THEN (SELECT COUNT(*) FROM batch_units bu
 		                    WHERE bu.batch_id = ba.batch_id AND bu.stitched_at IS NULL)
 		              ELSE GREATEST(ba.target_qty - (SELECT COUNT(*) FROM batch_units bu
-		                    WHERE bu.batch_id = ba.batch_id AND bu.stitched_by = ba.worker_id), 0)
+		                    WHERE bu.batch_id = ba.batch_id AND bu.stitched_by = ba.worker_id AND NOT bu.prestitched), 0)
 		         END AS left_qty
 		  FROM batch_assignments ba
 		  JOIN batches b ON b.id = ba.batch_id

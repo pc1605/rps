@@ -11,6 +11,7 @@ export const strings = {
     inRework: "Waiting for rework",
     writtenOff: "Written off — keep it aside",
     spare: "Spare stock — keep it aside",
+    wrongBatch: (code: string) => `Wrong batch — this mat is from ${code}`,
     sentToRework: "Sent to rework",
     alreadyPacked: "Already packed",
     wrongPhase: "This batch is not in packing",
