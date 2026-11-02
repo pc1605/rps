@@ -87,8 +87,9 @@ a dev build of the app pointed at your backend, one cutter, one stitcher and one
 2. [ ] **My work card** (home, top) on each phone: title "My work · pieces cut / mats stitched / mats packed"; *today* and
    *this week* match what that worker did (admin Reports → Workers for the same days). Stitcher: after a mat of theirs is sent
    to rework, "1 came back for rework this week" and "1 waiting for you"; packer: "1 sent to rework this week" after flagging one.
-3. [ ] **Scanning a spare.** Admin cancels a batch that was cut (Cancel batch → reason). On the stitcher's scanner for any
-   batch of theirs, scan a mat of the cancelled batch → red "✗ Spare stock — keep it aside" (no count change).
+3. [ ] **Scanning a spare.** Stitcher joins a batch, scans 1 mat and keeps the scanner open. Admin cancels that batch
+   (Cancel batch → the dialog says the stitcher "is stitching it now" → reason → Cancel). Stitcher scans another mat of it →
+   red "✗ Spare stock — keep it aside" (no count change). (A mat of a *different* batch says "Wrong batch" first — that's right.)
 4. [ ] **Packer scans a reused stitched spare.** Cancel a batch with at least 1 stitched mat → New batch of the same item
    reusing that stitched spare → stitch the rest, so the batch is at packing. Packer joins, scans the reused mat (its label
    still shows the OLD batch code) → Pack / Needs rework sheet appears (not "Wrong batch") → Pack → count goes up.
