@@ -2,8 +2,11 @@ package batch
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 // TestSpareReuse pins reusing spares on New batch (D36): spares join already cut (units 1..k),
@@ -15,7 +18,7 @@ func TestSpareReuse(t *testing.T) {
 	a, b2, c := f.stitcher("A"), f.stitcher("B"), f.stitcher("C")
 
 	// A cancelled batch of 6: 2 stitched by A, 4 cut but not stitched.
-	makeSpares := func(qty, stitched int) {
+	makeSpares := func(qty, stitched int) *Batch {
 		t.Helper()
 		src := f.create(CreateInput{Quantity: qty})
 		f.cut(src.ID, qty)
@@ -27,8 +30,9 @@ func TestSpareReuse(t *testing.T) {
 		if _, err := f.s.Cancel(f.ctx, src.ID, "order_cancelled", "", f.admin, "owner", u3ip); err != nil {
 			t.Fatal(err)
 		}
+		return src
 	}
-	makeSpares(6, 2)
+	src1 := makeSpares(6, 2)
 
 	if _, err := f.s.Create(f.ctx, CreateInput{CarModelID: f.car, Quantity: 2, SparesUnstitched: 3}, f.admin, "owner", u3ip); !errors.Is(err, ErrInvalidInput) {
 		t.Fatalf("more spares than quantity: %v", err)
@@ -72,6 +76,7 @@ func TestSpareReuse(t *testing.T) {
 	if left, _ := f.s.ListSpares(f.ctx, &f.car); len(left) != 1 || left[0].Stitched != 0 || left[0].Unstitched != 1 {
 		t.Fatalf("spares left = %+v", left)
 	}
+	f.wantReusedIn(src1.ID, 1, ReusedIn{nb.ID, nb.BatchCode, 5}) // the cancelled batch says where its mats went
 
 	// The cutter cuts the 5 remaining; quotas must total 8 (10 − 2 came in stitched).
 	if err := f.s.StartPhase(f.ctx, nb.ID, f.cutter, "cutter", u3ip); err != nil {
@@ -115,8 +120,11 @@ func TestSpareReuse(t *testing.T) {
 	}
 
 	// Whole batch from unstitched spares → skips cutting.
-	makeSpares(3, 0)
+	src2 := makeSpares(3, 0)
 	full := f.create(CreateInput{Quantity: 4, SparesUnstitched: 4}) // 1 left from before + 3
+	f.wantReusedIn(src1.ID, 0, ReusedIn{nb.ID, nb.BatchCode, 5}, ReusedIn{full.ID, full.BatchCode, 1})
+	f.wantReusedIn(src2.ID, 0, ReusedIn{full.ID, full.BatchCode, 3})
+	f.wantReusedIn(full.ID, 4) // only cancelled batches carry reused_in
 	if p, st := f.state(full.ID); p != PhaseStitching || st != StatusAwaitingAssignment {
 		t.Fatalf("all-spare batch state = %s/%s", p, st)
 	}
@@ -134,5 +142,34 @@ func TestSpareReuse(t *testing.T) {
 	}
 	if !done.BatchCompleted {
 		t.Fatal("packing the stitched spares should complete the batch")
+	}
+}
+
+// wantReusedIn: GET /batches/:id and the cancelled list view both say where the batch's spares were
+// reused, and how many units it still has (P1: no more "0 · 0 / 0" for a fully reused batch).
+func (f *u3fx) wantReusedIn(batchID uuid.UUID, unitsLeft int, want ...ReusedIn) {
+	f.t.Helper()
+	d, err := f.s.Get(f.ctx, batchID)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	if d.UnitsTotal != unitsLeft || len(d.Units) != unitsLeft {
+		f.t.Fatalf("%s: %d units, want %d", d.BatchCode, d.UnitsTotal, unitsLeft)
+	}
+	if len(want) == 0 {
+		want = nil
+	}
+	if !reflect.DeepEqual(d.ReusedIn, want) {
+		f.t.Fatalf("Get(%s).reused_in = %+v, want %+v", d.BatchCode, d.ReusedIn, want)
+	}
+	if d.Status != StatusCancelled {
+		return
+	}
+	page, err := f.s.ListPage(f.ctx, ListFilter{View: "cancelled", Q: d.BatchCode})
+	if err != nil || len(page.Items) != 1 {
+		f.t.Fatalf("list cancelled %s: %v %+v", d.BatchCode, err, page)
+	}
+	if b := page.Items[0]; !reflect.DeepEqual(b.ReusedIn, want) || b.UnitsTotal != unitsLeft {
+		f.t.Fatalf("list(%s): reused_in = %+v units %d, want %+v units %d", d.BatchCode, b.ReusedIn, b.UnitsTotal, want, unitsLeft)
 	}
 }

@@ -34,6 +34,13 @@ const activeWorkersExpr = `(SELECT string_agg(wk.name, ', ' ORDER BY plg.started
 	  FROM phase_logs plg JOIN workers wk ON wk.id = plg.worker_id
 	  WHERE plg.batch_id = b.id AND plg.phase = b.current_phase AND plg.completed_at IS NULL)`
 
+// reusedInExpr: for a cancelled batch, where its spares went — JSON [{batch_id, batch_code, count}] of
+// the batches whose units have reused_from = this batch; NULL otherwise (P1: "All 5 mats reused in …").
+const reusedInExpr = `CASE WHEN b.status = 'cancelled' THEN (
+	  SELECT json_agg(json_build_object('batch_id', nb.id, 'batch_code', nb.batch_code, 'count', r.n) ORDER BY nb.created_at)
+	  FROM (SELECT bu.batch_id, COUNT(*)::int AS n FROM batch_units bu WHERE bu.reused_from = b.id GROUP BY bu.batch_id) r
+	  JOIN batches nb ON nb.id = r.batch_id) END`
+
 // Sortable columns (whitelist). Every sort ends with created_at, id for a stable order.
 var listSorts = map[string]string{
 	// ascending = longest waiting first; batches not waiting sort last either way (NULLS LAST)
@@ -96,7 +103,8 @@ const listSelect = `
 	       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.prestitched),
 	       (SELECT COUNT(*) FROM rework_logs rl WHERE rl.batch_id = b.id AND rl.fixed_at IS NULL AND (rl.decision IS NULL OR rl.decision = 'to_stitcher')),
 	       ` + activeWorkersExpr + `,
-	       ` + readySinceExpr
+	       ` + readySinceExpr + `,
+	       ` + reusedInExpr
 
 const listFrom = `
 	FROM batches b
@@ -202,7 +210,7 @@ func (s *Service) ListPage(ctx context.Context, f ListFilter) (*ListPage, error)
 			&b.Version, &b.CreatedAt, &b.UpdatedAt,
 			&b.CutQty, &b.ParentBatchID, &b.ParentBatchCode, &b.ShortReason, &b.StickersPrintedAt,
 			&b.UnitsTotal, &b.UnitsPacked, &b.UnitsStitched, &b.UnitsWrittenOff, &b.UnitsPrestitched, &b.ReworkOpen,
-			&b.ActiveWorkers, &b.ReadySince,
+			&b.ActiveWorkers, &b.ReadySince, &b.ReusedIn,
 		); err != nil {
 			return nil, err
 		}

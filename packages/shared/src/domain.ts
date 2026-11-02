@@ -97,6 +97,15 @@ export interface Batch {
   my_done_qty?: number;
   /** GET /batches only: for an awaiting_assignment batch, when cutting last finished (waiting time). */
   ready_since?: string;
+  /** Cancelled batch only (P1): the batches its spare mats were reused in (the mats moved there). */
+  reused_in?: ReusedIn[];
+}
+
+/** n spare mats of a cancelled batch that now belong to this batch. */
+export interface ReusedIn {
+  batch_id: string;
+  batch_code: string;
+  count: number;
 }
 
 export interface Unit {

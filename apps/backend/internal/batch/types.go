@@ -78,6 +78,15 @@ type Batch struct {
 	ShortReason     *string    `json:"short_reason,omitempty"`
 	// List only: for an awaiting_assignment batch, when cutting last finished (waiting time).
 	ReadySince *time.Time `json:"ready_since,omitempty"`
+	// Cancelled batch only (P1): where its spare mats were reused (they moved to these batches).
+	ReusedIn []ReusedIn `json:"reused_in,omitempty"`
+}
+
+// ReusedIn: n spare mats of a cancelled batch now on this batch (batch_units.reused_from).
+type ReusedIn struct {
+	BatchID   uuid.UUID `json:"batch_id"`
+	BatchCode string    `json:"batch_code"`
+	Count     int       `json:"count"`
 }
 
 // Unit is one physical mat.

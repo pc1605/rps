@@ -14,6 +14,7 @@ import { BatchMaterials } from "@/features/batches/components/batch-materials";
 import { CancelBatchDialog } from "@/features/batches/components/cancel-batch-dialog";
 import { EditBatchDialog } from "@/features/batches/components/edit-batch-dialog";
 import { BatchTimeline } from "@/features/batches/components/batch-timeline";
+import { ReusedInLine } from "@/features/batches/components/reused-in";
 import { ShortCutPanel } from "@/features/batches/components/short-cut-panel";
 import { UnitCard } from "@/features/batches/components/unit-card";
 import { useBatch } from "@/features/batches/hooks";
@@ -135,11 +136,14 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
 
       <section>
         <SectionTitle aside={`${batch.units_total} mats`}>Units</SectionTitle>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-          {batch.units.map((u) => (
-            <UnitCard key={u.id} unit={u} allowUndo={batch.status !== "cancelled"} />
-          ))}
-        </div>
+        <ReusedInLine batch={batch} className="mb-3 block text-small text-muted-foreground" />
+        {batch.units.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            {batch.units.map((u) => (
+              <UnitCard key={u.id} unit={u} allowUndo={batch.status !== "cancelled"} />
+            ))}
+          </div>
+        )}
       </section>
 
       <BatchMaterials batchId={batch.id} />
