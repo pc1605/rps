@@ -43,4 +43,5 @@ Admin: rework badge on Packing view, rework rows in unit grid with photo thumbna
 
 ## Later / maybe never
 Strict-FIFO toggle for open queues · soft "suggested worker" · kiosk print station · realtime WS · AI agent over the same
-Guard · unit journey / public `/units/:code` page · audit-log viewer · batch cancel/edit · `packages/shared` types.
+Guard · public (no-login) unit page · audit-log viewer.
+Built since this list was written: the admin unit journey `/units/:code` (U1), batch edit/cancel (U3), `@rps/shared` types.
