@@ -28,6 +28,12 @@ const readySinceExpr = `CASE WHEN b.status = 'awaiting_assignment' THEN COALESCE
 	  (SELECT MAX(e.at) FROM batch_events e WHERE e.batch_id = b.id AND e.kind = 'cut_completed'),
 	  b.updated_at) END`
 
+// activeWorkersExpr: who's working on the batch right now — names of the open phase logs at the
+// current phase ("Surya, Mahesh"), NULL when nobody. Used by the list and the detail (cancel warning).
+const activeWorkersExpr = `(SELECT string_agg(wk.name, ', ' ORDER BY plg.started_at)
+	  FROM phase_logs plg JOIN workers wk ON wk.id = plg.worker_id
+	  WHERE plg.batch_id = b.id AND plg.phase = b.current_phase AND plg.completed_at IS NULL)`
+
 // Sortable columns (whitelist). Every sort ends with created_at, id for a stable order.
 var listSorts = map[string]string{
 	// ascending = longest waiting first; batches not waiting sort last either way (NULLS LAST)
@@ -89,11 +95,7 @@ const listSelect = `
 	       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.status = 'defective'),
 	       (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = b.id AND bu.prestitched),
 	       (SELECT COUNT(*) FROM rework_logs rl WHERE rl.batch_id = b.id AND rl.fixed_at IS NULL AND (rl.decision IS NULL OR rl.decision = 'to_stitcher')),
-	       -- who's working right now (open logs at the current phase)
-	       (SELECT string_agg(wk.name, ', ' ORDER BY plg.started_at)
-	        FROM phase_logs plg JOIN workers wk ON wk.id = plg.worker_id
-	        WHERE plg.batch_id = b.id AND plg.phase = b.current_phase
-	          AND plg.completed_at IS NULL),
+	       ` + activeWorkersExpr + `,
 	       ` + readySinceExpr
 
 const listFrom = `
