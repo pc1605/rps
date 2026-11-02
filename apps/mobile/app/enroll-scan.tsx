@@ -11,6 +11,7 @@ import { AppButton } from "../components/ui/AppButton";
 import { Screen } from "../components/ui/Screen";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useEnrollDraft } from "../features/auth/enroll-draft";
+import { strings } from "../lib/strings";
 
 export default function EnrollScan() {
   const router = useRouter();
@@ -30,11 +31,19 @@ export default function EnrollScan() {
 
   if (!permission.granted) {
     return (
-      <Screen centered footer={<AppButton title="Allow camera" size="lg" onPress={requestPermission} />}>
+      <Screen
+        centered
+        footer={<AppButton title={strings.scanner.allowCamera} size="lg" onPress={requestPermission} />}
+      >
         <View style={styles.permContent}>
-          <Text style={styles.permTitle}>Camera needed</Text>
-          <Text style={styles.permText}>To scan your enrollment code.</Text>
-          <AppButton title="← Back" variant="ghost" size="md" onPress={() => router.back()} />
+          <Text style={styles.permTitle}>{strings.scanner.cameraNeeded}</Text>
+          <Text style={styles.permText}>{strings.enroll.cameraWhy}</Text>
+          <AppButton
+            title={strings.common.backArrow}
+            variant="ghost"
+            size="md"
+            onPress={() => router.back()}
+          />
         </View>
       </Screen>
     );
@@ -46,11 +55,11 @@ export default function EnrollScan() {
     const code = data.trim();
 
     if (!code.startsWith(ENROLL_PREFIX)) {
-      const msg = "Not an enrollment code — ask your admin for the QR";
+      const msg = strings.enroll.notEnrollCode;
       setError(msg);
       try {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        AccessibilityInfo.announceForAccessibility(`Error: ${msg}`);
+        AccessibilityInfo.announceForAccessibility(strings.scanner.errorA11y(msg));
       } catch {
         // Ignore haptics failure
       }
@@ -63,7 +72,7 @@ export default function EnrollScan() {
 
     try {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      AccessibilityInfo.announceForAccessibility("Enrollment code scanned");
+      AccessibilityInfo.announceForAccessibility(strings.enroll.scannedA11y);
     } catch {
       // Ignore haptics failure
     }
@@ -87,16 +96,16 @@ export default function EnrollScan() {
           <Pressable
             onPress={() => router.back()}
             accessibilityRole="button"
-            accessibilityLabel="Cancel enrollment scan"
+            accessibilityLabel={strings.enroll.cancelA11y}
             style={styles.topBarBtn}
           >
-            <Text style={styles.topBarText}>← Cancel</Text>
+            <Text style={styles.topBarText}>{strings.enroll.cancel}</Text>
           </Pressable>
         </View>
 
         <View pointerEvents="none" style={styles.frameWrap}>
           <View style={styles.frame} />
-          <Text style={styles.hint}>Point at the enrollment QR on the admin screen</Text>
+          <Text style={styles.hint}>{strings.enroll.hint}</Text>
         </View>
 
         <View style={styles.bottomFlashWrap(insets)} pointerEvents="box-none">

@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
+import { strings } from "../../lib/strings";
 
 type Props = {
   title?: string;
@@ -25,9 +26,9 @@ export function ScreenHeader({ title, subtitle, back, onBack, onPress, right, la
             hitSlop={8}
             style={styles.iconBtn}
             accessibilityRole="button"
-            accessibilityLabel={typeof back === "string" ? `Back to ${back}` : "Back"}
+            accessibilityLabel={typeof back === "string" ? strings.common.backTo(back) : strings.common.back}
           >
-            <Text style={styles.backText}>‹ {typeof back === "string" ? back : "Back"}</Text>
+            <Text style={styles.backText}>‹ {typeof back === "string" ? back : strings.common.back}</Text>
           </Pressable>
         ) : (
           <View style={styles.spacer} />

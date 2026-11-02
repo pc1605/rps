@@ -32,7 +32,7 @@ export default function BatchAction() {
 
   if (isPending) {
     return (
-      <Screen header={<ScreenHeader back="Queue" />}>
+      <Screen header={<ScreenHeader back={strings.common.queue} />}>
         <View style={styles.skeletonContainer}>
           <Skeleton width="30%" height={36} />
           <Skeleton width="60%" height={28} />
@@ -46,13 +46,16 @@ export default function BatchAction() {
 
   if (!batch) {
     return (
-      <Screen header={<ScreenHeader back="Queue" />}>
+      <Screen header={<ScreenHeader back={strings.common.queue} />}>
         <View style={styles.notFoundWrap}>
-          <Text style={styles.notFoundTitle}>Batch not found</Text>
-          <Text style={styles.notFoundText}>
-            This batch might have been completed, cancelled, or is no longer assigned to your station.
-          </Text>
-          <AppButton title="Back to queue" variant="secondary" size="md" onPress={() => router.back()} />
+          <Text style={styles.notFoundTitle}>{strings.batch.notFoundTitle}</Text>
+          <Text style={styles.notFoundText}>{strings.batch.notFoundBody}</Text>
+          <AppButton
+            title={strings.batch.backToQueue}
+            variant="secondary"
+            size="md"
+            onPress={() => router.back()}
+          />
         </View>
       </Screen>
     );
@@ -70,22 +73,18 @@ export default function BatchAction() {
   const sizeText = SIZE_LABEL[batch.size_class as keyof typeof SIZE_LABEL] ?? batch.size_class;
 
   const onError = (e: unknown) => {
-    const msg = e instanceof ApiError ? e.message : "Something went wrong";
-    Alert.alert("Couldn't do that", msg);
+    const msg = e instanceof ApiError ? e.message : strings.common.somethingWrong;
+    Alert.alert(strings.common.couldntDoThat, msg);
   };
 
   const handleStart = () => startBatch.mutate(batch.id, { onError });
 
   const handleComplete = () => {
     if (qtyNum < remaining) {
-      Alert.alert(
-        "Short count",
-        `This batch needs ${remaining} more cut but you're reporting ${qtyNum}. The admin will decide what happens with the remaining ${remaining - qtyNum}.`,
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Complete", onPress: doComplete },
-        ],
-      );
+      Alert.alert(strings.batch.shortCountTitle, strings.batch.shortCountBody(remaining, qtyNum), [
+        { text: strings.common.cancel, style: "cancel" },
+        { text: strings.batch.complete, onPress: doComplete },
+      ]);
     } else {
       doComplete();
     }
@@ -97,10 +96,10 @@ export default function BatchAction() {
       {
         onSuccess: () => {
           Alert.alert(
-            "Done ✓",
+            strings.common.done,
             isCutter
-              ? `${batch.batch_code} sent to admin for stitching assignment.`
-              : `${batch.batch_code} sent to the next station.`,
+              ? strings.batch.sentForAssignment(batch.batch_code)
+              : strings.batch.sentToNext(batch.batch_code),
           );
           router.back();
         },
@@ -117,7 +116,7 @@ export default function BatchAction() {
         onPress: () =>
           releaseBatch.mutate(batch.id, {
             onSuccess: () => {
-              Alert.alert("Done ✓", strings.cutting.released(batch.batch_code));
+              Alert.alert(strings.common.done, strings.cutting.released(batch.batch_code));
               router.back();
             },
             onError,
@@ -138,13 +137,18 @@ export default function BatchAction() {
   const primaryAction = (() => {
     if (isCutter && !mine && batch.status === "pending") {
       return (
-        <AppButton title="Start cutting" size="lg" onPress={handleStart} loading={startBatch.isPending} />
+        <AppButton
+          title={strings.batch.startCutting}
+          size="lg"
+          onPress={handleStart}
+          loading={startBatch.isPending}
+        />
       );
     }
     if (isCutter && mine) {
       return (
         <AppButton
-          title="Report cut"
+          title={strings.batch.reportCut}
           size="lg"
           onPress={handleComplete}
           disabled={!qtyValid}
@@ -153,19 +157,35 @@ export default function BatchAction() {
       );
     }
     if (scanStation && !mine) {
-      return <AppButton title="Join batch" size="lg" onPress={handleStart} loading={startBatch.isPending} />;
+      return (
+        <AppButton
+          title={strings.batch.joinBatch}
+          size="lg"
+          onPress={handleStart}
+          loading={startBatch.isPending}
+        />
+      );
     }
     if (scanStation && mine) {
-      return <AppButton title="Open scanner" size="lg" onPress={() => router.push(`/scan/${batch.id}`)} />;
+      return (
+        <AppButton
+          title={strings.batch.openScanner}
+          size="lg"
+          onPress={() => router.push(`/scan/${batch.id}`)}
+        />
+      );
     }
     return undefined;
   })();
 
   return (
-    <Screen header={<ScreenHeader back="Queue" title={batch.batch_code} />} footer={primaryAction}>
+    <Screen
+      header={<ScreenHeader back={strings.common.queue} title={batch.batch_code} />}
+      footer={primaryAction}
+    >
       {!isOnline && (
         <View style={styles.bannerWrap}>
-          <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
+          <Banner kind="warning" text={strings.common.offline} />
         </View>
       )}
 
@@ -191,14 +211,14 @@ export default function BatchAction() {
       {/* Middle: Relevant Big Stat */}
       <Card style={styles.statCard}>
         {isCutter ? (
-          <Stat value={batch.quantity} label="mats to cut" big />
+          <Stat value={batch.quantity} label={strings.batch.matsToCut} big />
         ) : batch.my_target_qty != null ? (
-          <Stat value={batch.my_done_qty ?? 0} of={batch.my_target_qty} label="your share" big />
+          <Stat value={batch.my_done_qty ?? 0} of={batch.my_target_qty} label={strings.batch.yourShare} big />
         ) : (
           <Stat
             value={isStitcher ? stitchDone : batch.units_packed}
             of={batch.units_total}
-            label={isStitcher ? "mats stitched" : "mats packed"}
+            label={isStitcher ? strings.batch.matsStitched : strings.batch.matsPacked}
             big
           />
         )}
@@ -208,21 +228,21 @@ export default function BatchAction() {
       <View style={styles.infoSection}>
         {batch.assigned_workers ? (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Assigned workers</Text>
+            <Text style={styles.infoLabel}>{strings.batch.assignedWorkers}</Text>
             <Text style={styles.infoValue}>📌 {batch.assigned_workers}</Text>
           </View>
         ) : null}
 
         {batch.active_workers ? (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Active workers</Text>
+            <Text style={styles.infoLabel}>{strings.batch.activeWorkers}</Text>
             <Text style={styles.infoValue}>👤 {batch.active_workers}</Text>
           </View>
         ) : null}
 
         {batch.notes ? (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Notes</Text>
+            <Text style={styles.infoLabel}>{strings.batch.notes}</Text>
             <Text style={styles.notesText}>✎ {batch.notes}</Text>
           </View>
         ) : null}
@@ -231,13 +251,13 @@ export default function BatchAction() {
       {/* Cutter mine stepper inside content */}
       {isCutter && mine && (
         <Card style={styles.stepperCard}>
-          <Text style={styles.stepperCaption}>Pieces completed</Text>
+          <Text style={styles.stepperCaption}>{strings.batch.piecesCompleted}</Text>
           <View style={styles.stepperRow}>
             <Pressable
               onPress={stepDecrement}
               disabled={qtyNum <= 1}
               accessibilityRole="button"
-              accessibilityLabel="Decrease quantity"
+              accessibilityLabel={strings.batch.decreaseQty}
               accessibilityState={{ disabled: qtyNum <= 1 }}
               style={({ pressed }) => [
                 styles.stepBtn,
@@ -253,14 +273,14 @@ export default function BatchAction() {
               onChangeText={(t) => setQty(t.replace(/\D/g, ""))}
               keyboardType="number-pad"
               style={styles.stepperInput}
-              accessibilityLabel="Quantity completed"
+              accessibilityLabel={strings.batch.quantityCompleted}
             />
 
             <Pressable
               onPress={stepIncrement}
               disabled={qtyNum >= remaining}
               accessibilityRole="button"
-              accessibilityLabel="Increase quantity"
+              accessibilityLabel={strings.batch.increaseQty}
               accessibilityState={{ disabled: qtyNum >= remaining }}
               style={({ pressed }) => [
                 styles.stepBtn,
@@ -271,9 +291,7 @@ export default function BatchAction() {
               <Text style={[styles.stepBtnText, qtyNum >= remaining && styles.stepBtnTextDisabled]}>+</Text>
             </Pressable>
           </View>
-          <Text style={styles.stepperSubtext}>
-            {remaining} remaining of {batch.quantity}
-          </Text>
+          <Text style={styles.stepperSubtext}>{strings.batch.remainingOf(remaining, batch.quantity)}</Text>
         </Card>
       )}
 
@@ -289,9 +307,7 @@ export default function BatchAction() {
 
       {isCutter && !mine && batch.status === "in_progress" && (
         <View style={styles.takenNotice}>
-          <Text style={styles.takenText}>
-            ⏳ {batch.active_workers ?? "Another cutter"} is cutting this batch
-          </Text>
+          <Text style={styles.takenText}>{strings.batch.cuttingNow(batch.active_workers)}</Text>
         </View>
       )}
     </Screen>

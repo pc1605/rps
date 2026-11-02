@@ -66,9 +66,9 @@ export default function ReworkFixScreen() {
 
     try {
       if (fb.kind === "ok") {
-        AccessibilityInfo.announceForAccessibility(`Fixed ${fb.code}`);
+        AccessibilityInfo.announceForAccessibility(strings.rework.fixedA11y(fb.code));
       } else {
-        AccessibilityInfo.announceForAccessibility(`Error: ${fb.msg}`);
+        AccessibilityInfo.announceForAccessibility(strings.scanner.errorA11y(fb.msg));
       }
     } catch {
       // Ignore a11y failure
@@ -85,7 +85,7 @@ export default function ReworkFixScreen() {
     lock.current = true;
 
     if (!isOnline) {
-      flashAndUnlock({ kind: "err", msg: "Offline — reconnect to scan" });
+      flashAndUnlock({ kind: "err", msg: strings.scanner.offline });
       return;
     }
 
@@ -93,7 +93,7 @@ export default function ReworkFixScreen() {
 
     // Local validation
     if (!UNIT_CODE_RE.test(code)) {
-      flashAndUnlock({ kind: "err", msg: "Not an RPS unit label" });
+      flashAndUnlock({ kind: "err", msg: strings.scanner.notRpsLabel });
       return;
     }
 
@@ -136,13 +136,13 @@ export default function ReworkFixScreen() {
           }
           flashAndUnlock({
             kind: "err",
-            msg: e.message || "Scan failed — try again",
+            msg: e.message || strings.scanner.scanFailed,
           });
           return;
         }
         flashAndUnlock({
           kind: "err",
-          msg: "Scan failed — try again",
+          msg: strings.scanner.scanFailed,
         });
       },
     });
@@ -164,11 +164,14 @@ export default function ReworkFixScreen() {
 
   if (!permission.granted) {
     return (
-      <Screen centered footer={<AppButton title="Allow camera" size="lg" onPress={requestPermission} />}>
+      <Screen
+        centered
+        footer={<AppButton title={strings.scanner.allowCamera} size="lg" onPress={requestPermission} />}
+      >
         <View style={styles.permContent}>
-          <Text style={styles.permTitle}>Camera needed</Text>
-          <Text style={styles.permText}>RPS uses the camera to scan unit QR labels.</Text>
-          <AppButton title="← Back" variant="ghost" size="md" onPress={handleBack} />
+          <Text style={styles.permTitle}>{strings.scanner.cameraNeeded}</Text>
+          <Text style={styles.permText}>{strings.scanner.cameraWhy}</Text>
+          <AppButton title={strings.common.backArrow} variant="ghost" size="md" onPress={handleBack} />
         </View>
       </Screen>
     );
@@ -214,19 +217,21 @@ export default function ReworkFixScreen() {
           <Pressable
             onPress={handleBack}
             accessibilityRole="button"
-            accessibilityLabel="Back to detail"
+            accessibilityLabel={strings.rework.backToDetailA11y}
             style={styles.topBarBtn}
           >
-            <Text style={styles.topBarText}>← {unitCode ?? "Back"}</Text>
+            <Text style={styles.topBarText}>← {unitCode ?? strings.common.back}</Text>
           </Pressable>
           <Pressable
             onPress={() => setTorch((t) => !t)}
             accessibilityRole="button"
-            accessibilityLabel={torch ? "Turn torch off" : "Turn torch on"}
+            accessibilityLabel={torch ? strings.scanner.torchOffA11y : strings.scanner.torchOnA11y}
             accessibilityState={{ selected: torch }}
             style={styles.topBarBtn}
           >
-            <Text style={styles.topBarText}>{torch ? "🔦 Torch off" : "🔦 Torch on"}</Text>
+            <Text style={styles.topBarText}>
+              {torch ? strings.scanner.torchOff : strings.scanner.torchOn}
+            </Text>
           </Pressable>
         </View>
 
@@ -236,14 +241,14 @@ export default function ReworkFixScreen() {
             <View style={styles.bannerWrap}>
               <Banner
                 kind="danger"
-                text="Camera didn't start — tap to retry"
-                actionLabel="Retry"
+                text={strings.scanner.cameraFailed}
+                actionLabel={strings.common.retry}
                 onAction={handleRetryCamera}
               />
             </View>
           )}
           <View style={styles.targetWrap}>
-            <Text style={styles.targetLabel}>Target Mat</Text>
+            <Text style={styles.targetLabel}>{strings.rework.targetMat}</Text>
             <Text style={styles.targetCode}>{unitCode}</Text>
           </View>
         </View>

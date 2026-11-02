@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
+import { strings } from "./strings";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 if (!API_URL) throw new Error("EXPO_PUBLIC_API_URL is not set — check apps/mobile/.env and rebuild the app");
@@ -69,7 +70,7 @@ http.interceptors.response.use(
       new ApiError(
         status,
         body?.code ?? "network_error",
-        body?.error ?? (status === 0 ? "Cannot reach server" : "Request failed"),
+        body?.error ?? (status === 0 ? strings.common.cannotReachServer : strings.common.requestFailed),
       ),
     );
   },
