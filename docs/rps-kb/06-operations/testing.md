@@ -27,6 +27,17 @@ cd apps/backend && TEST_DATABASE_URL=… go test -v ./internal/batch -run TestRe
 then select the **`RPS test`** environment (`apps/backend/RPS-test.postman_environment.json`, `baseUrl`
 `http://localhost:8082/api/v1` — environment values override the collection's `baseUrl`). Never against :8080 / `rps`.
 
+**Full run — from the repo root** (the Rework Flow photo `postman/fixtures/fault.jpg` is resolved against the
+working directory, so a run from `apps/backend` fails 24 assertions):
+```bash
+npx --no-install newman run apps/backend/RPS.postman_collection.json -e apps/backend/RPS-test.postman_environment.json
+```
+Expected: 0 failed requests, 0 failed assertions (Nov 2026: 306 requests, 528 assertions). It can be re-run on the
+same rps_test without resetting it. Add `--folder "<name>"` (repeatable) to run part of it. In the Postman app, set
+Settings → General → Working directory to the repo root for the photo upload. Scripts read `baseUrl` with
+`pm.variables.get` (environment wins), never `pm.collectionVariables.get` (that's the :8080 default); `Health` derives
+the server root from `baseUrl`.
+
 Variables: `baseUrl` (localhost:8080/api/v1), `accessToken`, `workerToken` (cutter), `stitcherToken`, `stitcher2Token`,
 `packerToken`, badge vars, `batchId`, `workerBatchId`, `scanBatchId/Code`, `stockRollId`, `reportFrom/To`.
 Convention: tests read `const responseData = pm.response.json().data`, assert `code` fields not messages (except worker-login
@@ -39,16 +50,18 @@ Folders and run order:
 4. **Reference**, **Batches** (create/list/get/validation), **Stock**
 5. **Worker Phase Flow** — cutting only now: queue · start · start-again 409 · Cutter Complete · complete-again 409 · admin-token forbidden
 6. **Multi-Worker Scanning** — self-contained (creates qty-4 batch, Stitcher A/B, packer; cutter start/complete; both stitchers join; split scans; idempotent re-scan; manual complete 400; last scan `phase_completed`; stitcher-after-move 409; packer joins via pre-request and packs all → `batch_completed`).
-   **Needs updating for Slice A/A.2:** after cutter complete the batch is `awaiting_assignment`; insert `PUT /batches/{{scanBatchId}}/assignments` with `{"phase":"stitching","assignments":[{"worker_id":…,"target_qty":3},{…,"target_qty":1}]}` before the joins; add a non-assignee join → 403 `not_assigned`; add a quota-exceeded scan → 409 `quota_reached`; add sum-mismatch → 400.
+   Since Slice A the admin assigns the stitchers with quotas after cutting (`PUT /batches/{{scanBatchId}}/assignments`) before they join.
 7. **Reports** — default range, dynamic 30-day with echo check, invalid range 400, worker 403, sort assertion.
 8. **Materials (C1c)** — self-contained (logs in, builds a cutter token): types, variants, receive, adjust/waste/return,
    lot PATCH, movements pagination, groups, recipes, car group + overrides, resolve dry run, batch → cutter
    materials-needed → cut → batch materials; main 4xx; restores the car's group at the end.
-   `npx -y newman@6.2.1 run apps/backend/RPS.postman_collection.json -e apps/backend/RPS-test.postman_environment.json --folder "Materials (C1c)"`
+   Full-run command with `--folder "Materials (C1c)"`.
 9. **Entity pages (U1)** — worker detail/summary/history, busy-deactivate 409, throwaway packer: edit, reset PIN,
    login with it, deactivate → its token 401, reactivate; unit journey, car overview, lot detail; main 4xx. Same command with `--folder "Entity pages (U1)"`.
 10. **Lists & search (U2)** — read-only: paging, views, sort, filters, `q` (no wildcard), 400s; search exact batch /
     mat, worker hit, 1-char empty; `stats.working`. Self-contained (logs in).
+11. **Short-Cut Resolution**, **Assignments & Quotas**, **Rework Flow**, **Reports v2 (R1)**, **Stitching assignment (U3)**,
+    **Workflow corrections (U3b)** — run inside the full run (U3b alone: see below).
 Folders that need earlier ones in the same run: **Batches** needs `--folder "Auth" --folder "Cars & Reference"`
 before it (each Newman run starts with empty variables).
 
@@ -76,10 +89,5 @@ curl -s -X POST $API/worker/units/scan -H "Authorization: Bearer $STITCHER" -H "
 ### U3b folder — "Workflow corrections (U3b)"
 Self-contained (creates its own car item, cutter and stitcher; run after `Auth`): edit before cutting, cutter + admin
 release, undo scan, cancel → spare stock, cancelled view, scanning a spare, reuse on New batch, spare write-off,
-My work. `npx --no-install newman run RPS.postman_collection.json -e RPS-test.postman_environment.json --folder Auth
---folder "Workflow corrections (U3b)"` → 50 requests, 77 assertions.
-
-Known failures on a full run (same on master, not U3): `Health / Healthz` calls `:8080` directly instead of
-`{{baseUrl}}`; `Rework Flow` needs `postman/fixtures/fault.jpg` relative to the working directory, and the following
-`Multi-Worker Scanning / Packer scans 4` step fails with it.
+My work. Full-run command with `--folder Auth --folder "Workflow corrections (U3b)"`.
 

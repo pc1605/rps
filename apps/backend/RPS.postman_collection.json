@@ -354,6 +354,16 @@
           "name": "Healthz",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// /healthz is at the server root, not under /api/v1: derive it from baseUrl (environment wins).",
+                  "pm.variables.set('rootUrl', pm.variables.get('baseUrl').replace(/\\/api\\/v1\\/?$/, ''));"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -372,9 +382,9 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "http://localhost:8080/healthz",
+              "raw": "{{rootUrl}}/healthz",
               "host": [
-                "http://localhost:8080"
+                "{{rootUrl}}"
               ],
               "path": [
                 "healthz"
@@ -3609,7 +3619,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const base = pm.collectionVariables.get('baseUrl');",
+                  "const base = pm.variables.get('baseUrl');",
                   "const code = pm.collectionVariables.get('scanBatchCode');",
                   "const tok = pm.collectionVariables.get('packerToken');",
                   "pm.sendRequest({ url: base + '/worker/units/scan', method: 'POST',",
