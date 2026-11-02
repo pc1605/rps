@@ -78,6 +78,34 @@ Cast: cutter (Ramesh), two stitchers (Surya, Mahesh), packer (Raju) — 2–3 ph
 7. Packer: Join → scan all 10 → done screen; Batches → Completed; Stock → Finished +10; Reports credit Surya 8 / Mahesh 2 / Raju 10 / Ramesh 10.
 8. Edge checks: kill app mid-scan → reopen → counts intact; scan a mat from another batch → red "Wrong batch"; edit Surya's quota below 8 → 400 toast.
 
+## Real-phone checklist (U3 + P1) — run by the owner, the agent can't drive the phone app
+Setup: your dev DB must have migrations up to 019 (`set -a; source .env; set +a; migrate -path apps/backend/migrations -database "$DATABASE_URL" up`),
+a dev build of the app pointed at your backend, one cutter, one stitcher and one packer phone (PIN 1234). Tick each:
+1. [ ] **Cutter — Give back this batch.** Cutter starts a batch → batch screen shows "Give back this batch" under the
+   stepper → tap → dialog "Give back this batch?" → **Give back** → "Done ✓ … is back in the cutting queue." → back on the
+   queue the batch is free again (another cutter phone can start it; admin timeline no longer shows the claim).
+2. [ ] **My work card** (home, top) on each phone: title "My work · pieces cut / mats stitched / mats packed"; *today* and
+   *this week* match what that worker did (admin Reports → Workers for the same days). Stitcher: after a mat of theirs is sent
+   to rework, "1 came back for rework this week" and "1 waiting for you"; packer: "1 sent to rework this week" after flagging one.
+3. [ ] **Scanning a spare.** Admin cancels a batch that was cut (Cancel batch → reason). On the stitcher's scanner for any
+   batch of theirs, scan a mat of the cancelled batch → red "✗ Spare stock — keep it aside" (no count change).
+4. [ ] **Packer scans a reused stitched spare.** Cancel a batch with at least 1 stitched mat → New batch of the same item
+   reusing that stitched spare → stitch the rest, so the batch is at packing. Packer joins, scans the reused mat (its label
+   still shows the OLD batch code) → Pack / Needs rework sheet appears (not "Wrong batch") → Pack → count goes up.
+5. [ ] **Packer scans a mat of another batch** (a normal one, not reused) → red "✗ Wrong batch — this mat is from B-…".
+6. [ ] **Texts after the strings.ts move (P1).** Walk login, home, batch screen, scanner, rework (send / fix): every text,
+   button and banner reads as before (nothing blank, no "undefined"); the cutter's short-count alert still names both numbers.
+
+## Admin browser checks (P1, 2 Nov 2026, rps_test)
+Checked in Chrome against the test backend: Spare mats → **Write off** dialog (opens, counts, writes off 1 → list updates),
+**Edit** (opens; only shown once nobody holds the batch), **Cancel batch** (warning: cutting "<name> is cutting it now — cuts
+not yet reported are lost", stitching "<name> is stitching it now — cancelling takes them off it"), timeline **Release**
+(toast, claim gone, warning gone), unit **Undo last scan** (reason required, 1/3 → 0/3), cancelled batch fully reused
+("All 3 mats reused in B-…" on the list and the batch page). **A real mouse click was NOT confirmed:** the Claude in Chrome
+extension's clicks and key presses delivered no events at all to the page (no pointerdown/mousedown/click on rows or plain
+buttons, typing didn't change inputs) in that session, so the dialogs were opened with a page-script `element.click()` and
+inputs set via the native value setter. Open each of these once with your own mouse.
+
 ## Curl snippets
 ```bash
 API=http://localhost:8080/api/v1; T=<admin token>
