@@ -9,9 +9,16 @@
 | C2 ✅ | Materials admin screens  | Materials (types, variants, lots, receive/adjust, movements), Recipes grid, groups + overrides in car dialog, "Materials used" on batch                                                                              | C1, U1, U2 | main                 |
 | R1 ✅ | Reports v2               | WIP ageing + stuck batches (also on dashboard), throughput, cycle time per phase, first-pass yield, worker output/hour, short-cut rate; CSV export                                                                   | U2         | main                 |
 | U3 ✅ | Workflow gaps            | stitching assignment UX + reassign mid-stitching (hand-over) · edit before cutting, cancel → spare stock + reuse on New batch, release claim, undo scan, My work card (D34–D39; migrations 017–019)                                                                                                            | U2         | main                 |
-| C3  | Cutter materials          | "You'll need …" panel, roll QR scan at cutting start, lot QR labels (hand-off: `c3-handoff.md`)                                                                                                                                                  | C2         | main                 |
 | R2  | Material reports          | consumption vs recipe, waste, cost per mat                                                                                                                                                                           | C2         | main                 |
 | E   | Hardening & deploy        | E1 security · E2 deploy · E3 EAS · E4 factory pilot                                                                                                                                                                  | U3         | main                 |
+
+### Future plan (not discussed with the owner yet — don't start)
+
+- **C3 Cutter materials** — "You'll need …" panel for the cutter, roll QR scan at cutting start, lot QR labels.
+  Why it would matter: material is deducted at cutting-complete from the roll picked on New batch, else the oldest
+  roll (FIFO). If the cutter cuts from another roll, total stock stays right but the wrong roll goes down; a roll scan
+  would fix per-roll counts at the cost of a scan per batch and a label on every roll. Only worth it if the owner
+  tracks each roll's remaining metres. Draft plan: `c3-handoff.md` (parked).
 
 Parallel rule: two agents may run at once only in separate folders (git worktree) on separate branches,
 and only when they don't touch the same files. Merge order: U0 → C1 → U1 → U2 → C2 → …

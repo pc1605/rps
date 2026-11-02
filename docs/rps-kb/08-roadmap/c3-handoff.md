@@ -1,6 +1,8 @@
 # C3 (Cutter materials) — hand-off prompt (Nov 2026)
 
-Status: **planned, not started.** Paste the prompt below into a new agent session to start C3.
+Status: **parked — future plan, not discussed with the owner yet (Nov 2026). Don't start it.** The owner's priority
+is that what exists works perfectly, without features the floor doesn't need. Raise C3 with the owner first (see the
+"Future plan" note in NEXT-STEPS.md for what roll scanning is for); if they want it, this prompt is the starting point.
 U3 is done and merged to master locally (merge commit `27985a1`, **not pushed yet**).
 
 ```text
