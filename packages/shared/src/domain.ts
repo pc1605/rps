@@ -478,7 +478,8 @@ export interface ReceiveLotInput {
   material_type_id: number;
   /** Required iff the type has variants. */
   variant_id?: number;
-  lot_code: string;
+  /** Optional: blank → "<TYPE CODE>-NNN", the next number for that type. */
+  lot_code?: string;
   color: string;
   qty: number;
   unit_cost?: number;

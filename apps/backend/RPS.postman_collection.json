@@ -6303,6 +6303,40 @@
           }
         },
         {
+          "name": "Receive \u00b7 no lot code \u2192 auto-numbered",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('<TYPE CODE>-NNN', () => pm.expect(d.lot_code).to.eql(d.type_code + '-001'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/materials/lots",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"material_type_id\": {{matTypeId}}, \"variant_id\": {{matVariantId}}, \"color\": \"Black\", \"qty\": 1}"
+            }
+          }
+        },
+        {
           "name": "Adjust lot",
           "event": [
             {

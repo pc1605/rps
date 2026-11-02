@@ -32,7 +32,7 @@ working directory, so a run from `apps/backend` fails 24 assertions):
 ```bash
 npx --no-install newman run apps/backend/RPS.postman_collection.json -e apps/backend/RPS-test.postman_environment.json
 ```
-Expected: 0 failed requests, 0 failed assertions (Nov 2026: 306 requests, 528 assertions). It can be re-run on the
+Expected: 0 failed requests, 0 failed assertions (Nov 2026: 307 requests, 530 assertions). It can be re-run on the
 same rps_test without resetting it. Add `--folder "<name>"` (repeatable) to run part of it. In the Postman app, set
 Settings → General → Working directory to the repo root for the photo upload. Scripts read `baseUrl` with
 `pm.variables.get` (environment wins), never `pm.collectionVariables.get` (that's the :8080 default); `Health` derives

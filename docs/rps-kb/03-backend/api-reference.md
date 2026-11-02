@@ -77,7 +77,7 @@ Quantities are JSON numbers with ≤ 3 decimals (money ≤ 2), parsed exactly (n
 | GET/POST | `/materials/types/:id/variants` | `{name, specs (object), is_active?}`; 400 if the type has no variants |
 | PATCH | `/materials/variants/:id` | `{name?, specs?, is_active?}` |
 | GET | `/materials/lots?type_id&active&low` | lots with type, variant, colour, qty, unit, cost, supplier, `last_movement_at`. `low=true` = lots of types below `min_level` |
-| POST | `/materials/lots` | receive `{material_type_id, variant_id (iff has_variants), lot_code, color, qty > 0, unit_cost?, supplier?, note?}` → lot + `receive` movement |
+| POST | `/materials/lots` | receive `{material_type_id, variant_id (iff has_variants), lot_code?, color, qty > 0, unit_cost?, supplier?, note?}` → lot + `receive` movement. `lot_code` blank → `<TYPE CODE>-NNN`, one above the highest such number of that type (owner, Nov 2026) |
 | POST | `/materials/lots/:id/adjust` | `{new_remaining ≥ 0, reason}` → `adjust` for the difference (400 if no change) |
 | POST | `/materials/lots/:id/waste` · `/return` | `{qty > 0, reason}` → `waste` (−, ≤ remaining) / `return` (+) |
 | PATCH | `/materials/lots/:id` | `is_active, color, supplier, note, unit_cost` (null clears); `material_type_id` / `variant_id` only before any consume/waste/return (else 409 `lot_has_consumption`) — opening movements move along |

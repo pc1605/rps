@@ -467,8 +467,6 @@ func (s *Service) Receive(ctx context.Context, in ReceiveInput, a Actor) (*Lot, 
 	switch {
 	case in.MaterialTypeID == 0:
 		return nil, invalid("material_type_id is required")
-	case in.LotCode == "":
-		return nil, invalid("lot_code is required")
 	case in.Color == "":
 		return nil, invalid("color is required")
 	case in.Qty <= 0:
@@ -487,6 +485,11 @@ func (s *Service) Receive(ctx context.Context, in ReceiveInput, a Actor) (*Lot, 
 		}
 		if err := checkVariant(ctx, tx, t, in.VariantID, true); err != nil {
 			return err
+		}
+		if in.LotCode == "" {
+			if in.LotCode, err = nextLotCode(ctx, tx, t); err != nil {
+				return err
+			}
 		}
 		var id uuid.UUID
 		// qty_remaining starts at 0; the receive movement brings it to qty.
@@ -514,6 +517,21 @@ func (s *Service) Receive(ctx context.Context, in ReceiveInput, a Actor) (*Lot, 
 		return writeAudit(ctx, tx, a, "material_lot", id.String(), audit.ActionCreate, nil, l)
 	})
 	return out, err
+}
+
+// nextLotCode: the lot code for a lot received without one — "<TYPE CODE>-NNN", one above the highest
+// such number of that type (codes typed by hand in the same form count too). Serialised per type.
+func nextLotCode(ctx context.Context, tx pgx.Tx, t *MaterialType) (string, error) {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('material_lot_code'), $1)`, t.ID); err != nil {
+		return "", err
+	}
+	var n int64
+	if err := tx.QueryRow(ctx, `
+		SELECT COALESCE(MAX((regexp_match(lot_code, '^' || $1 || '-([0-9]{1,9})$'))[1]::bigint), 0) + 1
+		FROM material_lots WHERE starts_with(lot_code, $1 || '-')`, t.Code).Scan(&n); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s-%03d", t.Code, n), nil
 }
 
 // lockLot locks the lot row and returns it.
