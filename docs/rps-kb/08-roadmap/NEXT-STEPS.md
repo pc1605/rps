@@ -10,10 +10,16 @@
 | R1 ✅ | Reports v2               | WIP ageing + stuck batches (also on dashboard), throughput, cycle time per phase, first-pass yield, worker output/hour, short-cut rate; CSV export                                                                   | U2         | main                 |
 | U3 ✅ | Workflow gaps            | stitching assignment UX + reassign mid-stitching (hand-over) · edit before cutting, cancel → spare stock + reuse on New batch, release claim, undo scan, My work card (D34–D39; migrations 017–019)                                                                                                            | U2         | main                 |
 | P1 ✅ | Make it perfect          | Owner priority (Nov 2026): no new features — Postman fully green, cancel-dialog warning, reused-spares display, phone texts in strings.ts, stale docs, last browser + real-phone checks (hand-off: `p1-perfection-handoff.md`); also lot code optional on Receive. Real-phone checklist (testing.md) still to be run by the owner | U3         | main                 |
-| R2  | Material reports          | consumption vs recipe, waste, cost per mat                                                                                                                                                                           | C2         | main                 |
+| H1  | Hindi on the phone        | English + Hindi on the worker app before the pilot: language picker (login + home), Hindi texts typed against English, shared labels + server error codes in Hindi, Devanagari font, layout pass, owner reviews wording (hand-off: `h1-hindi-handoff.md`) | P1 | main |
+| R2 ⏸ | Material reports (on hold, owner Nov 2026) | consumption vs recipe, waste, cost per mat                                                                                                                                                                           | C2         | main                 |
 | E   | Hardening & deploy        | E1 security · E2 deploy · E3 EAS · E4 factory pilot                                                                                                                                                                  | U3         | main                 |
 
 ### Future plan (not discussed with the owner yet — don't start)
+
+- **Worker helpers after the pilot** (owner, Nov 2026 — pick only what a pilot week shows workers need): earnings on
+  My work (needs Slice D rates), spoken scan feedback in Hindi, monthly work history, offline scan queue (if floor
+  Wi-Fi drops), "assigned to you" notification (needs EAS), first-use picture guide per station. Plan shared in chat
+  11 Nov 2026; nothing designed yet.
 
 - **C3 Cutter materials** — "You'll need …" panel for the cutter, roll QR scan at cutting start, lot QR labels.
   Why it would matter: material is deducted at cutting-complete from the roll picked on New batch, else the oldest
