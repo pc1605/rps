@@ -7,6 +7,7 @@ import { AccessibilityInfo, BackHandler, Pressable, Text, View } from "react-nat
 import { type EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../components/ui/AppButton";
+import { BackIcon, BackLabel } from "../../components/ui/BackIcon";
 import { Banner } from "../../components/ui/Banner";
 import { Screen } from "../../components/ui/Screen";
 import { Skeleton } from "../../components/ui/Skeleton";
@@ -319,7 +320,13 @@ export default function ScanScreen() {
         <View style={styles.permContent}>
           <Text style={styles.permTitle}>{strings.scanner.cameraNeeded}</Text>
           <Text style={styles.permText}>{strings.scanner.cameraWhy}</Text>
-          <AppButton title={strings.common.backArrow} variant="ghost" size="md" onPress={handleBack} />
+          <AppButton
+            title={strings.common.back}
+            icon={<BackIcon />}
+            variant="ghost"
+            size="md"
+            onPress={handleBack}
+          />
         </View>
       </Screen>
     );
@@ -374,7 +381,11 @@ export default function ScanScreen() {
             accessibilityLabel={strings.scanner.backToQueueA11y}
             style={styles.topBarBtn}
           >
-            <Text style={styles.topBarText}>← {batch?.batch_code ?? strings.common.back}</Text>
+            <BackLabel
+              tone="overlay"
+              label={batch?.batch_code ?? strings.common.back}
+              textStyle={styles.topBarText}
+            />
           </Pressable>
           <Pressable
             onPress={() => setTorch((t) => !t)}

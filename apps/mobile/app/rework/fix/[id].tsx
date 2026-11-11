@@ -8,6 +8,7 @@ import { AccessibilityInfo, BackHandler, Pressable, Text, View } from "react-nat
 import { type EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../../components/ui/AppButton";
+import { BackIcon, BackLabel } from "../../../components/ui/BackIcon";
 import { Banner } from "../../../components/ui/Banner";
 import { Screen } from "../../../components/ui/Screen";
 import { Skeleton } from "../../../components/ui/Skeleton";
@@ -176,7 +177,13 @@ export default function ReworkFixScreen() {
         <View style={styles.permContent}>
           <Text style={styles.permTitle}>{strings.scanner.cameraNeeded}</Text>
           <Text style={styles.permText}>{strings.scanner.cameraWhy}</Text>
-          <AppButton title={strings.common.backArrow} variant="ghost" size="md" onPress={handleBack} />
+          <AppButton
+            title={strings.common.back}
+            icon={<BackIcon />}
+            variant="ghost"
+            size="md"
+            onPress={handleBack}
+          />
         </View>
       </Screen>
     );
@@ -225,7 +232,7 @@ export default function ReworkFixScreen() {
             accessibilityLabel={strings.rework.backToDetailA11y}
             style={styles.topBarBtn}
           >
-            <Text style={styles.topBarText}>← {unitCode ?? strings.common.back}</Text>
+            <BackLabel tone="overlay" label={unitCode ?? strings.common.back} textStyle={styles.topBarText} />
           </Pressable>
           <Pressable
             onPress={() => setTorch((t) => !t)}

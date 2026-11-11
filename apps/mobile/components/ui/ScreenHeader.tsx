@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useStrings } from "../../lib/language";
+import { BackLabel } from "./BackIcon";
 
 type Props = {
   title?: string;
@@ -29,7 +30,11 @@ export function ScreenHeader({ title, subtitle, back, onBack, onPress, right, la
             accessibilityRole="button"
             accessibilityLabel={typeof back === "string" ? strings.common.backTo(back) : strings.common.back}
           >
-            <Text style={styles.backText}>‹ {typeof back === "string" ? back : strings.common.back}</Text>
+            <BackLabel
+              tone="accent"
+              label={typeof back === "string" ? back : strings.common.back}
+              textStyle={styles.backText}
+            />
           </Pressable>
         ) : (
           <View style={styles.spacer} />

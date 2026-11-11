@@ -125,7 +125,10 @@ stitcher and one packer phone. Wording list to read alongside: `docs/rps-kb/05-m
     "✗ इंटरनेट नहीं है — जुड़ने पर स्कैन करें"; cutter taps कटिंग शुरू करें → alert "यह नहीं हो पाया" with a Hindi line.
 11. [ ] **English is unchanged.** Switch to English and glance over the same screens: texts read as before H1, the
     font is IBM Plex Sans again, spacing as before.
-12. [ ] **TalkBack (optional).** With TalkBack on in Hindi, a scan announces "B-… स्कैन हुआ" and buttons read in Hindi.
+12. [ ] **Back arrow.** One and the same arrow (←, drawn) in both languages, level with its text, never a box or a
+    thin "‹": header back on the batch / rework screens (amber), the scanner and rework-fix top bar (white, before the
+    code), rework send 1/2, enroll scan "Cancel", and the "Back" button on a "Camera needed" screen. Check light and dark.
+13. [ ] **TalkBack (optional).** With TalkBack on in Hindi, a scan announces "B-… स्कैन हुआ" and buttons read in Hindi.
 
 ## Admin browser checks (P1, 2 Nov 2026, rps_test)
 Checked in Chrome against the test backend: Spare mats → **Write off** dialog (opens, counts, writes off 1 → list updates),

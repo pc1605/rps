@@ -7,6 +7,7 @@ import { BackHandler, Image, Pressable, Text, TextInput, View } from "react-nati
 import { type EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../components/ui/AppButton";
+import { BackIcon, BackLabel } from "../../components/ui/BackIcon";
 import { Banner } from "../../components/ui/Banner";
 import { Screen } from "../../components/ui/Screen";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
@@ -156,7 +157,13 @@ export default function NewReworkScreen() {
         <View style={styles.permContent}>
           <Text style={styles.permTitle}>{strings.scanner.cameraNeeded}</Text>
           <Text style={styles.permText}>{strings.rework.cameraWhy}</Text>
-          <AppButton title={strings.common.backArrow} variant="ghost" size="md" onPress={handleBack} />
+          <AppButton
+            title={strings.common.back}
+            icon={<BackIcon />}
+            variant="ghost"
+            size="md"
+            onPress={handleBack}
+          />
         </View>
       </Screen>
     );
@@ -188,7 +195,7 @@ export default function NewReworkScreen() {
               accessibilityRole="button"
               accessibilityLabel={strings.common.back}
             >
-              <Text style={styles.topBarBackText}>{strings.rework.back}</Text>
+              <BackLabel tone="overlay" label={strings.common.back} textStyle={styles.topBarBackText} />
             </Pressable>
             <Text style={styles.topBarUnitCode} numberOfLines={1}>
               {unitCode}

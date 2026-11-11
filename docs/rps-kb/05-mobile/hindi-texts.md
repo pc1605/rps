@@ -24,669 +24,663 @@ Every text of the phone app, grouped by screen: the English line first, the Hind
 3. Back  
    **वापस**
 
-4. ← Back  
-   **← वापस**
-
-5. Back to {where}  
+4. Back to {where}  
    **{where} पर वापस**
 
-6. Back to my queue  
+5. Back to my queue  
    **मेरी लिस्ट पर वापस**
 
-7. Done ✓  
+6. Done ✓  
    **हो गया ✓**
 
-8. Cancel  
+7. Cancel  
    **कैंसल**  
    ❓ कैंसल or रहने दें / रद्द करें
 
-9. Retry  
+8. Retry  
    **फिर कोशिश करें**
 
-10. Couldn't do that  
+9. Couldn't do that  
    **यह नहीं हो पाया**
 
-11. Something went wrong  
+10. Something went wrong  
    **कुछ गड़बड़ हुई**
 
-12. You're offline — changes will sync when you reconnect  
+11. You're offline — changes will sync when you reconnect  
    **इंटरनेट नहीं है — जुड़ने पर अपडेट होगा**
 
-13. Cannot reach server  
+12. Cannot reach server  
    **सर्वर नहीं मिल रहा**
 
-14. Request failed  
+13. Request failed  
    **काम नहीं हुआ**
 
-15. Login failed  
+14. Login failed  
    **लॉगिन नहीं हुआ**
 
 ## Login and enrollment scan
 
-16. AMBIKA · RIDDHI  
+15. AMBIKA · RIDDHI  
    **AMBIKA · RIDDHI**
 
-17. RPS Worker  
+16. RPS Worker  
    **RPS Worker**  
    ❓ app name kept in English
 
-18. Scan the enrollment QR from your admin, or type the code, then enter your PIN to set up this phone.  
+17. Scan the enrollment QR from your admin, or type the code, then enter your PIN to set up this phone.  
    **एडमिन से मिला QR स्कैन करें या कोड लिखें, फिर अपना PIN डालकर यह फ़ोन चालू करें।**
 
-19. Set up this phone →  
+18. Set up this phone →  
    **यह फ़ोन चालू करें →**
 
-20. One-time setup. You'll stay signed in on this phone.  
+19. One-time setup. You'll stay signed in on this phone.  
    **बस एक बार करना है। इस फ़ोन में आप लॉगिन रहेंगे।**
 
-21. Scan enrollment code  
+20. Scan enrollment code  
    **QR कोड स्कैन करें**
 
-22. Scan a different code  
+21. Scan a different code  
    **दूसरा कोड स्कैन करें**
 
-23. Enrollment code  
+22. Enrollment code  
    **कोड**
 
-24. or type the code  
+23. or type the code  
    **या कोड लिखें**
 
-25. 4-digit PIN  
+24. 4-digit PIN  
    **4 अंकों का PIN**
 
-26. Wrong code or PIN  
+25. Wrong code or PIN  
    **कोड या PIN गलत है**
 
-27. To scan your enrollment code.  
+26. To scan your enrollment code.  
    **आपका कोड स्कैन करने के लिए।**
 
-28. Not an enrollment code — ask your admin for the QR  
+27. Not an enrollment code — ask your admin for the QR  
    **यह सही कोड नहीं है — एडमिन से QR माँगें**
 
-29. Enrollment code scanned  
+28. Enrollment code scanned  
    **कोड स्कैन हो गया**
 
-30. Cancel enrollment scan  
+29. Cancel enrollment scan  
    **स्कैन कैंसल करें**
 
-31. ← Cancel  
-   **← कैंसल**
+30. Cancel  
+   **कैंसल**
 
-32. Point at the enrollment QR on the admin screen  
+31. Point at the enrollment QR on the admin screen  
    **एडमिन की स्क्रीन पर दिख रहे QR पर कैमरा रखें**
 
 ## Home — queue and batch cards
 
-33. My queue  
+32. My queue  
    **मेरी लिस्ट**
 
-34. {station} queue  
+33. {station} queue  
    **{station} लिस्ट**
 
-35. Sign out  
+34. Sign out  
    **लॉग आउट**  
    ❓ लॉग आउट or साइन आउट / बाहर निकलें
 
-36. Couldn't load your queue. Check connection and retry.  
+35. Couldn't load your queue. Check connection and retry.  
    **लिस्ट नहीं खुली। इंटरनेट देखें और फिर कोशिश करें।**
 
-37. All clear  
+36. All clear  
    **सब हो गया**  
    ❓ check this wording
 
-38. Nothing waiting at your station.  
+37. Nothing waiting at your station.  
    **आपके पास अभी कोई काम नहीं है।**
 
-39. Rework {code}, {model}  
+38. Rework {code}, {model}  
    **रीवर्क {code}, {model}**
 
-40. Rework defect photo  
+39. Rework defect photo  
    **रीवर्क की खराबी की फ़ोटो**
 
-41. Batch {code}, {car}  
+40. Batch {code}, {car}  
    **बैच {code}, {car}**
 
-42. mats  
+41. mats  
    **मैट**
 
-43. your share  
+42. your share  
    **आपका हिस्सा**
 
-44. stitched  
+43. stitched  
    **सिल गए**
 
-45. packed  
+44. packed  
    **पैक हुए**
 
-46. ⏳ {who} is cutting  
+45. ⏳ {who} is cutting  
    **⏳ {who} काट रहे हैं**
 
-47. 📌 Assigned to you  
+46. 📌 Assigned to you  
    **📌 आपको दिया गया**
 
-48. 📌 Assigned to you (with {workers})  
+47. 📌 Assigned to you (with {workers})  
    **📌 आपको दिया गया ({workers} के साथ)**
 
-49. You're in  
+48. You're in  
    **आप जुड़े हैं**
 
-50. Cutter  
+49. Cutter  
    **कटर**
 
-51. Stitcher  
+50. Stitcher  
    **सिलाई**  
    ❓ सिलाई or स्टिचर
 
-52. Packer  
+51. Packer  
    **पैकर**
 
-53. Cutting  
+52. Cutting  
    **कटिंग**
 
-54. Stitching  
+53. Stitching  
    **सिलाई**
 
-55. Packing  
+54. Packing  
    **पैकिंग**
 
-56. Completed  
+55. Completed  
    **पूरा**
 
-57. S  
+56. S  
    **S**  
    ❓ sizes stay S / M / L
 
-58. M  
+57. M  
    **M**
 
-59. L  
+58. L  
    **L**
 
 ## Home — My work card
 
-60. My work  
+59. My work  
    **मेरा काम**
 
-61. today  
+60. today  
    **आज**
 
-62. this week  
+61. this week  
    **इस हफ़्ते**
 
-63. pieces cut  
+62. pieces cut  
    **पीस काटे**  
    ❓ पीस or मैट
 
-64. mats stitched  
+63. mats stitched  
    **मैट सिले**
 
-65. mats packed  
+64. mats packed  
    **मैट पैक किए**
 
-66. 3 came back for rework this week  
+65. 3 came back for rework this week  
    **इस हफ़्ते 3 रीवर्क के लिए वापस आए**
 
-67. 3 waiting for you  
+66. 3 waiting for you  
    **3 आपके पास बाकी हैं**
 
-68. 3 sent to rework this week  
+67. 3 sent to rework this week  
    **इस हफ़्ते 3 रीवर्क में भेजे**
 
 ## Batch screen (incl. cutter)
 
-69. Batch not found  
+68. Batch not found  
    **बैच नहीं मिला**
 
-70. This batch might have been completed, cancelled, or is no longer assigned to your station.  
+69. This batch might have been completed, cancelled, or is no longer assigned to your station.  
    **यह बैच पूरा हो गया होगा, कैंसल हुआ होगा, या अब आपके पास नहीं है।**
 
-71. Back to queue  
+70. Back to queue  
    **लिस्ट पर वापस**
 
-72. Short count  
+71. Short count  
    **गिनती कम है**
 
-73. This batch needs 12 more cut but you're reporting 10. The admin will decide what happens with the remaining 2.  
+72. This batch needs 12 more cut but you're reporting 10. The admin will decide what happens with the remaining 2.  
    **इस बैच में 12 और काटने हैं, पर आप 10 बता रहे हैं। बाकी 2 का क्या होगा, यह एडमिन तय करेगा।**
 
-74. Complete  
+73. Complete  
    **पूरा करें**
 
-75. {code} sent to admin for stitching assignment.  
+74. {code} sent to admin for stitching assignment.  
    **{code} सिलाई बाँटने के लिए एडमिन के पास गया।**  
    ❓ check this wording
 
-76. {code} sent to the next station.  
+75. {code} sent to the next station.  
    **{code} अगले स्टेशन पर गया।**
 
-77. Start cutting  
+76. Start cutting  
    **कटिंग शुरू करें**
 
-78. Report cut  
+77. Report cut  
    **कटिंग की गिनती भेजें**  
    ❓ check this wording
 
-79. Join batch  
+78. Join batch  
    **बैच में जुड़ें**
 
-80. Open scanner  
+79. Open scanner  
    **स्कैनर खोलें**
 
-81. mats to cut  
+80. mats to cut  
    **मैट काटने हैं**
 
-82. your share  
+81. your share  
    **आपका हिस्सा**
 
-83. mats stitched  
+82. mats stitched  
    **मैट सिल गए**
 
-84. mats packed  
+83. mats packed  
    **मैट पैक हुए**
 
-85. Assigned workers  
+84. Assigned workers  
    **इनको दिया गया**
 
-86. Active workers  
+85. Active workers  
    **अभी काम कर रहे हैं**
 
-87. Notes  
+86. Notes  
    **नोट**
 
-88. Pieces completed  
+87. Pieces completed  
    **कितने पीस हुए**  
    ❓ पीस or मैट
 
-89. Decrease quantity  
+88. Decrease quantity  
    **गिनती घटाएँ**
 
-90. Increase quantity  
+89. Increase quantity  
    **गिनती बढ़ाएँ**
 
-91. Quantity completed  
+90. Quantity completed  
    **कितने पूरे हुए**
 
-92. 12 remaining of 40  
+91. 12 remaining of 40  
    **40 में से 12 बाकी**
 
-93. ⏳ {who} is cutting this batch  
+92. ⏳ {who} is cutting this batch  
    **⏳ {who} यह बैच काट रहे हैं**
 
-94. Give back this batch  
+93. Give back this batch  
    **यह बैच वापस करें**
 
-95. Give back this batch?  
+94. Give back this batch?  
    **यह बैच वापस करें?**
 
-96. It goes back to the cutting queue so any cutter can start it. Nothing is reported as cut.  
+95. It goes back to the cutting queue so any cutter can start it. Nothing is reported as cut.  
    **यह कटिंग की लिस्ट में वापस जाएगा, ताकि कोई भी कटर इसे शुरू कर सके। कुछ भी कटा हुआ नहीं गिना जाएगा।**
 
-97. Give back  
+96. Give back  
    **वापस करें**
 
-98. Keep it  
+97. Keep it  
    **रखें**
 
-99. {code} is back in the cutting queue.  
+98. {code} is back in the cutting queue.  
    **{code} कटिंग की लिस्ट में वापस गया।**
 
 ## Scanner (stitcher / packer) and packer inspect sheet
 
-100. Waiting for rework  
+99. Waiting for rework  
    **रीवर्क में है**
 
-101. Written off — keep it aside  
+100. Written off — keep it aside  
    **यह मैट रद्द है — अलग रखें**  
    ❓ written off = रद्द
 
-102. Spare stock — keep it aside  
+101. Spare stock — keep it aside  
    **स्पेयर माल — अलग रखें**  
    ❓ spare stock = स्पेयर माल
 
-103. Wrong batch — this mat is from {code}  
+102. Wrong batch — this mat is from {code}  
    **गलत बैच — यह मैट {code} का है**
 
-104. Sent to rework  
+103. Sent to rework  
    **रीवर्क में भेजा गया**
 
-105. Already packed  
+104. Already packed  
    **पहले ही पैक हो चुका**
 
-106. This batch is not in packing  
+105. This batch is not in packing  
    **यह बैच पैकिंग में नहीं है**
 
-107. Join this batch first  
+106. Join this batch first  
    **पहले इस बैच में जुड़ें**
 
-108. Couldn't check this mat — try again  
+107. Couldn't check this mat — try again  
    **मैट चेक नहीं हो पाया — फिर कोशिश करें**
 
-109. Checking…  
+108. Checking…  
    **चेक हो रहा है…**
 
-110. Already scanned  
+109. Already scanned  
    **पहले ही स्कैन हो चुका**
 
-111. Your share is complete  
+110. Your share is complete  
    **आपका हिस्सा पूरा हुआ**
 
-112. Your share is complete ✓  
+111. Your share is complete ✓  
    **आपका हिस्सा पूरा हुआ ✓**
 
-113. 5 / 20 mats — leave the rest for your co-workers  
+112. 5 / 20 mats — leave the rest for your co-workers  
    **5 / 20 मैट — बाकी साथियों के लिए छोड़ दें**
 
-114. Scan failed — try again  
+113. Scan failed — try again  
    **स्कैन नहीं हुआ — फिर कोशिश करें**
 
-115. Offline — reconnect to scan  
+114. Offline — reconnect to scan  
    **इंटरनेट नहीं है — जुड़ने पर स्कैन करें**
 
-116. Not an RPS unit label  
+115. Not an RPS unit label  
    **यह RPS का लेबल नहीं है**
 
-117. Scanned {code}  
+116. Scanned {code}  
    **{code} स्कैन हुआ**
 
-118. Error: {msg}  
+117. Error: {msg}  
    **गलती: {msg}**
 
-119. Stitching complete  
+118. Stitching complete  
    **सिलाई पूरी हुई**
 
-120. {code} complete  
+119. {code} complete  
    **{code} पूरा हुआ**
 
-121. All 3 mats stitched — batch sent to packing.  
+120. All 3 mats stitched — batch sent to packing.  
    **सभी 3 मैट सिल गए — बैच पैकिंग में गया।**
 
-122. All 3 mats packed and sent to the stockyard.  
+121. All 3 mats packed and sent to the stockyard.  
    **सभी 3 मैट पैक होकर गोदाम में गए।**  
    ❓ stockyard = गोदाम
 
-123. Allow camera  
+122. Allow camera  
    **कैमरा चालू करें**
 
-124. Camera needed  
+123. Camera needed  
    **कैमरा चाहिए**
 
-125. RPS uses the camera to scan unit QR labels.  
+124. RPS uses the camera to scan unit QR labels.  
    **RPS मैट के QR लेबल स्कैन करने के लिए कैमरा चलाता है।**
 
-126. Back to queue  
+125. Back to queue  
    **लिस्ट पर वापस**
 
-127. 🔦 Torch on  
+126. 🔦 Torch on  
    **🔦 जलाएँ**  
    ❓ short on purpose — the scanner top bar is narrow
 
-128. 🔦 Torch off  
+127. 🔦 Torch off  
    **🔦 बंद करें**
 
-129. Turn torch on  
+128. Turn torch on  
    **टॉर्च जलाएँ**
 
-130. Turn torch off  
+129. Turn torch off  
    **टॉर्च बंद करें**
 
-131. Camera didn't start — tap to retry  
+130. Camera didn't start — tap to retry  
    **कैमरा नहीं चला — फिर से चलाने के लिए दबाएँ**
 
-132. 5/20 yours · 18/40 batch  
+131. 5/20 yours · 18/40 batch  
    **5/20 आपके · 18/40 बैच**
 
-133. 18 / 40 stitched  
+132. 18 / 40 stitched  
    **18 / 40 सिल गए**
 
-134. 18 / 40 packed  
+133. 18 / 40 packed  
    **18 / 40 पैक हुए**
 
-135. Point at a unit QR label  
+134. Point at a unit QR label  
    **मैट के QR लेबल पर कैमरा रखें**
 
-136. Pack mat  
+135. Pack mat  
    **मैट पैक करें**
 
-137. Needs rework  
+136. Needs rework  
    **रीवर्क चाहिए**
 
-138. Cancel inspect  
+137. Cancel inspect  
    **जाँच कैंसल करें**
 
-139. Inspect Mat  
+138. Inspect Mat  
    **मैट जाँचें**
 
-140. ✓ Pack  
+139. ✓ Pack  
    **✓ पैक करें**
 
-141. ✗ Needs rework  
+140. ✗ Needs rework  
    **✗ रीवर्क चाहिए**
 
-142. Cancel  
+141. Cancel  
    **कैंसल**
 
 ## Rework — send (packer), detail and fix (stitcher)
 
-143. Rework  
+142. Rework  
    **रीवर्क**
 
-144. Rework item not found  
+143. Rework item not found  
    **रीवर्क नहीं मिला**
 
-145. This item may have already been fixed or reassigned.  
+144. This item may have already been fixed or reassigned.  
    **यह शायद ठीक हो चुका है या किसी और को दे दिया गया है।**
 
-146. View full photo  
+145. View full photo  
    **पूरी फ़ोटो देखें**
 
-147. Defect photo  
+146. Defect photo  
    **खराबी की फ़ोटो**
 
-148. Note  
+147. Note  
    **नोट**
 
-149. Close photo preview  
+148. Close photo preview  
    **फ़ोटो बंद करें**
 
-150. Full-screen rework photo  
+149. Full-screen rework photo  
    **रीवर्क की पूरी फ़ोटो**
 
-151. Send to rework  
+150. Send to rework  
    **रीवर्क में भेजें**
 
-152. Photos (1–3)  
+151. Photos (1–3)  
    **फ़ोटो (1–3)**
 
-153. RPS uses the camera to capture rework defect photos.  
+152. RPS uses the camera to capture rework defect photos.  
    **RPS रीवर्क की खराबी की फ़ोटो लेने के लिए कैमरा चलाता है।**
 
-154. ‹ Back  
-   **‹ वापस**
-
-155. Reasons  
+153. Reasons  
    **खराबी**
 
-156. Optional note for stitcher...  
+154. Optional note for stitcher...  
    **सिलाई वाले के लिए नोट (ज़रूरी नहीं)...**  
    ❓ stitcher (person) = सिलाई वाला
 
-157. Take photo  
+155. Take photo  
    **फ़ोटो लें**
 
-158. Remove photo  
+156. Remove photo  
    **फ़ोटो हटाएँ**
 
-159. Capture photo  
+157. Capture photo  
    **फ़ोटो खींचें**
 
-160. Take a photo  
+158. Take a photo  
    **एक फ़ोटो लें**
 
-161. Next →  
+159. Next →  
    **आगे →**
 
-162. Choose what's wrong  
+160. Choose what's wrong  
    **खराबी चुनें**
 
-163. 3 / 3 photos  
+161. 3 / 3 photos  
    **3 / 3 फ़ोटो**
 
-164. Remove photo 3  
+162. Remove photo 3  
    **फ़ोटो 3 हटाएँ**
 
-165. 1/2  
+163. 1/2  
    **1/2**
 
-166. 2/2  
+164. 2/2  
    **2/2**
 
-167. Note (optional)  
+165. Note (optional)  
    **नोट (ज़रूरी नहीं)**
 
-168. Tap to edit photos  
+166. Tap to edit photos  
    **फ़ोटो बदलने के लिए दबाएँ**
 
-169. This mat is already in rework  
+167. This mat is already in rework  
    **यह मैट पहले से रीवर्क में है**
 
-170. Join this batch before sending to rework  
+168. Join this batch before sending to rework  
    **रीवर्क में भेजने से पहले इस बैच में जुड़ें**
 
-171. Cannot reach server — check connection  
+169. Cannot reach server — check connection  
    **सर्वर नहीं मिल रहा — इंटरनेट देखें**
 
-172. Failed to send rework — try again  
+170. Failed to send rework — try again  
    **रीवर्क नहीं भेजा गया — फिर कोशिश करें**
 
-173. 🔧 Rework  
+171. 🔧 Rework  
    **🔧 रीवर्क**
 
-174. 2nd time  
+172. 2nd time  
    **दूसरी बार**
 
-175. 3rd time  
+173. 3rd time  
    **तीसरी बार**
 
-176. Round 4  
+174. Round 4  
    **4वीं बार**
 
-177. Sent back by {name} · {time}  
+175. Sent back by {name} · {time}  
    **{name} ने वापस भेजा · {time}**
 
-178. 📷 Scan to mark fixed  
+176. 📷 Scan to mark fixed  
    **📷 ठीक होने पर स्कैन करें**  
    ❓ check this wording
 
-179. Fixed ✓ — back to packing  
+177. Fixed ✓ — back to packing  
    **ठीक हो गया ✓ — पैकिंग में वापस**
 
-180. Mat returned to packing queue.  
+178. Mat returned to packing queue.  
    **मैट पैकिंग की लिस्ट में वापस गया।**
 
-181. Back to my queue  
+179. Back to my queue  
    **मेरी लिस्ट पर वापस**
 
-182. Point camera at the mat's QR label  
+180. Point camera at the mat's QR label  
    **मैट के QR लेबल पर कैमरा रखें**
 
-183. Fixed {code}  
+181. Fixed {code}  
    **{code} ठीक हुआ**
 
-184. Back to detail  
+182. Back to detail  
    **रीवर्क पर वापस**
 
-185. Target Mat  
+183. Target Mat  
    **यही मैट स्कैन करें**  
    ❓ check this wording
 
-186. Wrong mat — this is {code}  
+184. Wrong mat — this is {code}  
    **गलत मैट — यह {code} है**
 
-187. Waiting for owner's decision  
+185. Waiting for owner's decision  
    **मालिक के फ़ैसले का इंतज़ार है**  
    ❓ owner = मालिक (or सेठ)
 
-188. This mat is assigned to another stitcher  
+186. This mat is assigned to another stitcher  
    **यह मैट दूसरे सिलाई वाले को दिया गया है**  
    ❓ stitcher (person) = सिलाई वाला
 
-189. Stitching fault  
+187. Stitching fault  
    **सिलाई में खराबी**
 
-190. Stain / dirt  
+188. Stain / dirt  
    **दाग / गंदगी**
 
-191. Cutting fault  
+189. Cutting fault  
    **कटिंग में खराबी**
 
-192. Material defect  
+190. Material defect  
    **माल में खराबी**  
    ❓ material = माल
 
-193. Other  
+191. Other  
    **कुछ और**
 
 ## Error messages (from server error codes)
 
-194. Cannot reach server — check connection  
+192. Cannot reach server — check connection  
    **सर्वर नहीं मिल रहा — इंटरनेट देखें**
 
-195. This phone is signed out — sign in again or ask your admin  
+193. This phone is signed out — sign in again or ask your admin  
    **यह फ़ोन लॉग आउट हो गया है — फिर से लॉगिन करें या एडमिन से पूछें**
 
-196. This is not yours to do — ask your admin  
+194. This is not yours to do — ask your admin  
    **यह काम आपका नहीं है — एडमिन से पूछें**
 
-197. That didn't go through — try again  
+195. That didn't go through — try again  
    **यह नहीं हुआ — फिर कोशिश करें**
 
-198. Something went wrong — try again  
+196. Something went wrong — try again  
    **कुछ गड़बड़ हुई — फिर कोशिश करें**
 
-199. Batch not found  
+197. Batch not found  
    **बैच नहीं मिला**
 
-200. Not an RPS unit label  
+198. Not an RPS unit label  
    **यह RPS का लेबल नहीं है**
 
-201. This batch is not at your station right now  
+199. This batch is not at your station right now  
    **यह बैच अभी आपके पास नहीं है**
 
-202. This batch has already been started  
+200. This batch has already been started  
    **यह बैच पहले ही शुरू हो चुका है**
 
-203. Start or join this batch first  
+201. Start or join this batch first  
    **पहले यह बैच शुरू करें या इसमें जुड़ें**
 
-204. This batch is assigned to other workers  
+202. This batch is assigned to other workers  
    **यह बैच दूसरों को दिया गया है**
 
-205. Your share is complete  
+203. Your share is complete  
    **आपका हिस्सा पूरा हुआ**
 
-206. Waiting for rework  
+204. Waiting for rework  
    **रीवर्क में है**
 
-207. This mat is already in rework  
+205. This mat is already in rework  
    **यह मैट पहले से रीवर्क में है**
 
-208. Waiting for owner's decision  
+206. Waiting for owner's decision  
    **मालिक के फ़ैसले का इंतज़ार है**  
    ❓ owner = मालिक (or सेठ)
 
-209. This mat is assigned to another stitcher  
+207. This mat is assigned to another stitcher  
    **यह मैट दूसरे सिलाई वाले को दिया गया है**
 
-210. This rework is already closed  
+208. This rework is already closed  
    **यह रीवर्क बंद हो चुका है**
 
-211. Written off — keep it aside  
+209. Written off — keep it aside  
    **यह मैट रद्द है — अलग रखें**  
    ❓ same as scanner
 
-212. Spare stock — keep it aside  
+210. Spare stock — keep it aside  
    **स्पेयर माल — अलग रखें**  
    ❓ same as scanner
 
-213. Nobody is cutting this batch right now  
+211. Nobody is cutting this batch right now  
    **इस बैच को अभी कोई नहीं काट रहा**

@@ -53,6 +53,7 @@ Monorepo (pnpm workspace, hoisted node_modules):
   language table directly. Add the line to `docs/rps-kb/05-mobile/hindi-texts.md` too (the owner reviews wording there).
 - Labels for shared enums (station, phase, size) and server error codes come from `strings.station/phase/size/errors`
   on the phone, not from `@rps/shared` labels or `ApiError.message` (those are English only) — use `errorText()` (`lib/errors.ts`).
+- Back arrows: `BackIcon` / `BackLabel` (`components/ui/BackIcon.tsx`), never a "←" or "‹" character in a text.
 - Feedback (haptic + sound) via `lib/feedback.ts`.
 
 ## Verify before saying "done" (paste the output)

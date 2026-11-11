@@ -12,7 +12,7 @@ app/
   home.tsx               header (station queue label, name, sign out); queue FlatList of BatchCard; pull-to-refresh; error state
   batch/[id].tsx         station-specific action card (cutter: Start / blocked / qty+Complete; stitcher/packer: Join / progress+Open scanner)
   scan/[batchId].tsx     CameraView scanner: local validation, scan lock, feedback flashes, progress pill, done screen
-components/ui/           AppButton, Banner, Card, Chip, Screen, Skeleton, Stat
+components/ui/           AppButton, BackIcon (the one back arrow, drawn — never type "←" / "‹" in a text), Banner, Card, Chip, Screen, Skeleton, Stat
 components/LanguagePicker.tsx   "English | हिन्दी" — on login (top) and in the home header
 features/auth/
   store.ts               zustand: worker, login(code,pin), restore() (/worker/me), logout(); token in SecureStore
