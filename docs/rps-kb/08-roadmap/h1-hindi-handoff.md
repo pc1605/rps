@@ -1,6 +1,8 @@
 # H1 — Hindi on the worker phone app — hand-off prompt (Nov 2026)
 
-Status: **planned, not started.** Paste the prompt below into a new agent session.
+Status: **built on `agent/h1-hindi`, not merged** — waiting for the owner's wording review (`05-mobile/hindi-texts.md`)
+and the real-phone checklist (`06-operations/testing.md`). The decision is D41 (D40 was already taken). How it works:
+`05-mobile/structure.md` → Language. The prompt below is kept for the record.
 Owner direction (11 Nov 2026): the app is not in use on the floor yet; add Hindi before the pilot. Hindi only for now
 (Gujarati not needed). R2 (material reports) is on hold. Work history and an "assigned to you" notification come after a pilot week
 (NEXT-STEPS "Future plan"); the app never shows money (D40) — don't build any of it here.

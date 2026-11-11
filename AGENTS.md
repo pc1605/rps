@@ -48,7 +48,11 @@ Monorepo (pnpm workspace, hoisted node_modules):
 - Tokens from `lib/theme.ts` only (no hex/rgba, no `fontWeight`, no raw font sizes); add tokens to BOTH themes.
 - Screens use `Screen` / `ScreenHeader` (safe areas); primary action in the bottom `footer`; touch targets ≥ 48 px.
 - Scanner rules: `lock` ref check is the FIRST line of the handler; `onBarcodeScanned` stays a stable function (never conditional); mount `CameraView` only when the screen is focused and the transition has ended; unmount before navigating away; `onMountError` → retry banner.
-- New user-facing text goes in `lib/strings.ts` (future translation source; Hindi planned).
+- New user-facing text goes in `lib/strings.ts` (English) AND `lib/strings.hi.ts` (Hindi) — the type check fails if a
+  key is missing in Hindi. Read texts with `useStrings()` in components, `getStrings()` outside React; never import a
+  language table directly. Add the line to `docs/rps-kb/05-mobile/hindi-texts.md` too (the owner reviews wording there).
+- Labels for shared enums (station, phase, size) and server error codes come from `strings.station/phase/size/errors`
+  on the phone, not from `@rps/shared` labels or `ApiError.message` (those are English only) — use `errorText()` (`lib/errors.ts`).
 - Feedback (haptic + sound) via `lib/feedback.ts`.
 
 ## Verify before saying "done" (paste the output)

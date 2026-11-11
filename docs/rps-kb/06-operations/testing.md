@@ -97,6 +97,36 @@ a dev build of the app pointed at your backend, one cutter, one stitcher and one
 6. [ ] **Texts after the strings.ts move (P1).** Walk login, home, batch screen, scanner, rework (send / fix): every text,
    button and banner reads as before (nothing blank, no "undefined"); the cutter's short-count alert still names both numbers.
 
+## Hindi on a real phone (H1) — run by the owner, the agent can't drive the phone app
+Setup: a dev build pointed at your backend (JS only changed — reload the app; no native rebuild), one cutter, one
+stitcher and one packer phone. Wording list to read alongside: `docs/rps-kb/05-mobile/hindi-texts.md`. Tick each:
+1. [ ] **Fresh install starts in Hindi.** Clear the app's data (or install fresh) → login screen is in Hindi, with
+   "English | हिन्दी" at the top right and हिन्दी highlighted.
+2. [ ] **Switch on login.** Tap English → the whole screen changes at once (title, button, labels); tap हिन्दी → back.
+   Type a wrong PIN → red "कोड या PIN गलत है"; switch to English while it shows → it reads "Wrong code or PIN".
+3. [ ] **Switch on home.** After login the picker sits next to "लॉग आउट". Switch both ways: header ("कटर लिस्ट" …),
+   My work card, batch cards (phase chip कटिंग / सिलाई / पैकिंग, "आपको दिया गया") and the rework section all change.
+4. [ ] **Restart keeps it.** Pick English → close the app fully → open → still English. Pick हिन्दी → same.
+5. [ ] **Sign out keeps it.** In Hindi tap लॉग आउट → login screen is in Hindi. Same for English.
+6. [ ] **Every screen in Hindi** — nothing left in English except codes, names, car / product line names, digits and
+   "RPS": login, enroll scan (hint + "not an enrollment code" flash), home + My work, batch screen (cutter: stepper,
+   short-count alert with both numbers, "यह बैच वापस करें" dialog; stitcher / packer: जुड़ें → स्कैनर खोलें), scanner
+   (progress pill, hint, ✓ flash, done screen), packer inspect sheet (✓ पैक करें / ✗ रीवर्क चाहिए / कैंसल), rework send
+   1/2 (photo count) and 2/2 (reason tiles, note), rework detail, rework fix (target pill, "ठीक हो गया ✓").
+7. [ ] **Font.** Hindi letters, the Latin names / codes inside a Hindi line and the digits look like one font (no
+   boxes, no mixed weights); batch and unit codes are still the mono font. No matra is cut off at the top or bottom of
+   any line — look hardest at the big ones: home title, "आपका हिस्सा पूरा हुआ ✓" flash, the scanner progress pill.
+8. [ ] **Largest font size.** Android Settings → Display → Font size → largest. Walk the same screens in Hindi:
+   every button text is fully inside its button (it may wrap to two lines), buttons are still easy to hit, no number
+   or code is cut ("…"), the home header still shows both the picker and लॉग आउट (they may stack).
+9. [ ] **Flashes in Hindi.** Stitcher scans a mat of another batch → "✗ गलत बैच — यह मैट B-… का है". Scan a spare
+   (see U3 item 3) → "✗ स्पेयर माल — अलग रखें". Stitcher with a share scans past it → blue "आपका हिस्सा पूरा हुआ ✓".
+10. [ ] **Error while offline.** Turn off Wi-Fi/data: yellow banner "इंटरनेट नहीं है — जुड़ने पर अपडेट होगा"; scan →
+    "✗ इंटरनेट नहीं है — जुड़ने पर स्कैन करें"; cutter taps कटिंग शुरू करें → alert "यह नहीं हो पाया" with a Hindi line.
+11. [ ] **English is unchanged.** Switch to English and glance over the same screens: texts read as before H1, the
+    font is IBM Plex Sans again, spacing as before.
+12. [ ] **TalkBack (optional).** With TalkBack on in Hindi, a scan announces "B-… स्कैन हुआ" and buttons read in Hindi.
+
 ## Admin browser checks (P1, 2 Nov 2026, rps_test)
 Checked in Chrome against the test backend: Spare mats → **Write off** dialog (opens, counts, writes off 1 → list updates),
 **Edit** (opens; only shown once nobody holds the batch), **Cancel batch** (warning: cutting "<name> is cutting it now — cuts
