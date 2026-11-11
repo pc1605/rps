@@ -10,7 +10,7 @@ import { Screen } from "../../components/ui/Screen";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { useMyRework } from "../../features/rework/hooks";
-import { strings } from "../../lib/strings";
+import { useStrings } from "../../lib/language";
 
 function formatTime(iso: string): string {
   try {
@@ -22,6 +22,7 @@ function formatTime(iso: string): string {
 }
 
 export default function ReworkDetailScreen() {
+  const strings = useStrings();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -136,9 +137,7 @@ export default function ReworkDetailScreen() {
               return (
                 <View key={r} style={styles.reasonTile}>
                   <Text style={styles.reasonEmoji}>{reasonInfo?.emoji ?? "•"}</Text>
-                  <Text style={styles.reasonLabel} numberOfLines={2}>
-                    {reasonInfo?.label ?? r}
-                  </Text>
+                  <Text style={styles.reasonLabel}>{reasonInfo?.label ?? r}</Text>
                 </View>
               );
             })}

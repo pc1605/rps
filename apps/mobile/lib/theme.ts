@@ -1,13 +1,26 @@
 // RPS mobile design tokens. Mirrors admin-web/app/globals.css.
-// Fonts are loaded in app/_layout.tsx via @expo-google-fonts/ibm-plex-*.
+// Fonts are loaded in app/_layout.tsx via @expo-google-fonts/*.
+import type { Language } from "./strings";
 
-const fonts = {
+type Fonts = Record<"regular" | "medium" | "semibold" | "bold" | "mono", string>;
+
+const fontsLatin: Fonts = {
   regular: "IBMPlexSans_400Regular",
   medium: "IBMPlexSans_500Medium",
   semibold: "IBMPlexSans_600SemiBold",
   bold: "IBMPlexSans_700Bold",
   mono: "IBMPlexMono_500Medium",
-} as const;
+};
+
+// IBM Plex Sans has no Devanagari letters. Noto Sans Devanagari also has Latin letters and digits,
+// so a Hindi line with a name or a number in it renders in one font. Codes keep the mono font.
+const fontsHindi: Fonts = {
+  regular: "NotoSansDevanagari_400Regular",
+  medium: "NotoSansDevanagari_500Medium",
+  semibold: "NotoSansDevanagari_600SemiBold",
+  bold: "NotoSansDevanagari_700Bold",
+  mono: "IBMPlexMono_500Medium",
+};
 
 // 4-pt grid
 const spacing = { xxs: 4, xs: 8, sm: 12, md: 16, lg: 24, xl: 32, xxl: 48 } as const;
@@ -16,22 +29,28 @@ const touch = { min: 48, primary: 56 } as const;
 const motion = { fast: 120, base: 200 } as const;
 
 // With custom font files, weight lives in fontFamily — never set fontWeight alongside.
-const text = {
-  display: { fontSize: 44, lineHeight: 48, fontFamily: fonts.semibold },
-  stat: { fontSize: 32, lineHeight: 36, fontFamily: fonts.semibold },
-  title: { fontSize: 24, lineHeight: 30, fontFamily: fonts.semibold },
-  heading: { fontSize: 18, lineHeight: 24, fontFamily: fonts.semibold },
-  body: { fontSize: 16, lineHeight: 24, fontFamily: fonts.regular },
-  bodyMed: { fontSize: 16, lineHeight: 24, fontFamily: fonts.medium },
-  small: { fontSize: 14, lineHeight: 20, fontFamily: fonts.regular },
-  caption: { fontSize: 12, lineHeight: 16, fontFamily: fonts.medium },
-  code: { fontSize: 14, lineHeight: 20, fontFamily: fonts.mono },
-  codeLarge: { fontSize: 24, lineHeight: 30, fontFamily: fonts.mono },
-  button: { fontSize: 16, lineHeight: 20, fontFamily: fonts.semibold },
-  eyebrow: { fontSize: 12, lineHeight: 16, letterSpacing: 2, fontFamily: fonts.medium },
-  label: { fontSize: 12, lineHeight: 16, letterSpacing: 1, fontFamily: fonts.medium },
-  emoji: { fontSize: 32, lineHeight: 36 },
-} as const;
+// Hindi: Devanagari marks sit above and below the letters, so every line height is at least
+// 1.4 × the font size (else Android clips them), and letter spacing is 0 (it breaks words apart).
+function textFor(fonts: Fonts, hindi: boolean) {
+  const lh = (latin: number, devanagari: number) => (hindi ? devanagari : latin);
+  const ls = (latin: number) => (hindi ? 0 : latin);
+  return {
+    display: { fontSize: 44, lineHeight: lh(48, 62), fontFamily: fonts.semibold },
+    stat: { fontSize: 32, lineHeight: lh(36, 46), fontFamily: fonts.semibold },
+    title: { fontSize: 24, lineHeight: lh(30, 34), fontFamily: fonts.semibold },
+    heading: { fontSize: 18, lineHeight: lh(24, 26), fontFamily: fonts.semibold },
+    body: { fontSize: 16, lineHeight: 24, fontFamily: fonts.regular },
+    bodyMed: { fontSize: 16, lineHeight: 24, fontFamily: fonts.medium },
+    small: { fontSize: 14, lineHeight: 20, fontFamily: fonts.regular },
+    caption: { fontSize: 12, lineHeight: lh(16, 18), fontFamily: fonts.medium },
+    code: { fontSize: 14, lineHeight: 20, fontFamily: fonts.mono },
+    codeLarge: { fontSize: 24, lineHeight: 30, fontFamily: fonts.mono },
+    button: { fontSize: 16, lineHeight: lh(20, 24), fontFamily: fonts.semibold },
+    eyebrow: { fontSize: 12, lineHeight: lh(16, 18), letterSpacing: ls(2), fontFamily: fonts.medium },
+    label: { fontSize: 12, lineHeight: lh(16, 18), letterSpacing: ls(1), fontFamily: fonts.medium },
+    emoji: { fontSize: 32, lineHeight: 36 },
+  };
+}
 
 interface PhaseColors {
   cutting: string;
@@ -78,12 +97,12 @@ interface ThemeColors {
 
 export interface AppTheme {
   isDark: boolean;
-  fonts: typeof fonts;
+  fonts: Fonts;
   spacing: typeof spacing;
   radius: typeof radius;
   touch: typeof touch;
   motion: typeof motion;
-  text: typeof text;
+  text: ReturnType<typeof textFor>;
   colors: ThemeColors;
 }
 
@@ -147,23 +166,13 @@ const dark: ThemeColors = {
   flash: { ok: "#15803D", dup: "#B45309", quota: "#2563EB", err: "#DC2626" },
 };
 
-export const lightTheme: AppTheme = {
-  isDark: false,
-  fonts,
-  spacing,
-  radius,
-  touch,
-  motion,
-  text,
-  colors: light,
-};
-export const darkTheme: AppTheme = {
-  isDark: true,
-  fonts,
-  spacing,
-  radius,
-  touch,
-  motion,
-  text,
-  colors: dark,
-};
+/** Light and dark theme for a language: same colours and sizes, the font and line heights differ. */
+export function themesFor(language: Language): { light: AppTheme; dark: AppTheme } {
+  const hindi = language === "hi";
+  const fonts = hindi ? fontsHindi : fontsLatin;
+  const base = { fonts, spacing, radius, touch, motion, text: textFor(fonts, hindi) };
+  return {
+    light: { isDark: false, ...base, colors: light },
+    dark: { isDark: true, ...base, colors: dark },
+  };
+}

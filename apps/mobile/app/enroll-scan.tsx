@@ -11,9 +11,10 @@ import { AppButton } from "../components/ui/AppButton";
 import { Screen } from "../components/ui/Screen";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useEnrollDraft } from "../features/auth/enroll-draft";
-import { strings } from "../lib/strings";
+import { useStrings } from "../lib/language";
 
 export default function EnrollScan() {
+  const strings = useStrings();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const setBadge = useEnrollDraft((s) => s.setBadge);

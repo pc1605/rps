@@ -14,13 +14,15 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { useFlagRework } from "../../features/rework/hooks";
 import { useReworkReturn } from "../../features/rework/store";
 import { ApiError } from "../../lib/api-client";
+import { errorText } from "../../lib/errors";
 import { feedback } from "../../lib/feedback";
-import { strings } from "../../lib/strings";
+import { useStrings } from "../../lib/language";
 import { useCameraReady } from "../../lib/use-camera-ready";
 
 const REASON_KEYS: ReworkReason[] = ["stitching_fault", "stain", "cutting_fault", "material_defect", "other"];
 
 export default function NewReworkScreen() {
+  const strings = useStrings();
   const { unitCode } = useLocalSearchParams<{
     unitCode: string;
     batchId: string;
@@ -129,7 +131,7 @@ export default function NewReworkScreen() {
         } else if (err.code === "not_started") {
           setErrorMsg(strings.rework.notStarted);
         } else {
-          setErrorMsg(err.message || strings.rework.genericError);
+          setErrorMsg(errorText(strings, err, strings.rework.genericError));
         }
       } else {
         setErrorMsg(strings.rework.networkError);
@@ -336,10 +338,7 @@ export default function NewReworkScreen() {
                 ]}
               >
                 <Text style={styles.reasonEmoji}>{item.emoji}</Text>
-                <Text
-                  style={[styles.reasonLabel, isSelected && styles.reasonLabelSelected]}
-                  numberOfLines={2}
-                >
+                <Text style={[styles.reasonLabel, isSelected && styles.reasonLabelSelected]}>
                   {item.label}
                 </Text>
                 {isSelected && (

@@ -15,8 +15,9 @@ import { peekUnit } from "../../features/batches/api";
 import { useMyBatches, useScanUnit } from "../../features/batches/hooks";
 import { useReworkReturn } from "../../features/rework/store";
 import { ApiError } from "../../lib/api-client";
+import { errorText } from "../../lib/errors";
 import { feedback as triggerFeedback } from "../../lib/feedback";
-import { strings } from "../../lib/strings";
+import { useStrings } from "../../lib/language";
 import { useCameraReady } from "../../lib/use-camera-ready";
 import { useOnline } from "../../lib/use-online";
 
@@ -31,6 +32,7 @@ type FlashState =
   | { kind: "checking" };
 
 export default function ScanScreen() {
+  const strings = useStrings();
   const { batchId } = useLocalSearchParams<{ batchId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -100,7 +102,7 @@ export default function ScanScreen() {
         lock.current = false;
       }, 1400);
     },
-    [isPacker],
+    [isPacker, strings],
   );
 
   // Focus effect: re-arm scanner when regaining focus and consume rework return flag
@@ -187,7 +189,7 @@ export default function ScanScreen() {
         }
         flashAndUnlock({
           kind: "err",
-          msg: e instanceof ApiError ? e.message : strings.scanner.scanFailed,
+          msg: errorText(strings, e, strings.scanner.scanFailed),
         });
       },
     });

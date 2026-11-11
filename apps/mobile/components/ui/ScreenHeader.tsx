@@ -2,7 +2,7 @@ import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
-import { strings } from "../../lib/strings";
+import { useStrings } from "../../lib/language";
 
 type Props = {
   title?: string;
@@ -16,6 +16,7 @@ type Props = {
 
 /** Standard 56px top bar. `large` = big title below (home-style). */
 export function ScreenHeader({ title, subtitle, back, onBack, onPress, right, large }: Props) {
+  const strings = useStrings();
   const router = useRouter();
   return (
     <View>
@@ -34,7 +35,13 @@ export function ScreenHeader({ title, subtitle, back, onBack, onPress, right, la
           <View style={styles.spacer} />
         )}
         {!large && title ? (
-          <Text style={styles.barTitle} numberOfLines={1} accessibilityRole="header">
+          <Text
+            style={styles.barTitle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+            accessibilityRole="header"
+          >
             {title}
           </Text>
         ) : (
@@ -56,7 +63,7 @@ export function ScreenHeader({ title, subtitle, back, onBack, onPress, right, la
 
 const styles = StyleSheet.create((theme) => ({
   bar: {
-    height: 56,
+    minHeight: 56,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: theme.spacing.xs,
@@ -72,7 +79,7 @@ const styles = StyleSheet.create((theme) => ({
   spacer: { width: theme.touch.min },
   flex: { flex: 1 },
   barTitle: { ...theme.text.heading, color: theme.colors.text, flex: 1, textAlign: "center" },
-  right: { minWidth: theme.touch.min, alignItems: "flex-end" },
+  right: { minWidth: theme.touch.min, alignItems: "flex-end", flexShrink: 1 },
   large: { paddingHorizontal: theme.spacing.md, paddingBottom: theme.spacing.sm },
   subtitle: { ...theme.text.small, color: theme.colors.textMuted },
   largeTitle: { ...theme.text.title, color: theme.colors.text },

@@ -13,14 +13,16 @@ import { Screen } from "../../../components/ui/Screen";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { useScanUnit } from "../../../features/batches/hooks";
 import { ApiError } from "../../../lib/api-client";
+import { errorText } from "../../../lib/errors";
 import { feedback as triggerFeedback } from "../../../lib/feedback";
-import { strings } from "../../../lib/strings";
+import { useStrings } from "../../../lib/language";
 import { useCameraReady } from "../../../lib/use-camera-ready";
 import { useOnline } from "../../../lib/use-online";
 
 type FlashState = { kind: "ok"; code: string } | { kind: "err"; msg: string };
 
 export default function ReworkFixScreen() {
+  const strings = useStrings();
   const { unitCode } = useLocalSearchParams<{
     id: string;
     unitCode: string;
@@ -60,25 +62,28 @@ export default function ReworkFixScreen() {
     return () => sub.remove();
   }, [handleBack]);
 
-  const flashAndUnlock = useCallback((fb: FlashState) => {
-    setFlash(fb);
-    triggerFeedback(fb.kind);
+  const flashAndUnlock = useCallback(
+    (fb: FlashState) => {
+      setFlash(fb);
+      triggerFeedback(fb.kind);
 
-    try {
-      if (fb.kind === "ok") {
-        AccessibilityInfo.announceForAccessibility(strings.rework.fixedA11y(fb.code));
-      } else {
-        AccessibilityInfo.announceForAccessibility(strings.scanner.errorA11y(fb.msg));
+      try {
+        if (fb.kind === "ok") {
+          AccessibilityInfo.announceForAccessibility(strings.rework.fixedA11y(fb.code));
+        } else {
+          AccessibilityInfo.announceForAccessibility(strings.scanner.errorA11y(fb.msg));
+        }
+      } catch {
+        // Ignore a11y failure
       }
-    } catch {
-      // Ignore a11y failure
-    }
 
-    setTimeout(() => {
-      setFlash(null);
-      lock.current = false;
-    }, 1400);
-  }, []);
+      setTimeout(() => {
+        setFlash(null);
+        lock.current = false;
+      }, 1400);
+    },
+    [strings],
+  );
 
   const handleScannedLatest = useRef<({ data }: { data: string }) => void>(() => {});
   handleScannedLatest.current = ({ data }: { data: string }) => {
@@ -136,7 +141,7 @@ export default function ReworkFixScreen() {
           }
           flashAndUnlock({
             kind: "err",
-            msg: e.message || strings.scanner.scanFailed,
+            msg: errorText(strings, e, strings.scanner.scanFailed),
           });
           return;
         }

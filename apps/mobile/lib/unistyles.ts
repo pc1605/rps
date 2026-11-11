@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native-unistyles";
-import { type AppTheme, darkTheme, lightTheme } from "./theme";
+import { getLanguage } from "./language";
+import { type AppTheme, themesFor } from "./theme";
 
 type AppThemes = { light: AppTheme; dark: AppTheme };
 
@@ -8,7 +9,8 @@ declare module "react-native-unistyles" {
 }
 
 StyleSheet.configure({
-  themes: { light: lightTheme, dark: darkTheme },
+  // Start in the saved language's font; lib/language.ts swaps the themes when the language changes.
+  themes: themesFor(getLanguage()),
   settings: {
     adaptiveThemes: true,
   },

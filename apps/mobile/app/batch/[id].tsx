@@ -1,4 +1,3 @@
-import { PHASE_LABEL, SIZE_LABEL } from "@rps/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { Alert, Pressable, Text, TextInput, View } from "react-native";
@@ -13,11 +12,12 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { Stat } from "../../components/ui/Stat";
 import { useAuth } from "../../features/auth/store";
 import { useCompleteBatch, useMyBatches, useReleaseBatch, useStartBatch } from "../../features/batches/hooks";
-import { ApiError } from "../../lib/api-client";
-import { strings } from "../../lib/strings";
+import { errorText } from "../../lib/errors";
+import { useStrings } from "../../lib/language";
 import { useOnline } from "../../lib/use-online";
 
 export default function BatchAction() {
+  const strings = useStrings();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { worker } = useAuth();
@@ -70,11 +70,10 @@ export default function BatchAction() {
   const quantity = qty === null ? String(remaining) : qty;
   const qtyNum = parseInt(quantity, 10);
   const qtyValid = !Number.isNaN(qtyNum) && qtyNum >= 1 && qtyNum <= remaining;
-  const sizeText = SIZE_LABEL[batch.size_class as keyof typeof SIZE_LABEL] ?? batch.size_class;
+  const sizeText = strings.size[batch.size_class] ?? batch.size_class;
 
   const onError = (e: unknown) => {
-    const msg = e instanceof ApiError ? e.message : strings.common.somethingWrong;
-    Alert.alert(strings.common.couldntDoThat, msg);
+    Alert.alert(strings.common.couldntDoThat, errorText(strings, e, strings.common.somethingWrong));
   };
 
   const handleStart = () => startBatch.mutate(batch.id, { onError });
@@ -193,7 +192,7 @@ export default function BatchAction() {
       <View style={styles.codeRow}>
         <Text style={styles.batchCode}>{batch.batch_code}</Text>
         <Chip
-          label={PHASE_LABEL[batch.current_phase] ?? batch.current_phase}
+          label={strings.phase[batch.current_phase] ?? batch.current_phase}
           color={styles.phaseColor(batch.current_phase).color}
           dot
         />
