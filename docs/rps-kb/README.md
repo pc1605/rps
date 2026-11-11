@@ -5,8 +5,8 @@ Manufacturing tracking for a car floor-mat (rexine) factory in Ahmedabad. Built 
 (GitHub `pc1605/rps`) starting July 2026. This KB is written so that any engineer or AI agent can continue the
 work without the original conversation history.
 
-> Last updated: 2026-09-13. State: **Week 9 / Slice A.2 complete on the backend; UI verification pending.**
-> See `08-roadmap/status-and-next.md` for exactly where things stand.
+> Last updated: 2026-11-02. State: **U3 merged (C1, C2, U0–U3, R1 done); P1 "make it perfect" pass in progress.**
+> See `08-roadmap/NEXT-STEPS.md` for the plan and slice order.
 
 ## How to use this KB
 

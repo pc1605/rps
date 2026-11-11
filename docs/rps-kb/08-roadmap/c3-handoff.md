@@ -72,7 +72,7 @@ HOW TO VERIFY (lessons from the U3 sessions)
 - Tests/Postman only on rps_test: scripts/test-db.sh, TEST_DATABASE_URL=...rps_test. Never touch rps.
 - Second backend: cd apps/backend && DATABASE_URL=<rps_test url> PORT=8082 go run ./cmd/server;
   admin: cd apps/admin-web && NEXT_PUBLIC_API_URL=http://localhost:8082/api/v1 pnpm dev --port 3000.
-- Newman: cd apps/backend && npx --no-install newman run RPS.postman_collection.json -e RPS-test.postman_environment.json --folder Auth --folder "<folder>".
+- Newman (from the repo root, see 06-operations/testing.md): npx --no-install newman run apps/backend/RPS.postman_collection.json -e apps/backend/RPS-test.postman_environment.json --folder Auth --folder "<folder>".
   A FULL run has 28 known failures that also fail on master (Health calls :8080; Rework Flow needs
   postman/fixtures/fault.jpg relative to the cwd) — compare against master before calling anything a regression.
 - Edit the Postman JSON with json.load + json.dumps(indent=2, ensure_ascii=True) and NO trailing newline

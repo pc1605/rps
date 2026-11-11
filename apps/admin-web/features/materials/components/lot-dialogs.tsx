@@ -79,13 +79,7 @@ export function ReceiveLotDialog({ defaultTypeId }: { defaultTypeId?: number }) 
   const q = parseQty(qty);
   const c = cost.trim() ? parseQty(cost, 2) : undefined;
   const ok =
-    !!type &&
-    (!type.has_variants || !!variantId) &&
-    code.trim() &&
-    color.trim() &&
-    q != null &&
-    q > 0 &&
-    c !== null;
+    !!type && (!type.has_variants || !!variantId) && color.trim() && q != null && q > 0 && c !== null;
 
   const reset = () => {
     setTypeId(defaultTypeId);
@@ -105,7 +99,7 @@ export function ReceiveLotDialog({ defaultTypeId }: { defaultTypeId?: number }) 
       const lot = await receive.mutateAsync({
         material_type_id: type.id,
         variant_id: type.has_variants ? variantId : undefined,
-        lot_code: code.trim(),
+        lot_code: code.trim() || undefined, // blank → the server numbers it (<TYPE CODE>-NNN)
         color: color.trim(),
         qty: q,
         unit_cost: c ?? undefined,
@@ -185,12 +179,12 @@ export function ReceiveLotDialog({ defaultTypeId }: { defaultTypeId?: number }) 
             </Field>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <Field id="rcv-code" label="Lot code">
+            <Field id="rcv-code" label="Lot code" hint="(optional)">
               <Input
                 id="rcv-code"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="R-014"
+                placeholder={type ? `Auto: ${type.code}-…` : "Auto-numbered"}
               />
             </Field>
             <Field id="rcv-color" label="Colour">

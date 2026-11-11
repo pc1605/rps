@@ -38,6 +38,16 @@ export function cancelOutcomeLines(o: CancelOutcome): string[] {
   return lines;
 }
 
+/** Who is working on the batch right now (open claim / joined), worded for what cancelling does to them. */
+function activeWorkersWarning(b: BatchDetail): string {
+  const who = b.active_workers ?? "";
+  const is = who.includes(",") ? "are" : "is";
+  if (b.current_phase === "cutting")
+    return `${who} ${is} cutting it now — cuts not yet reported are lost (they count as never cut).`;
+  const doing = b.current_phase === "packing" ? "packing" : "stitching";
+  return `${who} ${is} ${doing} it now — cancelling takes them off it.`;
+}
+
 /** True while cancelling is possible at all (the server still decides: no mat may be packed). */
 export const canCancelBatch = (b: BatchDetail) =>
   b.status !== "cancelled" &&
@@ -117,10 +127,7 @@ export function CancelBatchDialog({ batch }: { batch: BatchDetail }) {
               </ul>
             )}
             {batch.active_workers && !blocked && (
-              <p className="mt-2 text-caption text-muted-foreground">
-                {batch.active_workers} {batch.active_workers.includes(",") ? "are" : "is"} working on it now —
-                mats not yet reported cut count as never cut.
-              </p>
+              <p className="mt-2 text-small text-danger">{activeWorkersWarning(batch)}</p>
             )}
           </div>
 

@@ -33,7 +33,7 @@ export default function ReworkDetailScreen() {
 
   if (isPending) {
     return (
-      <Screen header={<ScreenHeader back title="Rework" />}>
+      <Screen header={<ScreenHeader back title={strings.rework.title} />}>
         <View style={styles.skeletonWrap}>
           <Skeleton width="100%" height={240} />
           <Skeleton width="60%" height={28} />
@@ -46,11 +46,16 @@ export default function ReworkDetailScreen() {
 
   if (!item) {
     return (
-      <Screen header={<ScreenHeader back title="Rework" />}>
+      <Screen header={<ScreenHeader back title={strings.rework.title} />}>
         <View style={styles.center}>
-          <Text style={styles.notFoundTitle}>Rework item not found</Text>
-          <Text style={styles.notFoundText}>This item may have already been fixed or reassigned.</Text>
-          <AppButton title="Back to queue" variant="secondary" size="md" onPress={() => router.back()} />
+          <Text style={styles.notFoundTitle}>{strings.rework.notFoundTitle}</Text>
+          <Text style={styles.notFoundText}>{strings.rework.notFoundBody}</Text>
+          <AppButton
+            title={strings.batch.backToQueue}
+            variant="secondary"
+            size="md"
+            onPress={() => router.back()}
+          />
         </View>
       </Screen>
     );
@@ -64,7 +69,7 @@ export default function ReworkDetailScreen() {
 
   return (
     <Screen
-      header={<ScreenHeader back title={item.unit_code ?? "Rework"} />}
+      header={<ScreenHeader back title={item.unit_code ?? strings.rework.title} />}
       footer={
         <AppButton
           title={strings.rework.scanToFix}
@@ -94,13 +99,13 @@ export default function ReworkDetailScreen() {
                 <Pressable
                   onPress={() => setModalPhotoUrl(photo.url)}
                   accessibilityRole="button"
-                  accessibilityLabel="View full photo"
+                  accessibilityLabel={strings.rework.viewPhotoA11y}
                   style={styles.photoPressable(photoCardWidth)}
                 >
                   <AuthImage
                     url={photo.url}
                     aspectRatio={4 / 3}
-                    accessibilityLabel="Defect photo"
+                    accessibilityLabel={strings.rework.defectPhotoA11y}
                     style={styles.photoThumb}
                   />
                 </Pressable>
@@ -143,7 +148,7 @@ export default function ReworkDetailScreen() {
         {/* Note if present */}
         {item.note ? (
           <View style={styles.section}>
-            <Text style={styles.sectionHeading}>Note</Text>
+            <Text style={styles.sectionHeading}>{strings.rework.noteTitle}</Text>
             <Card style={styles.noteCard}>
               <Text style={styles.noteText}>{item.note}</Text>
             </Card>
@@ -170,7 +175,7 @@ export default function ReworkDetailScreen() {
             <Pressable
               onPress={() => setModalPhotoUrl(null)}
               accessibilityRole="button"
-              accessibilityLabel="Close photo preview"
+              accessibilityLabel={strings.rework.closePhotoA11y}
               style={styles.modalCloseBtn}
             >
               <Text style={styles.modalCloseText}>✕</Text>
@@ -182,7 +187,7 @@ export default function ReworkDetailScreen() {
                 url={modalPhotoUrl}
                 aspectRatio={4 / 3}
                 resizeMode="contain"
-                accessibilityLabel="Full-screen rework photo"
+                accessibilityLabel={strings.rework.fullPhotoA11y}
                 style={styles.fullModalImage}
               />
             )}

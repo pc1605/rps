@@ -227,7 +227,8 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 		       b.rework_count, b.created_by, u.name,
 		       b.version, b.created_at, b.updated_at,
 		       b.cut_qty, b.parent_batch_id, pb.batch_code, b.short_reason, b.stickers_printed_at,
-		       (SELECT COUNT(*) FROM rework_logs rl WHERE rl.batch_id = b.id AND rl.fixed_at IS NULL AND (rl.decision IS NULL OR rl.decision = 'to_stitcher'))
+		       (SELECT COUNT(*) FROM rework_logs rl WHERE rl.batch_id = b.id AND rl.fixed_at IS NULL AND (rl.decision IS NULL OR rl.decision = 'to_stitcher')),
+		       `+activeWorkersExpr+`, `+reusedInExpr+`
 		FROM batches b
 		JOIN car_models cm ON cm.id = b.car_model_id
 		JOIN car_brands cb ON cb.id = cm.brand_id
@@ -244,7 +245,7 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 		&b.ReworkCount, &b.CreatedBy, &b.CreatedByName,
 		&b.Version, &b.CreatedAt, &b.UpdatedAt,
 		&b.CutQty, &b.ParentBatchID, &b.ParentBatchCode, &b.ShortReason, &b.StickersPrintedAt,
-		&b.ReworkOpen,
+		&b.ReworkOpen, &b.ActiveWorkers, &b.ReusedIn,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound

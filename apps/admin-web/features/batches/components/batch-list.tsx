@@ -16,6 +16,7 @@ import { useBatchPage, useMarkStickersPrinted } from "../hooks";
 import { PAGE_SIZE, useListParams } from "../use-list-params";
 import { AssignSheet, waitingFor } from "./assign-sheet";
 import { BatchFilters } from "./batch-filters";
+import { ReusedInLine } from "./reused-in";
 import { generateLabelPdf } from "../label-pdf";
 import type { Batch } from "../types";
 import { batchViews } from "../views";
@@ -108,11 +109,16 @@ const baseColumns: Column<Batch>[] = [
     width: "w-[140px]",
     cell: (b) => (
       <span className="tabular text-muted-foreground">
-        {b.units_stitched ?? 0} · {b.units_packed}
-        <span className="text-muted-foreground/60"> / {b.units_total}</span>
+        {!(b.units_total === 0 && b.reused_in?.length) && (
+          <>
+            {b.units_stitched ?? 0} · {b.units_packed}
+            <span className="text-muted-foreground/60"> / {b.units_total}</span>
+          </>
+        )}
         {b.units_written_off > 0 && (
           <span className="block text-caption text-danger">{b.units_written_off} written off</span>
         )}
+        <ReusedInLine batch={b} className="block text-caption" />
       </span>
     ),
   },

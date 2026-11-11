@@ -7,6 +7,7 @@ import { Banner } from "../components/ui/Banner";
 import { Screen } from "../components/ui/Screen";
 import { useEnrollDraft } from "../features/auth/enroll-draft";
 import { useAuth } from "../features/auth/store";
+import { strings } from "../lib/strings";
 
 export default function Login() {
   const router = useRouter();
@@ -31,28 +32,26 @@ export default function Login() {
       footer={
         <View style={styles.bottomActionInner}>
           <AppButton
-            title="Set up this phone →"
+            title={strings.login.submit}
             size="lg"
             onPress={handleLogin}
             disabled={!canSubmit}
             loading={submitting}
           />
-          <Text style={styles.footnote}>One-time setup. You'll stay signed in on this phone.</Text>
+          <Text style={styles.footnote}>{strings.login.footnote}</Text>
         </View>
       }
     >
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>AMBIKA · RIDDHI</Text>
-        <Text style={styles.title}>RPS Worker</Text>
-        <Text style={styles.subtitle}>
-          Scan the enrollment QR from your admin, or type the code, then enter your PIN to set up this phone.
-        </Text>
+        <Text style={styles.eyebrow}>{strings.login.eyebrow}</Text>
+        <Text style={styles.title}>{strings.login.title}</Text>
+        <Text style={styles.subtitle}>{strings.login.subtitle}</Text>
       </View>
 
       {/* Primary Scan Button at top of form */}
       <View style={styles.scanBtnWrap}>
         <AppButton
-          title={code ? "Scan a different code" : "Scan enrollment code"}
+          title={code ? strings.login.scanDifferent : strings.login.scanCode}
           icon={<Text style={styles.camIcon}>📷</Text>}
           variant={code ? "secondary" : "primary"}
           size="lg"
@@ -62,11 +61,11 @@ export default function Login() {
 
       {/* Fallback code input */}
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>Enrollment code</Text>
+        <Text style={styles.fieldLabel}>{strings.login.codeLabel}</Text>
         <TextInput
           value={code}
           onChangeText={setCode}
-          placeholder="or type the code"
+          placeholder={strings.login.codePlaceholder}
           placeholderTextColor={styles.placeholder.color}
           autoCapitalize="none"
           autoCorrect={false}
@@ -76,7 +75,7 @@ export default function Login() {
 
       {/* PIN Input */}
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>4-digit PIN</Text>
+        <Text style={styles.fieldLabel}>{strings.login.pinLabel}</Text>
         <TextInput
           value={pin}
           onChangeText={(t) => setPin(t.replace(/\D/g, "").slice(0, 4))}

@@ -77,15 +77,15 @@ export default function ScanScreen() {
 
       try {
         if (fb.kind === "ok") {
-          AccessibilityInfo.announceForAccessibility(`Scanned ${fb.code}`);
+          AccessibilityInfo.announceForAccessibility(strings.scanner.scannedA11y(fb.code));
         } else if (fb.kind === "dup") {
           AccessibilityInfo.announceForAccessibility(
-            `${isPacker ? strings.scanner.alreadyPacked : "Already scanned"} ${fb.code}`,
+            `${isPacker ? strings.scanner.alreadyPacked : strings.scanner.alreadyScanned} ${fb.code}`,
           );
         } else if (fb.kind === "quota") {
-          AccessibilityInfo.announceForAccessibility("Your share is complete");
+          AccessibilityInfo.announceForAccessibility(strings.scanner.shareComplete);
         } else if (fb.kind === "err") {
-          AccessibilityInfo.announceForAccessibility(`Error: ${fb.msg}`);
+          AccessibilityInfo.announceForAccessibility(strings.scanner.errorA11y(fb.msg));
         } else if (fb.kind === "in_rework") {
           AccessibilityInfo.announceForAccessibility(`${strings.scanner.inRework}: ${fb.code}`);
         } else if (fb.kind === "written_off") {
@@ -152,7 +152,7 @@ export default function ScanScreen() {
           triggerFeedback("ok");
           try {
             AccessibilityInfo.announceForAccessibility(
-              isStitcher ? "Stitching complete" : `${batchCode} complete`,
+              isStitcher ? strings.scanner.stitchingComplete : strings.scanner.batchComplete(batchCode),
             );
           } catch {
             // Ignore a11y failure
@@ -187,7 +187,7 @@ export default function ScanScreen() {
         }
         flashAndUnlock({
           kind: "err",
-          msg: e instanceof ApiError ? e.message : "Scan failed — try again",
+          msg: e instanceof ApiError ? e.message : strings.scanner.scanFailed,
         });
       },
     });
@@ -198,7 +198,7 @@ export default function ScanScreen() {
     lock.current = true;
 
     if (!isOnline) {
-      flashAndUnlock({ kind: "err", msg: "Offline — reconnect to scan" });
+      flashAndUnlock({ kind: "err", msg: strings.scanner.offline });
       return;
     }
 
@@ -206,7 +206,7 @@ export default function ScanScreen() {
 
     // Local validation — no network for obviously wrong scans
     if (!UNIT_CODE_RE.test(code)) {
-      flashAndUnlock({ kind: "err", msg: "Not an RPS unit label" });
+      flashAndUnlock({ kind: "err", msg: strings.scanner.notRpsLabel });
       return;
     }
     // Packers check against the server instead: a reused spare keeps the code of its old batch (U3).
@@ -310,11 +310,14 @@ export default function ScanScreen() {
 
   if (!permission.granted) {
     return (
-      <Screen centered footer={<AppButton title="Allow camera" size="lg" onPress={requestPermission} />}>
+      <Screen
+        centered
+        footer={<AppButton title={strings.scanner.allowCamera} size="lg" onPress={requestPermission} />}
+      >
         <View style={styles.permContent}>
-          <Text style={styles.permTitle}>Camera needed</Text>
-          <Text style={styles.permText}>RPS uses the camera to scan unit QR labels.</Text>
-          <AppButton title="← Back" variant="ghost" size="md" onPress={handleBack} />
+          <Text style={styles.permTitle}>{strings.scanner.cameraNeeded}</Text>
+          <Text style={styles.permText}>{strings.scanner.cameraWhy}</Text>
+          <AppButton title={strings.common.backArrow} variant="ghost" size="md" onPress={handleBack} />
         </View>
       </Screen>
     );
@@ -325,15 +328,19 @@ export default function ScanScreen() {
     return (
       <Screen
         centered
-        footer={<AppButton title="Back to my queue" size="lg" onPress={() => router.replace("/home")} />}
+        footer={
+          <AppButton title={strings.common.backToMyQueue} size="lg" onPress={() => router.replace("/home")} />
+        }
       >
         <View style={styles.doneContent}>
           <Text style={styles.doneEmoji}>✓</Text>
-          <Text style={styles.doneTitle}>{isStitcher ? "Stitching complete" : `${batchCode} complete`}</Text>
+          <Text style={styles.doneTitle}>
+            {isStitcher ? strings.scanner.stitchingComplete : strings.scanner.batchComplete(batchCode)}
+          </Text>
           <Text style={styles.doneText}>
             {isStitcher
-              ? `All ${progress.total} mats stitched — batch sent to packing.`
-              : `All ${progress.total} mats packed and sent to the stockyard.`}
+              ? strings.scanner.allStitched(progress.total)
+              : strings.scanner.allPacked(progress.total)}
           </Text>
         </View>
       </Screen>
@@ -362,19 +369,21 @@ export default function ScanScreen() {
           <Pressable
             onPress={handleBack}
             accessibilityRole="button"
-            accessibilityLabel="Back to queue"
+            accessibilityLabel={strings.scanner.backToQueueA11y}
             style={styles.topBarBtn}
           >
-            <Text style={styles.topBarText}>← {batch?.batch_code ?? "Back"}</Text>
+            <Text style={styles.topBarText}>← {batch?.batch_code ?? strings.common.back}</Text>
           </Pressable>
           <Pressable
             onPress={() => setTorch((t) => !t)}
             accessibilityRole="button"
-            accessibilityLabel={torch ? "Turn torch off" : "Turn torch on"}
+            accessibilityLabel={torch ? strings.scanner.torchOffA11y : strings.scanner.torchOnA11y}
             accessibilityState={{ selected: torch }}
             style={styles.topBarBtn}
           >
-            <Text style={styles.topBarText}>{torch ? "🔦 Torch off" : "🔦 Torch on"}</Text>
+            <Text style={styles.topBarText}>
+              {torch ? strings.scanner.torchOff : strings.scanner.torchOn}
+            </Text>
           </Pressable>
         </View>
 
@@ -384,23 +393,25 @@ export default function ScanScreen() {
             <View style={styles.offlineBannerWrap}>
               <Banner
                 kind="danger"
-                text="Camera didn't start — tap to retry"
-                actionLabel="Retry"
+                text={strings.scanner.cameraFailed}
+                actionLabel={strings.common.retry}
                 onAction={handleRetryCamera}
               />
             </View>
           )}
           {!isOnline && (
             <View style={styles.offlineBannerWrap}>
-              <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
+              <Banner kind="warning" text={strings.common.offline} />
             </View>
           )}
 
           <View style={styles.progressWrap}>
             <Text style={styles.progressText}>
               {progress.target != null
-                ? `${progress.mine}/${progress.target} yours · ${progress.done}/${progress.total} batch`
-                : `${progress.done} / ${progress.total} ${isStitcher ? "stitched" : "packed"}`}
+                ? strings.scanner.progressMine(progress.mine, progress.target, progress.done, progress.total)
+                : isStitcher
+                  ? strings.scanner.progressStitched(progress.done, progress.total)
+                  : strings.scanner.progressPacked(progress.done, progress.total)}
             </Text>
           </View>
         </View>
@@ -408,7 +419,7 @@ export default function ScanScreen() {
         {/* Scan Frame */}
         <View pointerEvents="none" style={styles.frameWrap}>
           <View style={styles.frame} />
-          <Text style={styles.frameHint}>Point at a unit QR label</Text>
+          <Text style={styles.frameHint}>{strings.scanner.pointAtLabel}</Text>
         </View>
 
         {/* Packer Inspect Sheet */}
@@ -426,21 +437,21 @@ export default function ScanScreen() {
                 title={strings.inspect.pack}
                 size="lg"
                 onPress={handlePack}
-                accessibilityLabel="Pack mat"
+                accessibilityLabel={strings.scanner.packA11y}
               />
               <AppButton
                 title={strings.inspect.needsRework}
                 variant="danger"
                 size="lg"
                 onPress={handleNeedsRework}
-                accessibilityLabel="Needs rework"
+                accessibilityLabel={strings.scanner.needsReworkA11y}
               />
               <AppButton
                 title={strings.inspect.cancel}
                 variant="ghost"
                 size="md"
                 onPress={handleCancelInspect}
-                accessibilityLabel="Cancel inspect"
+                accessibilityLabel={strings.scanner.cancelInspectA11y}
               />
             </View>
           </View>
@@ -464,8 +475,9 @@ export default function ScanScreen() {
             >
               <Text style={styles.flashTitle}>
                 {flash.kind === "ok" && `✓ ${flash.code}`}
-                {flash.kind === "dup" && (isPacker ? strings.scanner.alreadyPacked : "Already scanned")}
-                {flash.kind === "quota" && "Your share is complete ✓"}
+                {flash.kind === "dup" &&
+                  (isPacker ? strings.scanner.alreadyPacked : strings.scanner.alreadyScanned)}
+                {flash.kind === "quota" && strings.scanner.shareCompleteTitle}
                 {flash.kind === "err" && `✗ ${flash.msg}`}
                 {flash.kind === "in_rework" && `⏳ ${strings.scanner.inRework}`}
                 {flash.kind === "written_off" && `✗ ${strings.scanner.writtenOff}`}
@@ -476,7 +488,7 @@ export default function ScanScreen() {
               {flash.kind === "in_rework" && <Text style={styles.flashSub}>{flash.code}</Text>}
               {flash.kind === "quota" && (
                 <Text style={styles.flashSub}>
-                  {flash.mine} / {flash.target} mats — leave the rest for your co-workers
+                  {strings.scanner.shareCompleteSub(flash.mine, flash.target)}
                 </Text>
               )}
             </View>

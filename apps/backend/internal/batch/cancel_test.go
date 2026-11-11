@@ -3,6 +3,8 @@ package batch
 import (
 	"errors"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 // TestCancel pins POST /batches/:id/cancel (D35): cut and stitched mats → spare (codes kept), never-cut
@@ -18,6 +20,7 @@ func TestCancel(t *testing.T) {
 			t.Fatal(err)
 		}
 		f.join(b.ID, f.cutter, "cutter") // claimed again; cancel still allowed, the open log closes
+		f.wantActive(b.ID, true)         // the cancel dialog warns from GET /batches/:id
 		pre, err := f.s.CancelPreview(f.ctx, b.ID)
 		if err != nil {
 			t.Fatal(err)
@@ -35,6 +38,7 @@ func TestCancel(t *testing.T) {
 		if _, st := f.state(b.ID); st != StatusCancelled {
 			t.Fatalf("status = %s", st)
 		}
+		f.wantActive(b.ID, false)
 		if n := f.count(`SELECT COUNT(*) FROM batch_units WHERE batch_id=$1 AND status='spare'`, b.ID); n != 4 {
 			t.Fatalf("spares = %d, want 4", n)
 		}
@@ -60,6 +64,7 @@ func TestCancel(t *testing.T) {
 		codes := f.codes(b.ID)
 		f.scan(codes[0], a, "stitcher")
 		f.scan(codes[1], a, "stitcher")
+		f.wantActive(b.ID, true)
 		o, err := f.s.Cancel(f.ctx, b.ID, "other", "customer went elsewhere", f.admin, "owner", u3ip)
 		if err != nil {
 			t.Fatal(err)
@@ -140,5 +145,18 @@ func TestCancel(t *testing.T) {
 
 	if _, err := f.s.Cancel(f.ctx, f.create(CreateInput{Quantity: 1}).ID, "nope", "", f.admin, "owner", u3ip); !errors.Is(err, ErrInvalidInput) {
 		t.Fatalf("bad reason: %v", err)
+	}
+}
+
+// wantActive: GET /batches/:id carries active_workers exactly when someone has an open log on the
+// current phase (the cancel dialog's "working on it now" warning).
+func (f *u3fx) wantActive(batchID uuid.UUID, want bool) {
+	f.t.Helper()
+	d, err := f.s.Get(f.ctx, batchID)
+	if err != nil {
+		f.t.Fatal(err)
+	}
+	if has := d.ActiveWorkers != nil && *d.ActiveWorkers != ""; has != want {
+		f.t.Fatalf("Get: active_workers = %v, want present=%v", d.ActiveWorkers, want)
 	}
 }

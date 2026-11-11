@@ -147,11 +147,14 @@ export default function NewReworkScreen() {
 
   if (!permission.granted) {
     return (
-      <Screen centered footer={<AppButton title="Allow camera" size="lg" onPress={requestPermission} />}>
+      <Screen
+        centered
+        footer={<AppButton title={strings.scanner.allowCamera} size="lg" onPress={requestPermission} />}
+      >
         <View style={styles.permContent}>
-          <Text style={styles.permTitle}>Camera needed</Text>
-          <Text style={styles.permText}>RPS uses the camera to capture rework defect photos.</Text>
-          <AppButton title="← Back" variant="ghost" size="md" onPress={handleBack} />
+          <Text style={styles.permTitle}>{strings.scanner.cameraNeeded}</Text>
+          <Text style={styles.permText}>{strings.rework.cameraWhy}</Text>
+          <AppButton title={strings.common.backArrow} variant="ghost" size="md" onPress={handleBack} />
         </View>
       </Screen>
     );
@@ -181,9 +184,9 @@ export default function NewReworkScreen() {
               hitSlop={8}
               style={styles.topBarBtn}
               accessibilityRole="button"
-              accessibilityLabel="Back"
+              accessibilityLabel={strings.common.back}
             >
-              <Text style={styles.topBarBackText}>‹ Back</Text>
+              <Text style={styles.topBarBackText}>{strings.rework.back}</Text>
             </Pressable>
             <Text style={styles.topBarUnitCode} numberOfLines={1}>
               {unitCode}
@@ -199,8 +202,8 @@ export default function NewReworkScreen() {
               <View style={styles.bannerWrap}>
                 <Banner
                   kind="danger"
-                  text="Camera didn't start — tap to retry"
-                  actionLabel="Retry"
+                  text={strings.scanner.cameraFailed}
+                  actionLabel={strings.common.retry}
                   onAction={handleRetryCamera}
                 />
               </View>

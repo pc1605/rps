@@ -182,6 +182,26 @@ func TestLotMovements(t *testing.T) {
 	_, err = f.s.Receive(f.ctx, ReceiveInput{MaterialTypeID: sheet.ID, VariantID: &w54.ID, LotCode: "R-" + f.sfx, Color: "x", Qty: 1}, f.a)
 	is(t, "duplicate lot code", err, ErrDuplicate)
 
+	// No lot code → numbered per type: <TYPE CODE>-001, -002; a hand-typed code of that form counts.
+	auto := func(code string) string {
+		t.Helper()
+		l, err := f.s.Receive(f.ctx, ReceiveInput{MaterialTypeID: sheet.ID, VariantID: &w54.ID, LotCode: code, Color: "Black", Qty: 1000}, f.a)
+		if err != nil {
+			t.Fatalf("receive %q: %v", code, err)
+		}
+		return l.LotCode
+	}
+	if c := auto("  "); c != sheet.Code+"-001" {
+		t.Fatalf("first auto code = %s", c)
+	}
+	if c := auto(""); c != sheet.Code+"-002" {
+		t.Fatalf("second auto code = %s", c)
+	}
+	auto(sheet.Code + "-010")
+	if c := auto(""); c != sheet.Code+"-011" {
+		t.Fatalf("auto code after a typed -010 = %s", c)
+	}
+
 	// Re-classify before consumption: allowed, opening movement follows.
 	lot, err = f.s.PatchLot(f.ctx, lot.ID, LotPatch{VariantID: Opt[int]{Set: true, Value: &w60.ID}, Note: Opt[string]{Set: true, Value: sp("relabelled")}}, f.a)
 	if err != nil || *lot.VariantName != "60″" || *lot.Note != "relabelled" {

@@ -1,4 +1,7 @@
-# Status & Next Steps (as of 2026-09-13)
+# Status & Next Steps (as of 2026-09-13; slice table updated 2026-11-02)
+
+> The current plan and slice order live in `NEXT-STEPS.md`. Since this page was written: C1 + C2 (materials), U0–U3
+> (bugs, entity pages, lists, workflow gaps), R1 (reports v2) are built; P1 (make it perfect) is in progress.
 
 ## Built and verified (end-to-end tested by the developer)
 - Weeks 1–7: auth (admin + worker), batches/units, worker app, phase state machine, stock (rolls + finished), batch timeline,
@@ -30,16 +33,15 @@
 | Slice | Scope | Status / Next |
 |---|---|---|
 | **B** Rework | unit `rework` status, `rework_logs` + photo upload, stitcher queue, admin decisions, signed URLs | **DONE** |
-| **E** Hardening + Deploy | §3 worker auth hardening, §4 admin refresh token rotation, Railway (API+PG) + Vercel deployment, EAS build/update, real-device pilot | **Recommended Next** |
-| **C** Materials & BOM | `materials` (types/units), BOM linkage, consumption at cutting-complete (FIFO), stockyard materials tracking | Blocked on owner numbers |
+| **E** Hardening + Deploy | §3 worker auth hardening, §4 admin refresh token rotation, Railway (API+PG) + Vercel deployment, EAS build/update, real-device pilot | After P1 (see NEXT-STEPS) |
+| **C** Materials & BOM | `materials` (types/units), BOM linkage, consumption at cutting-complete (FIFO), stockyard materials tracking | **DONE** (C1 + C2; C3 cutter materials parked) |
 | **D** Earnings | rates per station/size, ₹ column + date-range wage sheet on Reports (`piece_rates`) | Follows C / E |
 
 ## Sequence
-1. Slices A & B verified end-to-end (Postman + demo seed + smoke tests pass).
-2. **Next step**: Either proceed with **Slice E** (production hardening, Railway/Vercel deployment, and factory pilot APK build) OR unblock **Slice C** once owner provides BOM specifications.
+See `NEXT-STEPS.md` (P1 → R2 → E; D waits for owner answers).
 
 ## Open Owner Questions
-1. **Languages**: Should the worker app support Hindi, Gujarati, or remain English-first with icon-heavy cues?
+1. **Languages**: Hindi is planned; every phone text is in `apps/mobile/lib/strings.ts` (P1). Gujarati: not asked yet.
 2. **Re-cut Process**: When admin decides to recut, should the new 1-mat batch automatically assign the original cutter or enter the general cutting pool?
 3. **Photo Required?**: Is photo capture strictly mandatory (1–3 photos) for every rework flag, or can minor flaws be submitted with text-only?
 4. **Quick-Pack Toggle**: Should high-volume packers have a "Quick Pack" mode toggle that skips the peek modal and packs immediately on QR scan?

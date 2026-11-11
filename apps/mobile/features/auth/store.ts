@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { ApiError, tokenStore } from "../../lib/api-client";
+import { strings } from "../../lib/strings";
 import { authApi } from "./api";
 import type { Worker } from "./types";
 
@@ -26,7 +27,7 @@ export const useAuth = create<AuthState>((set) => ({
       return true;
     } catch (e) {
       set({
-        error: e instanceof ApiError ? e.message : "Login failed",
+        error: e instanceof ApiError ? e.message : strings.common.loginFailed,
         submitting: false,
       });
       return false;

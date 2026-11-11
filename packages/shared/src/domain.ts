@@ -97,6 +97,15 @@ export interface Batch {
   my_done_qty?: number;
   /** GET /batches only: for an awaiting_assignment batch, when cutting last finished (waiting time). */
   ready_since?: string;
+  /** Cancelled batch only (P1): the batches its spare mats were reused in (the mats moved there). */
+  reused_in?: ReusedIn[];
+}
+
+/** n spare mats of a cancelled batch that now belong to this batch. */
+export interface ReusedIn {
+  batch_id: string;
+  batch_code: string;
+  count: number;
 }
 
 export interface Unit {
@@ -469,7 +478,8 @@ export interface ReceiveLotInput {
   material_type_id: number;
   /** Required iff the type has variants. */
   variant_id?: number;
-  lot_code: string;
+  /** Optional: blank → "<TYPE CODE>-NNN", the next number for that type. */
+  lot_code?: string;
   color: string;
   qty: number;
   unit_cost?: number;

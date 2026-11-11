@@ -34,14 +34,14 @@ function ReworkCard({ item, onOpen }: { item: ReworkEntry; onOpen: (item: Rework
     <Pressable
       onPress={() => onOpen(item)}
       accessibilityRole="button"
-      accessibilityLabel={`Rework ${item.unit_code ?? ""}, ${modelText}`}
+      accessibilityLabel={strings.home.reworkA11y(item.unit_code ?? "", modelText)}
     >
       <Card style={styles.reworkCard}>
         <View style={styles.reworkCardContent}>
           {firstPhoto && (
             <AuthImage
               url={firstPhoto.url}
-              accessibilityLabel="Rework defect photo"
+              accessibilityLabel={strings.home.reworkPhotoA11y}
               style={styles.reworkThumb}
             />
           )}
@@ -99,7 +99,7 @@ function BatchCard({
       onPress={() => onOpen(batch)}
       disabled={blocked}
       accessibilityRole="button"
-      accessibilityLabel={`Batch ${batch.batch_code}, ${batch.brand_name} ${batch.model_name}`}
+      accessibilityLabel={strings.home.batchA11y(batch.batch_code, `${batch.brand_name} ${batch.model_name}`)}
       accessibilityState={{ disabled: blocked }}
     >
       <Card style={[styles.batchCard, mine && styles.cardMine, blocked && styles.cardBlocked]}>
@@ -124,24 +124,21 @@ function BatchCard({
 
         <View style={styles.statWrap}>
           {station === "cutter" ? (
-            <Stat value={batch.quantity} label="mats" />
+            <Stat value={batch.quantity} label={strings.home.mats} />
           ) : batch.my_target_qty != null ? (
-            <Stat value={batch.my_done_qty ?? 0} of={batch.my_target_qty} label="your share" />
+            <Stat value={batch.my_done_qty ?? 0} of={batch.my_target_qty} label={strings.home.yourShare} />
           ) : (
             <Stat
               value={station === "stitcher" ? (batch.units_stitched ?? 0) : batch.units_packed}
               of={batch.units_total}
-              label={station === "stitcher" ? "stitched" : "packed"}
+              label={station === "stitcher" ? strings.home.stitched : strings.home.packed}
             />
           )}
         </View>
 
         {blocked ? (
           <View style={styles.footerRow}>
-            <Chip
-              label={`⏳ ${batch.active_workers ?? "Another cutter"} is cutting`}
-              color={styles.textMuted.color}
-            />
+            <Chip label={strings.home.cutting(batch.active_workers)} color={styles.textMuted.color} />
           </View>
         ) : (
           (batch.assigned_to_me || batch.active_workers || mine) && (
@@ -150,8 +147,8 @@ function BatchCard({
                 <Chip
                   label={
                     batch.assigned_workers?.includes(",")
-                      ? `📌 Assigned to you (with ${batch.assigned_workers})`
-                      : "📌 Assigned to you"
+                      ? strings.home.assignedToYouWith(batch.assigned_workers)
+                      : strings.home.assignedToYou
                   }
                   color={styles.accentColor.color}
                 />
@@ -159,7 +156,7 @@ function BatchCard({
               {batch.active_workers && !mine && (
                 <Chip label={`👤 ${batch.active_workers}`} color={styles.textMuted.color} />
               )}
-              {mine && <Chip label="You're in" color={styles.successColor.color} dot />}
+              {mine && <Chip label={strings.home.youreIn} color={styles.successColor.color} dot />}
             </View>
           )
         )}
@@ -200,8 +197,8 @@ export default function Home() {
   }, [worker, restore]);
 
   const stationTitle = worker
-    ? `${STATION_LABEL[worker.station as keyof typeof STATION_LABEL] ?? worker.station} queue`
-    : "My queue";
+    ? strings.home.stationQueue(STATION_LABEL[worker.station as keyof typeof STATION_LABEL] ?? worker.station)
+    : strings.home.myQueue;
 
   const handleRefresh = () => {
     refetch();
@@ -223,7 +220,7 @@ export default function Home() {
           title={worker?.name ?? "…"}
           right={
             <AppButton
-              title="Sign out"
+              title={strings.home.signOut}
               variant="ghost"
               size="md"
               onPress={async () => {
@@ -237,7 +234,7 @@ export default function Home() {
     >
       {!isOnline && (
         <View style={styles.bannerWrap}>
-          <Banner kind="warning" text="You're offline — changes will sync when you reconnect" />
+          <Banner kind="warning" text={strings.common.offline} />
         </View>
       )}
 
@@ -248,8 +245,8 @@ export default function Home() {
         <View style={styles.center}>
           <Banner
             kind="danger"
-            text="Couldn't load your queue. Check connection and retry."
-            actionLabel="Retry"
+            text={strings.home.loadFailed}
+            actionLabel={strings.common.retry}
             onAction={() => handleRefresh()}
           />
         </View>
@@ -289,8 +286,8 @@ export default function Home() {
           ListEmptyComponent={
             !hasRework ? (
               <View style={styles.center}>
-                <Text style={styles.emptyTitle}>All clear</Text>
-                <Text style={styles.emptyText}>Nothing waiting at your station.</Text>
+                <Text style={styles.emptyTitle}>{strings.home.allClear}</Text>
+                <Text style={styles.emptyText}>{strings.home.nothingWaiting}</Text>
               </View>
             ) : null
           }
