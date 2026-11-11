@@ -15,6 +15,7 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: "center",
     gap: 6,
     alignSelf: "flex-start",
+    maxWidth: "100%",
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.sm,
@@ -22,6 +23,6 @@ const styles = StyleSheet.create((theme) => ({
     paddingVertical: 3,
   },
   dot: { width: 6, height: 6, borderRadius: 3 },
-  text: { ...theme.text.caption, color: theme.colors.textMuted },
+  text: { ...theme.text.caption, color: theme.colors.textMuted, flexShrink: 1 },
   fallback: { color: theme.colors.textMuted },
 }));
