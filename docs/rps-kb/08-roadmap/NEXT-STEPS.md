@@ -16,10 +16,12 @@
 
 ### Future plan (not discussed with the owner yet — don't start)
 
-- **Worker helpers after the pilot** (owner, Nov 2026 — pick only what a pilot week shows workers need): earnings on
-  My work (needs Slice D rates), spoken scan feedback in Hindi, monthly work history, offline scan queue (if floor
-  Wi-Fi drops), "assigned to you" notification (needs EAS), first-use picture guide per station. Plan shared in chat
-  11 Nov 2026; nothing designed yet.
+- **Worker helpers after the pilot** (owner, 11 Nov 2026; nothing designed yet):
+  - Owner wants: **work history** on the phone (the worker's own counts per day / month — what the owner pays from)
+    and an **"assigned to you" notification** (needs the EAS build, E3).
+  - Maybe, if the pilot shows a need: spoken scan feedback in Hindi, offline scan queue (if floor Wi-Fi drops),
+    first-use picture guide per station.
+  - Not doing: earnings / ₹ on the phone or admin (D40 — the owner pays manually from the counts).
 
 - **C3 Cutter materials** — "You'll need …" panel for the cutter, roll QR scan at cutting start, lot QR labels.
   Why it would matter: material is deducted at cutting-complete from the roll picked on New batch, else the oldest
@@ -43,5 +45,5 @@ and only when they don't touch the same files. Merge order: U0 → C1 → U1 →
 
 - ~~What happens to a stitcher's remaining quota when they're absent mid-batch?~~ Handed over to another stitcher (D32, built in U3).
 - ~~Who may cancel a batch after cutting (owner only, or supervisors too)?~~ Owner and supervisors, until the first pack (D35, U3).
-- ~~Should workers see their own output/earnings on the phone?~~ Output yes (My work card, D39, U3); earnings come with Slice D.
+- ~~Should workers see their own output/earnings on the phone?~~ Output yes (My work card, D39, U3); never money — the owner pays manually from the counts (D40).
 - What counts as a "late" batch (due dates per order?)

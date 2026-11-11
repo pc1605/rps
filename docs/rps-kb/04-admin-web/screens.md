@@ -75,7 +75,7 @@ has a CSV button (built in the browser). **Thresholds** dialog edits the stuck h
   quota delivered.
 - **Quality:** rework rounds, average fix time, short cuts / cuts, write-offs, re-cuts · rework and losses by reason
   (ranked bars) · rework by stitcher · short cuts by action × reason · write-offs & re-cuts by item.
-(Slice D adds ₹ earnings via `piece_rates`.)
+(No ₹ / earnings — the owner pays from these counts himself, D40.)
 
 ## Entity pages & links (U1)
 Every worker / batch / unit / car / lot name is a link (`components/rps/entity-link.tsx`: `WorkerLink`, `BatchLink`,

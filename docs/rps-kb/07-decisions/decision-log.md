@@ -191,3 +191,13 @@ station; stitchers also see mats that came back for rework this week and how man
 sent to rework. No money until Slice D.
 **Why**: Owner (U3); audit question "should workers see their own output".
 **Status**: Built (U3).
+
+### D40 — The app counts work; it never shows money (Nov 2026)
+**Decision**: RPS records how much work each worker did (mats cut / stitched / packed, per day, attributed per scan)
+and shows those counts to the admin (Reports, worker page) and to the worker (My work, and later a work history). The
+owner works out and pays wages himself, outside the app. No ₹, rates or earnings anywhere — admin or phone. Slice D
+(Earnings) is dropped; the `piece_rates` table (migration 005, unused) stays as is — no migration to remove it.
+**Why**: Owner, 11 Nov 2026: "keep the earning based on admin manually … this system's purpose is to show how much
+work is done by each worker; based on that they will do their payment."
+**Status**: Decided. Supersedes "No money until Slice D" in D39 and every "earnings / Slice D" plan in the roadmap.
+

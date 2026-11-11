@@ -2,8 +2,8 @@
 
 Status: **planned, not started.** Paste the prompt below into a new agent session.
 Owner direction (11 Nov 2026): the app is not in use on the floor yet; add Hindi before the pilot. Hindi only for now
-(Gujarati not needed). R2 (material reports) is on hold. Ideas for helping workers day to day (earnings on My work,
-spoken feedback, offline scans, …) wait until after a pilot week — don't build them here.
+(Gujarati not needed). R2 (material reports) is on hold. Work history and an "assigned to you" notification come after a pilot week
+(NEXT-STEPS "Future plan"); the app never shows money (D40) — don't build any of it here.
 
 ```text
 Do slice H1 — Hindi on the worker phone app (apps/mobile). Read AGENTS.md first, then docs/rps-kb/README.md,
@@ -81,7 +81,7 @@ TESTS / VERIFY
 DOCS
 - docs/rps-kb/05-mobile/structure.md: how language works (store, hook, getter, font switch, where to add a text).
 - AGENTS.md "Mobile rules": new user-facing text goes in strings.ts in BOTH English and Hindi.
-- docs/rps-kb/07-decisions/decision-log.md: D40 — Hindi on the phone (choices above).
+- docs/rps-kb/07-decisions/decision-log.md: D41 — Hindi on the phone (choices above).
 - NEXT-STEPS: tick H1 when merged.
 
 Start by confirming you've read this and the mobile code, say anything in this list that turned out to be wrong,

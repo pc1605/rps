@@ -16,7 +16,7 @@ to the cutting queue (`POST /worker/batches/:id/release`).
 ## My work (U3, home)
 Card at the top of every home queue: "MY WORK · mats stitched" (or pieces cut / mats packed), **today** and **this week**
 (from Monday), stitchers "n came back for rework this week" + "n waiting for you", packers "n sent to rework this week".
-`GET /worker/me/summary`, refetched every minute and on pull-to-refresh. No ₹ until Slice D.
+`GET /worker/me/summary`, refetched every minute and on pull-to-refresh. Counts only, never ₹ (D40).
 
 ## Stitcher
 Home shows **only batches assigned to me** (server filters). Card: `📌 Your share: 3 / 8 · with Surya, Mahesh` (or

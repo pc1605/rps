@@ -5,7 +5,7 @@ import { strings } from "../lib/strings";
 import { Card } from "./ui/Card";
 import { Stat } from "./ui/Stat";
 
-/** Home "My work": today and this week (from Monday) at the worker's station. No ₹ until Slice D. */
+/** Home "My work": today and this week (from Monday) at the worker's station. Counts only — never ₹ (D40). */
 export function MyWorkCard() {
   const { data } = useMySummary();
   if (!data) return null;

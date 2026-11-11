@@ -35,10 +35,10 @@
 | **B** Rework | unit `rework` status, `rework_logs` + photo upload, stitcher queue, admin decisions, signed URLs | **DONE** |
 | **E** Hardening + Deploy | §3 worker auth hardening, §4 admin refresh token rotation, Railway (API+PG) + Vercel deployment, EAS build/update, real-device pilot | After P1 (see NEXT-STEPS) |
 | **C** Materials & BOM | `materials` (types/units), BOM linkage, consumption at cutting-complete (FIFO), stockyard materials tracking | **DONE** (C1 + C2; C3 cutter materials parked) |
-| **D** Earnings | rates per station/size, ₹ column + date-range wage sheet on Reports (`piece_rates`) | Follows C / E |
+| **D** Earnings | rates per station/size, ₹ column + date-range wage sheet on Reports (`piece_rates`) | **Dropped** (D40: the app counts work, the owner pays manually) |
 
 ## Sequence
-See `NEXT-STEPS.md` (P1 → R2 → E; D waits for owner answers).
+See `NEXT-STEPS.md`.
 
 ## Open Owner Questions
 1. **Languages**: Hindi is planned; every phone text is in `apps/mobile/lib/strings.ts` (P1). Gujarati: not asked yet.

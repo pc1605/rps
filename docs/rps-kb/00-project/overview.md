@@ -38,7 +38,8 @@ Workers use **their own smartphones**; the phone is their identity after a one-t
 
 ## Pay model (drives design)
 Stitchers are paid **piece-rate (₹ per mat, e.g. ₹100)**. Therefore per-mat scan attribution is not just tracking —
-it is the wage sheet. `piece_rates` table exists; Earnings view is planned (Slice D).
+it is what the owner pays from. The owner calculates and pays wages himself from these counts; the app never shows
+money (D40). The `piece_rates` table exists but is unused.
 
 ## Timeline so far
 - Jul 2026: Weeks 1–4 — auth, batches/units, worker app, phase state machine.
