@@ -5,10 +5,8 @@ Owner direction (11–13 Nov 2026): the app's purpose is to show how much work e
 himself from those counts (D40 — never ₹ in the app). Workers should be able to see their own counts per day and per
 month on the phone, so there is no argument on payday.
 
-**Owner: answer this before pasting (it changes one number on the screen).** A mat a stitcher stitched that was later
-**written off** still counts as stitched today, on the admin and on the phone. Options: (a) keep it that way — the phone
-shows the same number as the admin [default below]; (b) same number, plus a line "N written off" under the month total;
-(c) leave written-off mats out of the count everywhere (admin Reports too — bigger change, not in this slice).
+**Owner decision (13 Nov 2026):** a mat a stitcher stitched that was later **written off** keeps counting as stitched —
+the phone shows the same number as the admin, with no separate "written off" line.
 
 ```text
 Do slice M1 — work history on the worker phone. Read AGENTS.md first, then docs/rps-kb/README.md,
@@ -35,7 +33,7 @@ WHAT EXISTS (read before writing anything)
   Admin reads it through GET /workers/:id/summary?from&to (Service.Summary).
 - These follow from that SQL — don't change them, but know them: an undone scan removes the mat from the count; a mat
   of a cancelled batch that became spare stock keeps its stitcher's credit; a reused stitched spare stays on the day
-  and the stitcher it was first stitched by; a written-off mat still counts (owner decision above).
+  and the stitcher it was first stitched by; a written-off mat still counts (owner, 13 Nov 2026: keep it the same as the admin).
 
 RULE THAT MATTERS MOST
 The phone must show exactly the numbers the admin shows for the same worker and days — the owner pays from the admin
@@ -50,7 +48,7 @@ THE LIST
    - first_month: the month of the worker's first output (or the current month if none) — the phone stops there.
    - 400 for a malformed month or a month in the future. No new table, no migration.
    - Do NOT send first/last scan times or active seconds to the phone (workers don't need them; keep the payload small).
-   - Written-off mats: [owner's answer — default (a): no change, same count as the admin].
+   - Written-off mats: no change — they count, exactly as on the admin (owner, 13 Nov 2026). No "written off" line.
    Types in packages/shared (never redeclare in the app).
 2. Phone screen app/history.tsx, opened by tapping the My work card (whole card is the button, ≥ 48 px, with a small
    "see month" hint so it looks tappable):
@@ -78,7 +76,7 @@ THE LIST
      bad month 400, future month 400, admin token 401). Edit the JSON with json.load + json.dumps(indent=2,
      ensure_ascii=True), no trailing newline. Full run from the repo root must stay at 0 failures.
 5. Docs: 03-backend/api-reference.md (the endpoint), 05-mobile/screens-and-flows.md (the screen),
-   07-decisions/decision-log.md D42 (work history: counts only, same numbers as the admin, the written-off answer),
+   07-decisions/decision-log.md D42 (work history: counts only, same numbers as the admin; written-off mats keep counting — owner, 13 Nov 2026),
    06-operations/testing.md — a short "Work history on a real phone" checklist (open from the card; totals equal
    admin Reports → Workers for that worker and month; previous / next month limits; Hindi; largest font size; offline;
    a scan made now shows within a minute; an admin "undo scan" lowers it). Tick M1 in NEXT-STEPS when merged.
