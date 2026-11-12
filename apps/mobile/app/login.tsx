@@ -3,15 +3,26 @@ import { useState } from "react";
 import { Text, TextInput, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../components/ui/AppButton";
+import { LanguagePicker } from "../components/LanguagePicker";
 import { Banner } from "../components/ui/Banner";
 import { Screen } from "../components/ui/Screen";
 import { useEnrollDraft } from "../features/auth/enroll-draft";
 import { useAuth } from "../features/auth/store";
-import { strings } from "../lib/strings";
+import { ApiError } from "../lib/api-client";
+import { errorText } from "../lib/errors";
+import { useStrings } from "../lib/language";
 
 export default function Login() {
+  const strings = useStrings();
   const router = useRouter();
   const { login, error, submitting } = useAuth();
+  // On this screen "unauthorized" can only mean a wrong code or PIN.
+  const errorMessage =
+    error == null
+      ? null
+      : error instanceof ApiError && error.code === "unauthorized"
+        ? strings.login.wrongCodeOrPin
+        : errorText(strings, error, strings.common.loginFailed);
   const [pin, setPin] = useState("");
   const code = useEnrollDraft((s) => s.badge);
   const setCode = useEnrollDraft((s) => s.setBadge);
@@ -29,6 +40,11 @@ export default function Login() {
   return (
     <Screen
       centered
+      header={
+        <View style={styles.languageBar}>
+          <LanguagePicker />
+        </View>
+      }
       footer={
         <View style={styles.bottomActionInner}>
           <AppButton
@@ -88,9 +104,9 @@ export default function Login() {
         />
       </View>
 
-      {error ? (
+      {errorMessage ? (
         <View style={styles.errorWrap}>
-          <Banner kind="danger" text={error} />
+          <Banner kind="danger" text={errorMessage} />
         </View>
       ) : null}
     </Screen>
@@ -98,6 +114,10 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create((theme) => ({
+  languageBar: {
+    alignItems: "flex-end",
+    paddingHorizontal: theme.spacing.xs,
+  },
   header: {
     marginBottom: theme.spacing.xs,
   },

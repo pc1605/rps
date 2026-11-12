@@ -8,19 +8,22 @@ import { AccessibilityInfo, BackHandler, Pressable, Text, View } from "react-nat
 import { type EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../../../components/ui/AppButton";
+import { BackIcon, BackLabel } from "../../../components/ui/BackIcon";
 import { Banner } from "../../../components/ui/Banner";
 import { Screen } from "../../../components/ui/Screen";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { useScanUnit } from "../../../features/batches/hooks";
 import { ApiError } from "../../../lib/api-client";
+import { errorText } from "../../../lib/errors";
 import { feedback as triggerFeedback } from "../../../lib/feedback";
-import { strings } from "../../../lib/strings";
+import { useStrings } from "../../../lib/language";
 import { useCameraReady } from "../../../lib/use-camera-ready";
 import { useOnline } from "../../../lib/use-online";
 
 type FlashState = { kind: "ok"; code: string } | { kind: "err"; msg: string };
 
 export default function ReworkFixScreen() {
+  const strings = useStrings();
   const { unitCode } = useLocalSearchParams<{
     id: string;
     unitCode: string;
@@ -60,25 +63,28 @@ export default function ReworkFixScreen() {
     return () => sub.remove();
   }, [handleBack]);
 
-  const flashAndUnlock = useCallback((fb: FlashState) => {
-    setFlash(fb);
-    triggerFeedback(fb.kind);
+  const flashAndUnlock = useCallback(
+    (fb: FlashState) => {
+      setFlash(fb);
+      triggerFeedback(fb.kind);
 
-    try {
-      if (fb.kind === "ok") {
-        AccessibilityInfo.announceForAccessibility(strings.rework.fixedA11y(fb.code));
-      } else {
-        AccessibilityInfo.announceForAccessibility(strings.scanner.errorA11y(fb.msg));
+      try {
+        if (fb.kind === "ok") {
+          AccessibilityInfo.announceForAccessibility(strings.rework.fixedA11y(fb.code));
+        } else {
+          AccessibilityInfo.announceForAccessibility(strings.scanner.errorA11y(fb.msg));
+        }
+      } catch {
+        // Ignore a11y failure
       }
-    } catch {
-      // Ignore a11y failure
-    }
 
-    setTimeout(() => {
-      setFlash(null);
-      lock.current = false;
-    }, 1400);
-  }, []);
+      setTimeout(() => {
+        setFlash(null);
+        lock.current = false;
+      }, 1400);
+    },
+    [strings],
+  );
 
   const handleScannedLatest = useRef<({ data }: { data: string }) => void>(() => {});
   handleScannedLatest.current = ({ data }: { data: string }) => {
@@ -136,7 +142,7 @@ export default function ReworkFixScreen() {
           }
           flashAndUnlock({
             kind: "err",
-            msg: e.message || strings.scanner.scanFailed,
+            msg: errorText(strings, e, strings.scanner.scanFailed),
           });
           return;
         }
@@ -171,7 +177,13 @@ export default function ReworkFixScreen() {
         <View style={styles.permContent}>
           <Text style={styles.permTitle}>{strings.scanner.cameraNeeded}</Text>
           <Text style={styles.permText}>{strings.scanner.cameraWhy}</Text>
-          <AppButton title={strings.common.backArrow} variant="ghost" size="md" onPress={handleBack} />
+          <AppButton
+            title={strings.common.back}
+            icon={<BackIcon />}
+            variant="ghost"
+            size="md"
+            onPress={handleBack}
+          />
         </View>
       </Screen>
     );
@@ -220,7 +232,7 @@ export default function ReworkFixScreen() {
             accessibilityLabel={strings.rework.backToDetailA11y}
             style={styles.topBarBtn}
           >
-            <Text style={styles.topBarText}>← {unitCode ?? strings.common.back}</Text>
+            <BackLabel tone="overlay" label={unitCode ?? strings.common.back} textStyle={styles.topBarText} />
           </Pressable>
           <Pressable
             onPress={() => setTorch((t) => !t)}

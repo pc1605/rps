@@ -191,3 +191,27 @@ station; stitchers also see mats that came back for rework this week and how man
 sent to rework. No money until Slice D.
 **Why**: Owner (U3); audit question "should workers see their own output".
 **Status**: Built (U3).
+
+### D40 — The app counts work; it never shows money (Nov 2026)
+**Decision**: RPS records how much work each worker did (mats cut / stitched / packed, per day, attributed per scan)
+and shows those counts to the admin (Reports, worker page) and to the worker (My work, and later a work history). The
+owner works out and pays wages himself, outside the app. No ₹, rates or earnings anywhere — admin or phone. Slice D
+(Earnings) is dropped; the `piece_rates` table (migration 005, unused) stays as is — no migration to remove it.
+**Why**: Owner, 11 Nov 2026: "keep the earning based on admin manually … this system's purpose is to show how much
+work is done by each worker; based on that they will do their payment."
+**Status**: Decided. Supersedes "No money until Slice D" in D39 and every "earnings / Slice D" plan in the roadmap.
+
+### D41 — Hindi on the worker phone (Nov 2026)
+**Decision**: The phone app runs in English or Hindi (हिन्दी); Gujarati not now. A fresh install starts in Hindi. The
+choice is per phone ("English | हिन्दी" on login and in the home header), kept across sign-out and restarts. Never
+translated: batch / unit codes, car brand and model, product line and worker names, digits (0–9, no Devanagari
+numerals), "RPS". Wording is plain spoken factory Hindi and keeps the floor's English words (बैच, स्कैन, QR, रीवर्क,
+PIN); the owner decides floor words (review list: `05-mobile/hindi-texts.md`). Shared labels and server error codes
+are translated on the phone; `@rps/shared` and server messages stay English (the admin web is English only). The
+admin web is not translated.
+**Why**: Owner, 11 Nov 2026: workers read Hindi; add it before the pilot.
+**Consequences**: every new phone text needs English and Hindi (the type check enforces it); a new server error code
+a worker can receive needs a line in `strings.errors`, else it shows in English. (The H1 hand-off called this "D40";
+D40 was already taken.)
+**Status**: Built (H1); wording review and real-phone check by the owner pending.
+

@@ -68,6 +68,7 @@ const styles = StyleSheet.create((theme) => ({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.xs,
   },
   lg: { minHeight: theme.touch.primary },
   md: { minHeight: theme.touch.min },
@@ -85,7 +86,8 @@ const styles = StyleSheet.create((theme) => ({
     backgroundColor: theme.colors.disabledBg,
     borderColor: theme.colors.disabledBg,
   },
-  text: { ...theme.text.button },
+  // A long title (Hindi, or the largest font size) wraps inside the button.
+  text: { ...theme.text.button, flexShrink: 1, textAlign: "center" },
   primaryText: { color: theme.colors.accentFg },
   secondaryText: { color: theme.colors.text },
   offText: { color: theme.colors.disabledFg },

@@ -1,12 +1,13 @@
 import { Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { useMySummary } from "../features/me/hooks";
-import { strings } from "../lib/strings";
+import { useStrings } from "../lib/language";
 import { Card } from "./ui/Card";
 import { Stat } from "./ui/Stat";
 
-/** Home "My work": today and this week (from Monday) at the worker's station. No ₹ until Slice D. */
+/** Home "My work": today and this week (from Monday) at the worker's station. Counts only — never ₹ (D40). */
 export function MyWorkCard() {
+  const strings = useStrings();
   const { data } = useMySummary();
   if (!data) return null;
   const unit = strings.myWork.unit[data.station] ?? data.unit;

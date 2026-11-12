@@ -123,6 +123,9 @@ importers:
       '@expo-google-fonts/ibm-plex-sans':
         specifier: ^0.4.1
         version: 0.4.1
+      '@expo-google-fonts/noto-sans-devanagari':
+        specifier: ^0.4.2
+        version: 0.4.2
       '@react-native-community/netinfo':
         specifier: ^12.0.1
         version: 12.0.1(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
@@ -723,6 +726,9 @@ packages:
 
   '@expo-google-fonts/material-symbols@0.4.38':
     resolution: {integrity: sha512-IJkBtN1o8u9BW5fvSii1MyHPQ7Q0HxbWcVBvOrOzgMLpVtZw7R2w94wBTVR7kZwv3w1JNTESMmLA5Sqn1+Z36A==}
+
+  '@expo-google-fonts/noto-sans-devanagari@0.4.2':
+    resolution: {integrity: sha512-tYN501LDwk9bVc4HlHjAG2l2du08rvjexMdf3bO6u4idUk4mI1QxdnCaOfBq+U27RHM33CR5PmYfXcgEHXrovg==}
 
   '@expo/cli@57.0.8':
     resolution: {integrity: sha512-RzE6o39O6Ual4nw1LbUyrIMY5VzQlW4CbOyoww/RhKclMRVItnfkLi89cVKQoPFw+5EKW2KKC6LLtA4or7Trwg==}
@@ -6621,6 +6627,8 @@ snapshots:
   '@expo-google-fonts/ibm-plex-sans@0.4.1': {}
 
   '@expo-google-fonts/material-symbols@0.4.38': {}
+
+  '@expo-google-fonts/noto-sans-devanagari@0.4.2': {}
 
   '@expo/cli@57.0.8(@expo/dom-webview@57.0.0)(@expo/metro-runtime@57.0.3)(expo-constants@57.0.5)(expo-font@57.0.4)(expo-router@57.0.6)(expo@57.0.6)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.0(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)':
     dependencies:

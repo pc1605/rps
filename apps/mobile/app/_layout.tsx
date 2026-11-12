@@ -7,6 +7,12 @@ import {
   IBMPlexSans_700Bold,
   useFonts,
 } from "@expo-google-fonts/ibm-plex-sans";
+import {
+  NotoSansDevanagari_400Regular,
+  NotoSansDevanagari_500Medium,
+  NotoSansDevanagari_600SemiBold,
+  NotoSansDevanagari_700Bold,
+} from "@expo-google-fonts/noto-sans-devanagari";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -21,6 +27,11 @@ export default function RootLayout() {
     IBMPlexSans_600SemiBold,
     IBMPlexSans_700Bold,
     IBMPlexMono_500Medium,
+    // Hindi (lib/theme.ts fontsHindi). Loaded always so switching language needs no wait.
+    NotoSansDevanagari_400Regular,
+    NotoSansDevanagari_500Medium,
+    NotoSansDevanagari_600SemiBold,
+    NotoSansDevanagari_700Bold,
   });
 
   if (!fontsLoaded) return null;

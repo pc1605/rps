@@ -1,9 +1,10 @@
-import { PHASE_LABEL, SIZE_LABEL, STATION_LABEL, type ReworkEntry } from "@rps/shared";
+import type { ReworkEntry } from "@rps/shared";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { AuthImage } from "../components/AuthImage";
+import { LanguagePicker } from "../components/LanguagePicker";
 import { MyWorkCard } from "../components/MyWorkCard";
 import { AppButton } from "../components/ui/AppButton";
 import { Banner } from "../components/ui/Banner";
@@ -18,14 +19,15 @@ import { useMyBatches } from "../features/batches/hooks";
 import type { Batch } from "../features/batches/types";
 import { useMySummary } from "../features/me/hooks";
 import { useMyRework } from "../features/rework/hooks";
-import { strings } from "../lib/strings";
+import { useStrings } from "../lib/language";
 import { useOnline } from "../lib/use-online";
 
 function ReworkCard({ item, onOpen }: { item: ReworkEntry; onOpen: (item: ReworkEntry) => void }) {
+  const strings = useStrings();
   const modelText =
     item.brand_name && item.model_name ? `${item.brand_name} ${item.model_name}` : (item.batch_code ?? "");
   const metaText = item.size_class
-    ? `${SIZE_LABEL[item.size_class] ?? item.size_class}${item.line_name ? ` · ${item.line_name}` : ""}`
+    ? `${strings.size[item.size_class] ?? item.size_class}${item.line_name ? ` · ${item.line_name}` : ""}`
     : (item.line_name ?? "");
 
   const firstPhoto = item.photos?.[0];
@@ -88,11 +90,12 @@ function BatchCard({
   station?: string;
   onOpen: (b: Batch) => void;
 }) {
+  const strings = useStrings();
   const mine = batch.joined_by_me ?? false;
   // Only cutters are locked out of an in-progress batch;
   // stitchers/packers can always open & join.
   const blocked = station === "cutter" && batch.status === "in_progress" && !mine;
-  const sizeText = SIZE_LABEL[batch.size_class as keyof typeof SIZE_LABEL] ?? batch.size_class;
+  const sizeText = strings.size[batch.size_class] ?? batch.size_class;
 
   return (
     <Pressable
@@ -106,7 +109,7 @@ function BatchCard({
         <View style={styles.cardHeader}>
           <Text style={styles.batchCode}>{batch.batch_code}</Text>
           <Chip
-            label={PHASE_LABEL[batch.current_phase] ?? batch.current_phase}
+            label={strings.phase[batch.current_phase] ?? batch.current_phase}
             color={styles.phaseColor(batch.current_phase).color}
             dot
           />
@@ -184,6 +187,7 @@ function QueueSkeleton() {
 }
 
 export default function Home() {
+  const strings = useStrings();
   const router = useRouter();
   const { worker, restore, logout } = useAuth();
   const { data: batches, isPending, isError, isRefetching, refetch } = useMyBatches();
@@ -197,7 +201,7 @@ export default function Home() {
   }, [worker, restore]);
 
   const stationTitle = worker
-    ? strings.home.stationQueue(STATION_LABEL[worker.station as keyof typeof STATION_LABEL] ?? worker.station)
+    ? strings.home.stationQueue(strings.station[worker.station] ?? worker.station)
     : strings.home.myQueue;
 
   const handleRefresh = () => {
@@ -219,15 +223,18 @@ export default function Home() {
           subtitle={stationTitle}
           title={worker?.name ?? "…"}
           right={
-            <AppButton
-              title={strings.home.signOut}
-              variant="ghost"
-              size="md"
-              onPress={async () => {
-                await logout();
-                router.replace("/login");
-              }}
-            />
+            <View style={styles.headerRight}>
+              <LanguagePicker />
+              <AppButton
+                title={strings.home.signOut}
+                variant="ghost"
+                size="md"
+                onPress={async () => {
+                  await logout();
+                  router.replace("/login");
+                }}
+              />
+            </View>
           }
         />
       }
@@ -298,6 +305,13 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create((theme) => ({
+  // Wraps to two rows when the font size is very large, instead of pushing Sign out off the screen.
+  headerRight: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
   bannerWrap: {
     alignSelf: "center",
     width: "100%",

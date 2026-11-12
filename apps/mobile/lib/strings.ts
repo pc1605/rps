@@ -1,10 +1,56 @@
-import type { ReworkReason } from "@rps/shared";
+import {
+  type ApiErrorCode,
+  PHASE_LABEL,
+  type Phase,
+  type ReworkReason,
+  SIZE_LABEL,
+  type SizeClass,
+  STATION_LABEL,
+  type Station,
+} from "@rps/shared";
 
-export const strings = {
+export type Language = "en" | "hi";
+
+/**
+ * Error codes a worker phone call can get back (checked against the /worker/* handlers), plus
+ * "network_error" which lib/api-client.ts sets when the server can't be reached.
+ * "bad_request" and "forbidden" come from the backend's httpx helpers; they are not in ApiErrorCode.
+ */
+export type PhoneErrorCode =
+  | Extract<
+      ApiErrorCode,
+      | "not_found"
+      | "unit_not_found"
+      | "wrong_phase"
+      | "already_started"
+      | "not_started"
+      | "not_assigned"
+      | "quota_reached"
+      | "in_rework"
+      | "already_in_rework"
+      | "rework_pending_decision"
+      | "not_your_rework"
+      | "rework_not_open"
+      | "written_off"
+      | "spare"
+      | "no_claim"
+      | "unauthorized"
+      | "internal"
+    >
+  | "bad_request"
+  | "forbidden"
+  | "network_error";
+
+/**
+ * English texts — the source table. Hindi lives in strings.hi.ts and must have exactly these keys
+ * (the `Strings` type below makes the type check fail otherwise). Read texts with useStrings()
+ * in components and getStrings() outside React (lib/language.ts).
+ */
+export const en = {
   common: {
+    language: "Language",
     queue: "Queue",
     back: "Back",
-    backArrow: "← Back",
     backTo: (where: string) => `Back to ${where}`,
     backToMyQueue: "Back to my queue",
     done: "Done ✓",
@@ -17,6 +63,33 @@ export const strings = {
     requestFailed: "Request failed",
     loginFailed: "Login failed",
   },
+  // Shared enum labels. English reuses @rps/shared; other languages translate them here on the phone.
+  station: STATION_LABEL as Record<Station, string>,
+  phase: PHASE_LABEL as Record<Phase, string>,
+  size: SIZE_LABEL as Record<SizeClass, string>,
+  // Server error codes → phone text (lib/errors.ts). An unknown code falls back to the server message.
+  errors: {
+    network_error: "Cannot reach server — check connection",
+    unauthorized: "This phone is signed out — sign in again or ask your admin",
+    forbidden: "This is not yours to do — ask your admin",
+    bad_request: "That didn't go through — try again",
+    internal: "Something went wrong — try again",
+    not_found: "Batch not found",
+    unit_not_found: "Not an RPS unit label",
+    wrong_phase: "This batch is not at your station right now",
+    already_started: "This batch has already been started",
+    not_started: "Start or join this batch first",
+    not_assigned: "This batch is assigned to other workers",
+    quota_reached: "Your share is complete",
+    in_rework: "Waiting for rework",
+    already_in_rework: "This mat is already in rework",
+    rework_pending_decision: "Waiting for owner's decision",
+    not_your_rework: "This mat is assigned to another stitcher",
+    rework_not_open: "This rework is already closed",
+    written_off: "Written off — keep it aside",
+    spare: "Spare stock — keep it aside",
+    no_claim: "Nobody is cutting this batch right now",
+  } satisfies Record<PhoneErrorCode, string>,
   batch: {
     notFoundTitle: "Batch not found",
     notFoundBody:
@@ -58,13 +131,14 @@ export const strings = {
     codeLabel: "Enrollment code",
     codePlaceholder: "or type the code",
     pinLabel: "4-digit PIN",
+    wrongCodeOrPin: "Wrong code or PIN",
   },
   enroll: {
     cameraWhy: "To scan your enrollment code.",
     notEnrollCode: "Not an enrollment code — ask your admin for the QR",
     scannedA11y: "Enrollment code scanned",
     cancelA11y: "Cancel enrollment scan",
-    cancel: "← Cancel",
+    cancel: "Cancel",
     hint: "Point at the enrollment QR on the admin screen",
   },
   home: {
@@ -167,7 +241,6 @@ export const strings = {
     sendToRework: "Send to rework",
     photosTitle: "Photos (1–3)",
     cameraWhy: "RPS uses the camera to capture rework defect photos.",
-    back: "‹ Back",
     reasonsTitle: "Reasons",
     notePlaceholder: "Optional note for stitcher...",
     takePhoto: "Take photo",
@@ -213,3 +286,12 @@ export const strings = {
     } as Record<ReworkReason, { emoji: string; label: string }>,
   },
 } as const;
+
+type Widen<T> = T extends string
+  ? string
+  : T extends (...args: infer A) => unknown
+    ? (...args: A) => string
+    : { -readonly [K in keyof T]: Widen<T[K]> };
+
+/** Shape every language table must have: the English keys, with the same function arguments. */
+export type Strings = Widen<typeof en>;

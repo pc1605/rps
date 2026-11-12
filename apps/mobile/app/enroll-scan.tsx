@@ -8,12 +8,14 @@ import { AccessibilityInfo, Pressable, Text, View } from "react-native";
 import { type EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StyleSheet } from "react-native-unistyles";
 import { AppButton } from "../components/ui/AppButton";
+import { BackIcon, BackLabel } from "../components/ui/BackIcon";
 import { Screen } from "../components/ui/Screen";
 import { Skeleton } from "../components/ui/Skeleton";
 import { useEnrollDraft } from "../features/auth/enroll-draft";
-import { strings } from "../lib/strings";
+import { useStrings } from "../lib/language";
 
 export default function EnrollScan() {
+  const strings = useStrings();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const setBadge = useEnrollDraft((s) => s.setBadge);
@@ -39,7 +41,8 @@ export default function EnrollScan() {
           <Text style={styles.permTitle}>{strings.scanner.cameraNeeded}</Text>
           <Text style={styles.permText}>{strings.enroll.cameraWhy}</Text>
           <AppButton
-            title={strings.common.backArrow}
+            title={strings.common.back}
+            icon={<BackIcon />}
             variant="ghost"
             size="md"
             onPress={() => router.back()}
@@ -99,7 +102,7 @@ export default function EnrollScan() {
             accessibilityLabel={strings.enroll.cancelA11y}
             style={styles.topBarBtn}
           >
-            <Text style={styles.topBarText}>{strings.enroll.cancel}</Text>
+            <BackLabel tone="overlay" label={strings.enroll.cancel} textStyle={styles.topBarText} />
           </Pressable>
         </View>
 

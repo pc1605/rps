@@ -29,7 +29,8 @@ Admin: rework badge on Packing view, rework rows in unit grid with photo thumbna
 - Stock page: grouped by type, unit-aware; keep Finished tab.
 - Ask owner: rexine measurement method (metres) — decides precision of consumption.
 
-## Slice D — Earnings (piece-rate)
+## Slice D — Earnings (piece-rate) — DROPPED (D40, Nov 2026: the app counts work, the owner pays manually)
+Kept for history.
 - `piece_rates` exists per station. Likely extension: per (station, size_class) or per car model — ask owner.
 - `GET /reports/earnings?from&to` → per worker: pieces (from `stitched_by`/`packed_by` counts within range) × rate → ₹.
 - Reports page: Earnings tab/column; printable month-end sheet. Rate editor (small settings card).

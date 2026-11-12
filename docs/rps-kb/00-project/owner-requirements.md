@@ -32,7 +32,8 @@ Admin creates batch
 1. **Rework photo** — owner said "cutter will click image"; designed as *packer* photographs at flagging. Confirm who.
 2. **Does packing ever get divided** between packers (needs quota/assignment too)?
 3. **Printer location** — office desk vs packing table. Decides whether per-scan sticker printing (kiosk station) is worth it.
-4. **Piece rates per car size?** (Ertiga vs Alto) and which stations are piece-paid. Feeds Slice D (Earnings) and removes cherry-picking motive.
+4. ~~**Piece rates per car size?** (Ertiga vs Alto) and which stations are piece-paid. Feeds Slice D (Earnings) and removes cherry-picking motive.~~
+   Answered (11 Nov 2026, D40): rates stay with the owner; the app only counts work and the owner pays manually. Slice D dropped.
 5. **Rexine measurement method** at cutting (metres used) — gates consumption accounting in Slice C.
 6. **Rework frequency and process** details (does a re-cut ever happen?).
 7. **Supervisor accounts** — who else needs admin access.

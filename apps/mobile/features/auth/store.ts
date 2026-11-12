@@ -1,12 +1,12 @@
 import { create } from "zustand";
-import { ApiError, tokenStore } from "../../lib/api-client";
-import { strings } from "../../lib/strings";
+import { tokenStore } from "../../lib/api-client";
 import { authApi } from "./api";
 import type { Worker } from "./types";
 
 interface AuthState {
   worker: Worker | null;
-  error: string | null;
+  /** What the last login attempt threw (null = no error). The login screen words it in the current language. */
+  error: unknown;
   submitting: boolean;
   login: (code: string, pin: string) => Promise<boolean>;
   logout: () => Promise<void>;
@@ -26,10 +26,7 @@ export const useAuth = create<AuthState>((set) => ({
       set({ worker: resp.worker, submitting: false });
       return true;
     } catch (e) {
-      set({
-        error: e instanceof ApiError ? e.message : strings.common.loginFailed,
-        submitting: false,
-      });
+      set({ error: e ?? new Error("login failed"), submitting: false });
       return false;
     }
   },
