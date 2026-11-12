@@ -220,6 +220,31 @@ export const en = {
     reworkReturned: (n: number) => `${n} came back for rework this week`,
     reworkOpen: (n: number) => `${n} waiting for you`,
     flagged: (n: number) => `${n} sent to rework this week`,
+    seeMonth: "see month",
+  },
+  // Work history (app/history.tsx): the worker's own count per day of a month. Counts only — never ₹ (D40).
+  history: {
+    months: [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ],
+    // Sunday first, like Date.getDay().
+    weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    previousMonth: "Previous month",
+    nextMonth: "Next month",
+    daysWorked: (n: number) => (n === 1 ? "1 day worked" : `${n} days worked`),
+    empty: "No work recorded this month",
+    loadFailed: "Couldn't load your work. Check connection and retry.",
   },
   cutting: {
     release: "Give back this batch",
@@ -291,7 +316,9 @@ type Widen<T> = T extends string
   ? string
   : T extends (...args: infer A) => unknown
     ? (...args: A) => string
-    : { -readonly [K in keyof T]: Widen<T[K]> };
+    : T extends readonly unknown[]
+      ? { readonly [K in keyof T]: Widen<T[K]> } // a list keeps its length (12 months, 7 weekdays)
+      : { -readonly [K in keyof T]: Widen<T[K]> };
 
 /** Shape every language table must have: the English keys, with the same function arguments. */
 export type Strings = Widen<typeof en>;
