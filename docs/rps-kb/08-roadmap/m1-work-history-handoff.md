@@ -1,6 +1,6 @@
 # M1 — Work history on the worker phone — hand-off prompt (Nov 2026)
 
-Status: **planned, not started.** Paste the prompt below into a new agent session.
+Status: **built on `agent/m1-work-history` (13 Nov 2026)** — D42; the owner's real-phone check (testing.md, "Work history on a real phone") and Hindi wording review are pending. The prompt that was used:
 Owner direction (11–13 Nov 2026): the app's purpose is to show how much work each worker did; the owner pays wages
 himself from those counts (D40 — never ₹ in the app). Workers should be able to see their own counts per day and per
 month on the phone, so there is no argument on payday.

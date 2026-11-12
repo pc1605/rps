@@ -32,7 +32,7 @@ working directory, so a run from `apps/backend` fails 24 assertions):
 ```bash
 npx --no-install newman run apps/backend/RPS.postman_collection.json -e apps/backend/RPS-test.postman_environment.json
 ```
-Expected: 0 failed requests, 0 failed assertions (Nov 2026: 307 requests, 530 assertions). It can be re-run on the
+Expected: 0 failed requests, 0 failed assertions (Nov 2026: 311 requests, 538 assertions). It can be re-run on the
 same rps_test without resetting it. Add `--folder "<name>"` (repeatable) to run part of it. In the Postman app, set
 Settings → General → Working directory to the repo root for the photo upload. Scripts read `baseUrl` with
 `pm.variables.get` (environment wins), never `pm.collectionVariables.get` (that's the :8080 default); `Health` derives
@@ -130,6 +130,31 @@ stitcher and one packer phone. Wording list to read alongside: `docs/rps-kb/05-m
     code), rework send 1/2, enroll scan "Cancel", and the "Back" button on a "Camera needed" screen. Check light and dark.
 13. [ ] **TalkBack (optional).** With TalkBack on in Hindi, a scan announces "B-… स्कैन हुआ" and buttons read in Hindi.
 
+## Work history on a real phone (M1) — run by the owner, the agent can't drive the phone app
+Setup: a dev build pointed at your backend (JS only changed — reload the app; restart the backend so it has the new
+endpoint; no migration). A stitcher phone is enough; a cutter and a packer for item 2. Tick each:
+1. [ ] **Open from the card.** Home → the My work card shows "see month" with an arrow at the top right → tap anywhere
+   on the card → "My work" screen with a back arrow; back returns to the queue.
+2. [ ] **Same numbers as the admin.** Admin → Reports → Workers (or the worker's page) for that worker, from the 1st
+   of the month to today: the phone's month total equals the admin total, and each day row equals the admin's day.
+   The unit under the total is right per station: pieces cut / mats stitched / mats packed.
+3. [ ] **Days.** Newest day on top, "Mon 3" style, today's row marked "today"; days without work are not listed;
+   "N days worked" equals the number of rows.
+4. [ ] **Previous / next month.** On the current month the next arrow is faded and does nothing. Previous goes back
+   month by month and fades at the worker's first month of work. Next comes back to the current month. A month
+   without work says "No work recorded this month" with total 0.
+5. [ ] **Hindi.** Switch to हिन्दी on home, open the screen: title "मेरा काम", month name ("नवंबर 2026"), weekday
+   ("सोम 3"), "आज", "N दिन काम किया", "महीना देखें" on the card — digits stay 0–9. Wording list: `hindi-texts.md` 212–236.
+6. [ ] **Largest font size.** Android Settings → Display → Font size → largest, in Hindi: the card's "महीना देखें"
+   drops under the title instead of being cut; the month name stays between the two arrows; no count is cut ("…").
+7. [ ] **Offline.** Open the current month and one earlier month, turn off Wi-Fi/data: yellow offline banner, both
+   months still show. A month never opened shows only the banner. Back online → it loads.
+8. [ ] **A scan made now shows within a minute.** Stitch (or pack / complete a cut) with the screen open on the
+   current month → today's row and the total go up within a minute, or at once on pull-to-refresh.
+9. [ ] **Admin undo lowers it.** Admin → the mat → Undo last scan (stitch) → within a minute the phone's today row
+   and total are 1 lower (and the home card too).
+10. [ ] **Light and dark.** Both themes: arrows, rows and the faded arrow are readable.
+
 ## Admin browser checks (P1, 2 Nov 2026, rps_test)
 Checked in Chrome against the test backend: Spare mats → **Write off** dialog (opens, counts, writes off 1 → list updates),
 **Edit** (opens; only shown once nobody holds the batch), **Cancel batch** (warning: cutting "<name> is cutting it now — cuts
@@ -151,5 +176,5 @@ curl -s -X POST $API/worker/units/scan -H "Authorization: Bearer $STITCHER" -H "
 ### U3b folder — "Workflow corrections (U3b)"
 Self-contained (creates its own car item, cutter and stitcher; run after `Auth`): edit before cutting, cutter + admin
 release, undo scan, cancel → spare stock, cancelled view, scanning a spare, reuse on New batch, spare write-off,
-My work. Full-run command with `--folder Auth --folder "Workflow corrections (U3b)"`.
+My work, work history (M1: 200 + shape, bad month 400, future month 400, admin token 401). Full-run command with `--folder Auth --folder "Workflow corrections (U3b)"`.
 

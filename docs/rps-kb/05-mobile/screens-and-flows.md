@@ -18,6 +18,23 @@ Card at the top of every home queue: "MY WORK · mats stitched" (or pieces cut /
 (from Monday), stitchers "n came back for rework this week" + "n waiting for you", packers "n sent to rework this week".
 `GET /worker/me/summary`, refetched every minute and on pull-to-refresh. Counts only, never ₹ (D40).
 
+The whole card is a button ("see month" + arrow at the top right) → work history.
+
+## Work history (M1, `app/history.tsx`)
+Opened by tapping the My work card. Header: back arrow + "My work". The worker's own counts for one month — the same
+numbers the admin sees for that worker and those days (D42); counts only, never ₹ (D40).
+- **Month row**: previous (arrow button) · "November 2026" · next (arrow button). Next is off on the current month,
+  previous is off at `first_month` (the month of the worker's first output). Month and weekday names come from
+  `strings.history` in both languages (no `Intl` — Hermes).
+- **Month total**, big, with the station's unit (pieces cut / mats stitched / mats packed) and "N days worked".
+- **One row per worked day**, newest first: weekday + date ("Mon 3") left, count right (tabular digits). Today's row
+  is marked "today" (by the phone's own date). Days without output are not listed.
+- **States**: skeleton while loading; "No work recorded this month"; error → red banner with Retry; offline → the
+  yellow offline banner and whatever is cached.
+- `GET /worker/me/history?month=`. TanStack key `["my-history", month]` (`"current"` for the current month, which the
+  server picks): the current month refetches every minute and on pull-to-refresh; a past month is fetched once and
+  kept for the session (it only changes on an admin undo — pull to refresh gets that).
+
 ## Stitcher
 Home shows **only batches assigned to me** (server filters). Card: `📌 Your share: 3 / 8 · with Surya, Mahesh` (or
 `📌 Assigned to you` when uncapped), `👤 names` currently working, `▶ You're in — tap to continue` once joined.

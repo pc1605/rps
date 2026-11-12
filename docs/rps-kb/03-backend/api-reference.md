@@ -98,6 +98,7 @@ All routes above require an **admin** token (`owner`/`supervisor`); worker token
 |---|---|---|
 | GET | `/worker/me` | profile (used by cold-start `restore()`) |
 | GET | `/worker/me/summary` | **U3 (D39)** "My work": `{station, unit, today, week (since Monday, factory time), week_of, days[]}`; stitchers `rework_returned` (rounds flagged this week on mats they stitched) + `rework_open` (waiting for them now); packers `flagged` (this week). No ₹ (Slice D) |
+| GET | `/worker/me/history?month=YYYY-MM` | **M1 (D42)** work history, one month (default: the current factory month): `{station, unit, month, total, days_worked, days[{day, mats}], first_month}`. `days` = days with output only, oldest first; the current month stops at today. `first_month` = month of the worker's first output (the current month if none) — the phone stops there. Same counting as `/workers/:id/summary` (`days()` in `internal/worker/profile.go`), so the phone and the admin always agree; a written-off mat still counts. No scan times, no ₹ (D40). 400 `bad_request` for a malformed or future month; 401 without a worker token |
 | GET | `/worker/batches` | my queue (ListByPhase for my station; visibility rules apply). Fields in `02-domain/work-model.md §6` |
 | POST | `/worker/batches/:id/start` | cutting: exclusive claim; stitching/packing: join (idempotent). 403 `not_assigned` if assigned elsewhere |
 | POST | `/worker/batches/:id/complete` | `{quantity_completed, notes?}` — **cutting only**; 400 for stitching/packing |

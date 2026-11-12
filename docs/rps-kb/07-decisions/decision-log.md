@@ -215,3 +215,15 @@ a worker can receive needs a line in `strings.errors`, else it shows in English.
 D40 was already taken.)
 **Status**: Built (H1); wording review and real-phone check by the owner pending.
 
+### D42 — Work history on the phone: counts only, the admin's numbers (Nov 2026)
+**Decision**: A worker sees their own output per day for a month, with the month total, and can go back month by
+month to their first month of work (tap the My work card). The phone shows exactly the numbers the admin shows for
+the same worker and days: one counting query (`days()` / `outputSQL()` in `internal/worker/profile.go`) serves
+`/workers/:id/summary` and `/worker/me/history`, and a Go test compares the two. So: an undone scan leaves the count;
+a mat of a cancelled batch that became spare stock keeps its stitcher's credit; a reused stitched spare stays on the
+day and the stitcher it was first stitched by; **a mat that was later written off keeps counting as stitched** — no
+separate "written off" line. Counts only: no ₹, rates or earnings (D40), no scan times, no other workers' numbers,
+no targets, ranking or export.
+**Why**: Owner, 11–13 Nov 2026: the owner pays wages from the admin counts and the worker checks on the phone, so
+there is no argument on payday. Written-off mats: owner decision, 13 Nov 2026 — keep it the same as the admin.
+**Status**: Built (M1); real-phone check by the owner pending.
