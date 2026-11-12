@@ -11303,6 +11303,107 @@
           }
         },
         {
+          "name": "Work history (stitcher)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "pm.test('this month, counts only', () => { pm.expect(d.station).to.eql('stitcher'); pm.expect(d.unit).to.eql('mats stitched'); pm.expect(d.month).to.match(/^\\d{4}-\\d{2}$/); pm.expect(d.first_month).to.eql(d.month); pm.expect(d.total).to.eql(1); pm.expect(d.days_worked).to.eql(1); pm.expect(d.days).to.have.lengthOf(1); });",
+                  "pm.test('a day is {day, mats} only', () => { pm.expect(Object.keys(d.days[0]).sort()).to.eql(['day', 'mats']); pm.expect(d.days[0].day).to.match(new RegExp('^' + d.month + '-\\\\d{2}$')); pm.expect(d.days[0].mats).to.eql(1); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bStitcherToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/me/history"
+          }
+        },
+        {
+          "name": "Work history \u00b7 bad month \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bStitcherToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/me/history?month=2026-13"
+          }
+        },
+        {
+          "name": "Work history \u00b7 future month \u2192 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));",
+                  "pm.test('code bad_request', () => pm.expect(pm.response.json().code).to.eql('bad_request'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bStitcherToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/me/history?month=2999-01"
+          }
+        },
+        {
+          "name": "Work history \u00b7 admin token \u2192 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/me/history"
+          }
+        },
+        {
           "name": "My work \u00b7 admin token \u2192 401",
           "event": [
             {
