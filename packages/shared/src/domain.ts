@@ -715,6 +715,24 @@ export interface MyWorkSummary {
   flagged?: number;
 }
 
+/**
+ * GET /worker/me/history?month=YYYY-MM — the phone's work history (M1, D42): the worker's own count per
+ * day of one month, the same numbers the admin sees. Counts only, never ₹ (D40).
+ */
+export interface MyWorkHistory {
+  station: Station;
+  /** "pieces cut" | "mats stitched" | "mats packed" */
+  unit: string;
+  /** YYYY-MM (factory time). */
+  month: string;
+  total: number;
+  days_worked: number;
+  /** Days with output only, oldest first; the current month stops at today. */
+  days: { day: string; mats: number }[];
+  /** Month of the worker's first output (the current month if none) — the phone stops there. */
+  first_month: string;
+}
+
 /** GET /workers/:id/summary?from&to (factory days, inclusive; default last 14) */
 export interface WorkerSummary {
   worker_id: string;

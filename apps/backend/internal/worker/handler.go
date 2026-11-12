@@ -222,3 +222,16 @@ func (h *Handler) MySummary(c *fiber.Ctx) error {
 	}
 	return httpx.OK(c, out)
 }
+
+// MyHistory — GET /worker/me/history?month=YYYY-MM: the calling worker's own counts per day of a month.
+func (h *Handler) MyHistory(c *fiber.Ctx) error {
+	wid, ok := auth.WorkerID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "not a worker token")
+	}
+	out, err := h.svc.MyHistory(c.Context(), wid, c.Query("month"), time.Now())
+	if err != nil {
+		return workerErr(c, err, "load my history")
+	}
+	return httpx.OK(c, out)
+}
