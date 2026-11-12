@@ -11,14 +11,14 @@
 | U3 ✅ | Workflow gaps            | stitching assignment UX + reassign mid-stitching (hand-over) · edit before cutting, cancel → spare stock + reuse on New batch, release claim, undo scan, My work card (D34–D39; migrations 017–019)                                                                                                            | U2         | main                 |
 | P1 ✅ | Make it perfect          | Owner priority (Nov 2026): no new features — Postman fully green, cancel-dialog warning, reused-spares display, phone texts in strings.ts, stale docs, last browser + real-phone checks (hand-off: `p1-perfection-handoff.md`); also lot code optional on Receive. Real-phone checklist (testing.md) still to be run by the owner | U3         | main                 |
 | H1 ✅ | Hindi on the phone       | English + Hindi on the worker app before the pilot: language picker (login + home), Hindi texts typed against English, shared labels + server error codes in Hindi, Devanagari font, layout pass, owner reviews wording (hand-off: `h1-hindi-handoff.md`). Built; the owner still has to review the wording (`05-mobile/hindi-texts.md`) and run "Hindi on a real phone" (testing.md). Built on `agent/h1-hindi` (D41); before merge the owner reviews `05-mobile/hindi-texts.md` and runs "Hindi on a real phone" in testing.md | P1 | main |
+| M1 ✅ | Work history on the phone | The worker's own counts per day and month, opened from the My work card; same numbers as the admin, never ₹ (D40); one read endpoint `GET /worker/me/history?month=`; English + Hindi (hand-off: `m1-work-history-handoff.md`). Written-off mats keep counting, same as the admin (owner, 13 Nov 2026; D42). Built on `agent/m1-work-history`; the owner still has to run "Work history on a real phone" (testing.md) and review the new Hindi lines (`05-mobile/hindi-texts.md` 212–236) | H1 | main |
 | R2 ⏸ | Material reports (on hold, owner Nov 2026) | consumption vs recipe, waste, cost per mat                                                                                                                                                                           | C2         | main                 |
 | E   | Hardening & deploy        | E1 security · E2 deploy · E3 EAS · E4 factory pilot                                                                                                                                                                  | U3         | main                 |
 
 ### Future plan (not discussed with the owner yet — don't start)
 
 - **Worker helpers after the pilot** (owner, 11 Nov 2026; nothing designed yet):
-  - Owner wants: **work history** on the phone (the worker's own counts per day / month — what the owner pays from)
-    and an **"assigned to you" notification** (needs the EAS build, E3).
+  - Owner wants: an **"assigned to you" notification** (needs the EAS build, E3). Work history moved up: slice M1.
   - Maybe, if the pilot shows a need: spoken scan feedback in Hindi, offline scan queue (if floor Wi-Fi drops),
     first-use picture guide per station.
   - Not doing: earnings / ₹ on the phone or admin (D40 — the owner pays manually from the counts).

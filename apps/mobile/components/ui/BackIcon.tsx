@@ -18,6 +18,15 @@ export function BackIcon({ tone = "text" }: { tone?: Tone }) {
   );
 }
 
+/** The same arrow pointing right (→): "next" / "open". */
+export function ForwardIcon({ tone = "text" }: { tone?: Tone }) {
+  return (
+    <View style={styles.mirror}>
+      <BackIcon tone={tone} />
+    </View>
+  );
+}
+
 /** Back arrow followed by a label (a word, or a batch / unit code), on one line. */
 export function BackLabel({
   label,
@@ -39,6 +48,7 @@ export function BackLabel({
 const styles = StyleSheet.create((theme) => ({
   row: { flexDirection: "row", alignItems: "center", gap: theme.spacing.xxs },
   box: { width: 20, height: 20 },
+  mirror: { transform: [{ scaleX: -1 }] },
   // Shaft: a 2 px line through the middle. Head: a square's left + bottom edges turned 45°, tip at the left.
   shaft: { position: "absolute", left: 3, top: 9, width: 15, height: 2, borderRadius: 1 },
   head: {

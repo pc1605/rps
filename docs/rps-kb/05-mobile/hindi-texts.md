@@ -684,3 +684,86 @@ Every text of the phone app, grouped by screen: the English line first, the Hind
 
 211. Nobody is cutting this batch right now  
    **इस बैच को अभी कोई नहीं काट रहा**
+
+## My work — month screen (work history, M1)
+
+Opened by tapping the My work card. The title is "My work" (line 59), the unit under the total is lines 62–64, and
+today's row is marked with "today" (line 60). A day row reads weekday + date: "Mon 3" / "सोम 3"; the month line reads
+"November 2026" / "नवंबर 2026". "Previous month" / "Next month" are only read aloud (the buttons are arrows).
+
+212. see month  
+   **महीना देखें**
+
+213. January  
+   **जनवरी**
+
+214. February  
+   **फ़रवरी**
+
+215. March  
+   **मार्च**
+
+216. April  
+   **अप्रैल**
+
+217. May  
+   **मई**
+
+218. June  
+   **जून**
+
+219. July  
+   **जुलाई**
+
+220. August  
+   **अगस्त**
+
+221. September  
+   **सितंबर**
+
+222. October  
+   **अक्टूबर**
+
+223. November  
+   **नवंबर**
+
+224. December  
+   **दिसंबर**
+
+225. Sun  
+   **रवि**
+
+226. Mon  
+   **सोम**
+
+227. Tue  
+   **मंगल**
+
+228. Wed  
+   **बुध**
+
+229. Thu  
+   **गुरु**
+
+230. Fri  
+   **शुक्र**
+
+231. Sat  
+   **शनि**
+
+232. Previous month  
+   **पिछला महीना**
+
+233. Next month  
+   **अगला महीना**
+
+234. 12 days worked  (1 day worked)  
+   **12 दिन काम किया**  
+   ❓ दिन काम किया, or "12 दिन हाज़िर" — but this is days with work scanned, not attendance
+
+235. No work recorded this month  
+   **इस महीने कोई काम दर्ज नहीं है**  
+   ❓ दर्ज, or simpler: "इस महीने कोई काम नहीं हुआ"
+
+236. Couldn't load your work. Check connection and retry.  
+   **आपका काम नहीं खुला। इंटरनेट देखें और फिर कोशिश करें।**

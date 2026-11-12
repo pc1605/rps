@@ -10,9 +10,11 @@ app/
   login.tsx              scan button → code field (store-backed) → PIN → "Set up this phone"
   enroll-scan.tsx        camera; accepts RPS-ENROLL:<badge>; writes useEnrollDraft.badge; router.back()
   home.tsx               header (station queue label, name, sign out); queue FlatList of BatchCard; pull-to-refresh; error state
+  history.tsx            work history (M1): month row, month total, one row per worked day; opened from the My work card
   batch/[id].tsx         station-specific action card (cutter: Start / blocked / qty+Complete; stitcher/packer: Join / progress+Open scanner)
   scan/[batchId].tsx     CameraView scanner: local validation, scan lock, feedback flashes, progress pill, done screen
-components/ui/           AppButton, BackIcon (the one back arrow, drawn — never type "←" / "‹" in a text), Banner, Card, Chip, Screen, Skeleton, Stat
+components/MyWorkCard.tsx       home "My work" card (today / this week); tap → /history
+components/ui/           AppButton, BackIcon (the one back arrow, drawn — never type "←" / "‹" in a text; ForwardIcon = the same arrow mirrored), Banner, Card, Chip, Screen, Skeleton, Stat
 components/LanguagePicker.tsx   "English | हिन्दी" — on login (top) and in the home header
 features/auth/
   store.ts               zustand: worker, login(code,pin), restore() (/worker/me), logout(); token in SecureStore
@@ -21,6 +23,10 @@ features/batches/
   types.ts               Batch (queue payload), ScanResult
   api.ts                 myBatches, start, complete, scanUnit
   hooks.ts               useMyBatches (poll ~10-15s), useStartBatch, useCompleteBatch, useScanUnit (invalidates on phase/batch completion)
+features/me/
+  api.ts                 summary (/worker/me/summary), history(month?) (/worker/me/history)
+  hooks.ts               useMySummary (1 min), useMyHistory(month | null) — null = current month (1 min); past months kept for the session
+  dates.ts               addMonths / parseMonth / parseDay / todayString on "YYYY-MM(-DD)" strings — no Intl
 lib/
   api-client.ts          axios; token interceptor from SecureStore; ApiError{status, code, message}; ngrok-skip-browser-warning header
   theme.ts               themesFor(language) → dark + light AppTheme (Plex Sans & Mono; Noto Sans Devanagari for Hindi; 4-pt grid, touch targets 48/56, contrast-verified tokens)
