@@ -135,8 +135,16 @@ export default function ScanScreen() {
     requestAnimationFrame(() => router.back());
   }, [router]);
 
+  // The batch is finished and has left the queue: the batch screen under this one has nothing to
+  // show, so go back to the queue that is already open instead of opening a second one on top.
+  const goHome = useCallback(() => router.dismissTo("/home"), [router]);
+
   useEffect(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (done) {
+        goHome();
+        return true;
+      }
       if (inspectUnit) {
         setInspectUnit(null);
         lock.current = false;
@@ -146,7 +154,7 @@ export default function ScanScreen() {
       return true;
     });
     return () => sub.remove();
-  }, [inspectUnit, handleBack]);
+  }, [done, goHome, inspectUnit, handleBack]);
 
   const executeScan = (code: string) => {
     scanUnit.mutate(code, {
@@ -341,12 +349,7 @@ export default function ScanScreen() {
   // --- batch completed state ---
   if (done) {
     return (
-      <Screen
-        centered
-        footer={
-          <AppButton title={strings.common.backToMyQueue} size="lg" onPress={() => router.replace("/home")} />
-        }
-      >
+      <Screen centered footer={<AppButton title={strings.common.backToMyQueue} size="lg" onPress={goHome} />}>
         <View style={styles.doneContent}>
           <Text style={styles.doneEmoji}>✓</Text>
           <Text style={styles.doneTitle}>
