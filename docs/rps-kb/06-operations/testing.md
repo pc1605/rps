@@ -32,21 +32,21 @@ working directory, so a run from `apps/backend` fails 24 assertions):
 ```bash
 npx --no-install newman run apps/backend/RPS.postman_collection.json -e apps/backend/RPS-test.postman_environment.json
 ```
-Expected: 0 failed requests, 0 failed assertions (Nov 2026: 311 requests, 538 assertions). It can be re-run on the
+Expected: 0 failed requests, 0 failed assertions (Nov 2026: 323 requests, 543 assertions). It can be re-run on the
 same rps_test without resetting it. Add `--folder "<name>"` (repeatable) to run part of it. In the Postman app, set
 Settings → General → Working directory to the repo root for the photo upload. Scripts read `baseUrl` with
 `pm.variables.get` (environment wins), never `pm.collectionVariables.get` (that's the :8080 default); `Health` derives
 the server root from `baseUrl`.
 
 Variables: `baseUrl` (localhost:8080/api/v1), `accessToken`, `workerToken` (cutter), `stitcherToken`, `stitcher2Token`,
-`packerToken`, badge vars, `batchId`, `workerBatchId`, `scanBatchId/Code`, `stockRollId`, `reportFrom/To`.
+`packerToken`, `enrollCode` (set by each login's pre-request script), `batchId`, `workerBatchId`, `scanBatchId/Code`, `stockRollId`, `reportFrom/To`.
 Convention: tests read `const responseData = pm.response.json().data`, assert `code` fields not messages (except worker-login
-`invalid badge or pin`, manual-complete `.include('scanned')`, admin-forbidden `worker token required`).
+`invalid code or pin`, manual-complete `.include('scanned')`, admin-forbidden `worker token required`).
 
 Folders and run order:
 1. **Auth** → Login (saves admin tokens)
-2. **Workers (Admin)** → Create Worker (cutter Ramesh, PIN 1234; saves badge) · list · validations
-3. **Worker Auth** → Worker Login (saves `workerToken`) · wrong PIN · unknown badge · me · admin route forbidden
+2. **Workers (Admin)** → Create Worker (cutter Ramesh, PIN 1234) · list · validations
+3. **Worker Auth** → Worker Login (pre-request: admin makes the one-time code; saves `workerToken`) · wrong PIN · unknown code · code works only once · second phone signs the first out · me · admin route forbidden
 4. **Reference**, **Batches** (create/list/get/validation), **Stock**
 5. **Worker Phase Flow** — cutting only now: queue · start · start-again 409 · Cutter Complete · complete-again 409 · admin-token forbidden
 6. **Multi-Worker Scanning** — self-contained (creates qty-4 batch, Stitcher A/B, packer; cutter start/complete; both stitchers join; split scans; idempotent re-scan; manual complete 400; last scan `phase_completed`; stitcher-after-move 409; packer joins via pre-request and packs all → `batch_completed`).

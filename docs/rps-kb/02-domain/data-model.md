@@ -31,7 +31,7 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
 - `batch_units(id uuid, batch_id, unit_code unique 'B-YYYY-NNN-NNN', unit_number, status default 'pending', packed_by → workers, packed_at, created_at, stitched_by → workers [005], stitched_at [005])`. **Inserted at batch creation** (Hard Rule 18) via `generate_series`.
 
 ### 003 — workers
-- `workers(id uuid, name, phone, station worker_station, badge_token unique, pin_hash bcrypt, is_active, created_by → users NOT NULL, last_login_at, …)`, `idx_workers_active`.
+- `workers(id uuid, name, phone, station worker_station, pin_hash bcrypt, enroll_code_hash unique (SHA-256 of the one-time enrollment code) + enroll_expires_at + enroll_tries, session_no (one phone per worker — D44), is_active, created_by → users NOT NULL, last_login_at, …)`, `idx_workers_active`.
 
 ### 004 — phase_logs
 - `phase_logs(id uuid, batch_id, phase batch_phase, worker_id, started_at default now(), completed_at nullable, quantity_completed nullable, notes)`.

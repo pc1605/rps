@@ -255,3 +255,19 @@ nothing reaches a closed app.
 **Why**: Owner, 15 Nov 2026: "make all realtime". Supersedes the realtime part of D14 (polling only).
 **Status**: Built (RT1). Checked: Go tests over a real socket, the shared client against the test backend (connect,
 notes, bursts merged, reconnect after a server restart), the admin web in Chrome. Real-phone check by the owner pending.
+
+### D44 — Phones are set up in front of the admin: one-time codes, one phone per worker (Nov 2026)
+**Decision**: A worker's phone is signed in with a code the admin makes on the spot — 6 digits, valid once, for 10
+minutes — plus the worker's PIN. The permanent badge code is gone (`workers.badge_token` dropped, migration 020).
+- **Why**: the old code never changed and was shown as text (admin dialog, and on the phone after scanning). Workers
+  could pass it around and sign in as each other, which makes the per-worker counts (D42) worthless.
+- **Nothing to share**: the phone never shows the code; a typed code (camera broken) shows as dots and is typed by the
+  admin. The server stores only its hash. A photo of the QR is useless ten minutes later, or after one use.
+- **PIN guessing**: 5 wrong PINs kill the code.
+- **One phone per worker**: each sign-in raises `workers.session_no`; a token with another number is refused
+  (`signed_in_elsewhere`) and that phone signs itself out. So a session left on a colleague's phone ends the moment the
+  worker is set up on their own.
+- **Not signed out by the change itself**: tokens from before carry no number and keep working until that worker's
+  next sign-in. Phones need the new app build to sign in again (the old build sends the old field).
+- Supersedes the "one-time, expiring enrollment codes" item in the hardening gaps of `auth-model.md`.
+

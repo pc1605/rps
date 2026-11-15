@@ -42,5 +42,5 @@
 - Phone: the stream uses `expo/fetch` (React Native's own `fetch` cannot stream). Admin: a hidden tab has no line.
 
 ## Auth / product
-- Enrollment badge tokens are long — never type them; scan the QR or paste. Fast 401s (<1 ms) on `/worker/login` mean badge-not-found; ~100–200 ms means bcrypt ran (badge found, PIN wrong).
+- Enrollment codes are one-time (D44): seeded workers have a PIN (1234) but nothing to log in with until an admin opens Workers → Set up phone. Fast 401s (<1 ms) on `/worker/login` mean no live code matched; ~100–200 ms means bcrypt ran (code found, PIN wrong — 5 of those kill the code). Opening the dialog twice kills the first code.
 - All dev workers use PIN 1234.

@@ -14,8 +14,8 @@
 | **Scan-per-mat** | Stitchers and packers record work by scanning each mat's QR on completion. Sets `stitched_by`/`packed_by`. |
 | **Taffeta label** | Fabric unit label stitched into the mat. Printed at assignment. |
 | **Packing sticker** | Paper unit label for the polybag. Printed when batch enters packing. |
-| **Badge token** | Permanent per-worker secret used for enrollment (`workers.badge_token`). Shown as QR `RPS-ENROLL:<token>`. |
-| **Enrollment** | One-time login on a phone: badge (scan or type) + 4-digit PIN → 30-day token in SecureStore. |
+| **Enrollment code** | One-time 6-digit code the admin makes for one worker (`POST /workers/:id/enrollment`): works once, for 10 minutes. Shown as QR `RPS-ENROLL:<code>` + digits on the admin screen only (D44). |
+| **Enrollment** | Setting a phone up in front of the admin: enrollment code (scanned, or typed by the admin) + the worker's 4-digit PIN → 30-day token in SecureStore. One phone per worker. |
 | **Rework** | (Slice B, not built) Packer rejects a mat → goes back to its stitcher with photo + reason. |
 | **BOM / recipe** | Quantity per mat for each material type, keyed by product line × consumption group, optionally per variant; per-car overrides. See `02-domain/materials.md`. |
 | **Material type / variant / lot** | Type = kind of input (Rexine R, Velcro…); variant = spec that changes consumption (roll width); lot = one received roll/box with colour and qty. |

@@ -29,7 +29,9 @@ mapping: `handler.go` (`transitionResponse` for start/complete; dedicated switch
 | Guard | missing bearer token / invalid token | 401 | any protected route, including unknown paths under `/api/v1` |
 | Role guard | forbidden | 403 | worker token on admin route; non-owner/supervisor on reports |
 
-Worker login always returns the vague `invalid badge or pin` (401) whether the badge exists or not — intentional.
+Worker login always returns the vague `invalid code or pin` (401) whether the code exists or not — intentional.
+`signed_in_elsewhere` (401): the worker signed in on another phone since this token was issued (one phone per worker,
+D44) — the phone signs itself out and shows the login screen.
 
 Mobile mapping: green ok · amber `already_done` · blue `quota_reached` · red everything else (scanner flashes);
 `Alert` dialogs on the batch screen for start/complete errors.

@@ -9,7 +9,7 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | GET | `/healthz` (root, not under /api/v1) | `{"status":"ok"}` |
 | POST | `/auth/login` | `{email,password}` → `{user, tokens{access_token, refresh_token}}` |
 | POST | `/auth/refresh` | `{refresh_token}` → tokens |
-| POST | `/worker/login` | `{badge_token, pin, device_id?}` → `{worker, tokens{access_token}}` (30d). Always 401 `invalid badge or pin` on failure |
+| POST | `/worker/login` | `{code, pin, device_id?}` → `{worker, tokens{access_token}}` (30d). `code` = one-time enrollment code (D44): used up on success, dead after 5 wrong PINs; signing in signs out the worker's other phone. Always 401 `invalid code or pin` on failure |
 | GET | `/files/rework/:name?exp=<unix>&sig=<hmac>` | Public signed URL for rework photos. Validates HMAC-SHA256 signature against `FILE_URL_SECRET`. 403 `invalid_signature` if expired or tampered |
 
 ## Admin (requires admin token)
@@ -41,8 +41,8 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | POST | `/batches/:id/stickers-printed` | stamps `stickers_printed_at = now()` |
 | GET | `/rework` | query params `?status=open|all&route=admin|stitcher`. Returns `ReworkEntry[]` with signed photo URLs |
 | POST | `/rework/:id/decide` | `{decision: "to_stitcher"|"recut"|"write_off", note?}`. Directs admin-routed rework items. Recut spawns new 1-mat batch |
-| GET/POST | `/workers` | list (no badge exposed) / create `{name, station, pin, phone?}` → 201 with `badge_token` **once** |
-| GET | `/workers/:id/enrollment` | `{badge_token}` for re-showing the QR (admin) |
+| GET/POST | `/workers` | list / create `{name, station, pin, phone?}` → 201 (no enrollment secret in either) |
+| POST | `/workers/:id/enrollment` | Makes a fresh one-time code for setting up the worker's phone → `{code, expires_at}` (6 digits, 10 min, once; replaces the earlier code). 404 for an inactive worker. Audited. Admin only |
 | GET | `/workers/:id` | **worker page (U1)**: profile + `open_claims` (batch, phase, since, my_done/target), `assigned` (at the batch's current phase, not joined), `open_rework` (rounds on mats they stitched; `awaiting_decision`) |
 | GET | `/workers/:id/summary?from&to` | factory days, inclusive (default last 14): `unit` (pieces cut / mats stitched / mats packed), `total`, `today`, `last_7_days`, `mats_per_hour`, `days[]` (mats, first/last, active secs); stitchers `rework_caused {rounds, rate_pct, by_reason}` + `rework_fixed {count, median_turnaround_secs}`; packers `flagged`. Counted from scan facts (`stitched_at`/`packed_at`; cutting `completed_at`) |
 | GET | `/workers/:id/history?limit&cursor` | participations newest first (`phase_logs`): batch, item, phase, mats, target, first/last scan, rework caused; keyset `next_cursor` |

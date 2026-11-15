@@ -67,8 +67,8 @@ Every text of the phone app, grouped by screen: the English line first, the Hind
    **RPS Worker**  
    ❓ app name kept in English
 
-17. Scan the enrollment QR from your admin, or type the code, then enter your PIN to set up this phone.  
-   **एडमिन से मिला QR स्कैन करें या कोड लिखें, फिर अपना PIN डालकर यह फ़ोन चालू करें।**
+17. Your admin sets up this phone. Scan the code on the admin's screen, then enter your PIN.  
+   **यह फ़ोन एडमिन चालू करेंगे। एडमिन की स्क्रीन का कोड स्कैन करें, फिर अपना PIN डालें।**
 
 18. Set up this phone →  
    **यह फ़ोन चालू करें →**
@@ -82,11 +82,13 @@ Every text of the phone app, grouped by screen: the English line first, the Hind
 21. Scan a different code  
    **दूसरा कोड स्कैन करें**
 
-22. Enrollment code  
-   **कोड**
+22. Code — the admin types it  
+   **कोड — एडमिन डालेंगे**  
+   (label of the hand-typed code field; the digits show as dots)
 
-23. or type the code  
-   **या कोड लिखें**
+23. Enter code by hand  
+   **कोड हाथ से डालें**  
+   (link under the scan button, for when the camera does not work)
 
 24. 4-digit PIN  
    **4 अंकों का PIN**
@@ -782,3 +784,14 @@ one line: "1 in rework · 0 left to pack"). Line 239 is the chip on a batch wher
 
 239. Waiting for rework  
    **रीवर्क का इंतज़ार**
+
+## Login — one-time code, one phone per worker (D44)
+
+240. Code scanned ✓  
+   **कोड स्कैन हो गया ✓**  
+   (shown instead of the code after scanning)
+
+241. This phone was signed out because you signed in on another phone. Ask your admin to set it up again.  
+   **आपने दूसरे फ़ोन में लॉगिन किया, इसलिए यह फ़ोन बंद हो गया। इसे फिर चालू करने के लिए एडमिन से कहें।**  
+   ❓ बंद हो गया, or "लॉग आउट हो गया"
+
