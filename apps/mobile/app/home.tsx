@@ -1,6 +1,6 @@
 import type { ReworkEntry } from "@rps/shared";
 import { useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { StyleSheet } from "react-native-unistyles";
 import { AuthImage } from "../components/AuthImage";
@@ -16,6 +16,7 @@ import { Skeleton } from "../components/ui/Skeleton";
 import { Stat } from "../components/ui/Stat";
 import { useAuth } from "../features/auth/store";
 import { useMyBatches } from "../features/batches/hooks";
+import { packerQueue, packingRework } from "../features/batches/packing";
 import type { Batch } from "../features/batches/types";
 import { useMySummary } from "../features/me/hooks";
 import { useMyRework } from "../features/rework/hooks";
@@ -96,6 +97,9 @@ function BatchCard({
   // stitchers/packers can always open & join.
   const blocked = station === "cutter" && batch.status === "in_progress" && !mine;
   const sizeText = strings.size[batch.size_class] ?? batch.size_class;
+  // Packer: mats out for rework, and whether that is all that is left on this batch.
+  const rework = station === "packer" ? packingRework(batch) : null;
+  const waitingRework = rework?.waiting ?? false;
 
   return (
     <Pressable
@@ -105,7 +109,9 @@ function BatchCard({
       accessibilityLabel={strings.home.batchA11y(batch.batch_code, `${batch.brand_name} ${batch.model_name}`)}
       accessibilityState={{ disabled: blocked }}
     >
-      <Card style={[styles.batchCard, mine && styles.cardMine, blocked && styles.cardBlocked]}>
+      <Card
+        style={[styles.batchCard, mine && styles.cardMine, (blocked || waitingRework) && styles.cardBlocked]}
+      >
         <View style={styles.cardHeader}>
           <Text style={styles.batchCode}>{batch.batch_code}</Text>
           <Chip
@@ -137,6 +143,13 @@ function BatchCard({
               label={station === "stitcher" ? strings.home.stitched : strings.home.packed}
             />
           )}
+          {rework && rework.inRework > 0 ? (
+            <Text style={styles.reworkLine}>
+              {strings.home.inRework(rework.inRework)}
+              {" · "}
+              {strings.home.leftToPack(rework.left)}
+            </Text>
+          ) : null}
         </View>
 
         {blocked ? (
@@ -144,8 +157,9 @@ function BatchCard({
             <Chip label={strings.home.cutting(batch.active_workers)} color={styles.textMuted.color} />
           </View>
         ) : (
-          (batch.assigned_to_me || batch.active_workers || mine) && (
+          (batch.assigned_to_me || batch.active_workers || mine || waitingRework) && (
             <View style={styles.footerRow}>
+              {waitingRework && <Chip label={strings.home.waitingRework} color={styles.textMuted.color} />}
               {batch.assigned_to_me && (
                 <Chip
                   label={
@@ -213,6 +227,11 @@ export default function Home() {
   };
 
   const hasRework = (reworkItems?.length ?? 0) > 0;
+  const station = worker?.station;
+  const queue = useMemo(
+    () => (station === "packer" ? packerQueue(batches ?? []) : (batches ?? [])),
+    [batches, station],
+  );
 
   return (
     <Screen
@@ -259,7 +278,7 @@ export default function Home() {
         </View>
       ) : (
         <FlatList
-          data={batches ?? []}
+          data={queue}
           keyExtractor={(b) => b.id}
           ListHeaderComponent={
             <>
@@ -363,6 +382,11 @@ const styles = StyleSheet.create((theme) => ({
   },
   statWrap: {
     paddingVertical: theme.spacing.xxs,
+    gap: theme.spacing.xxs,
+  },
+  reworkLine: {
+    ...theme.text.small,
+    color: theme.colors.textMuted,
   },
   footerRow: {
     flexDirection: "row",

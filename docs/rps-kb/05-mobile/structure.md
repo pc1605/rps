@@ -23,6 +23,7 @@ features/batches/
   types.ts               Batch (queue payload), ScanResult
   api.ts                 myBatches, start, complete, scanUnit
   hooks.ts               useMyBatches (live; polls 15 s only while the live line is down), useStartBatch, useCompleteBatch, useScanUnit (invalidates on phase/batch completion)
+  packing.ts             packingRework(batch) → in rework / left to pack / waiting; packerQueue() sinks waiting batches
 features/me/
   api.ts                 summary (/worker/me/summary), history(month?) (/worker/me/history)
   hooks.ts               useMySummary (1 min), useMyHistory(month | null) — null = current month (1 min); past months kept for the session
