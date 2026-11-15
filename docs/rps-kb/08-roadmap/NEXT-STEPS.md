@@ -12,6 +12,7 @@
 | P1 ✅ | Make it perfect          | Owner priority (Nov 2026): no new features — Postman fully green, cancel-dialog warning, reused-spares display, phone texts in strings.ts, stale docs, last browser + real-phone checks (hand-off: `p1-perfection-handoff.md`); also lot code optional on Receive. Real-phone checklist (testing.md) still to be run by the owner | U3         | main                 |
 | H1 ✅ | Hindi on the phone       | English + Hindi on the worker app before the pilot: language picker (login + home), Hindi texts typed against English, shared labels + server error codes in Hindi, Devanagari font, layout pass, owner reviews wording (hand-off: `h1-hindi-handoff.md`). Built; the owner still has to review the wording (`05-mobile/hindi-texts.md`) and run "Hindi on a real phone" (testing.md). Built on `agent/h1-hindi` (D41); before merge the owner reviews `05-mobile/hindi-texts.md` and runs "Hindi on a real phone" in testing.md | P1 | main |
 | M1 ✅ | Work history on the phone | The worker's own counts per day and month, opened from the My work card; same numbers as the admin, never ₹ (D40); one read endpoint `GET /worker/me/history?month=`; English + Hindi (hand-off: `m1-work-history-handoff.md`). Written-off mats keep counting, same as the admin (owner, 13 Nov 2026; D42). Built on `agent/m1-work-history`; the owner still has to run "Work history on a real phone" (testing.md) and review the new Hindi lines (`05-mobile/hindi-texts.md` 212–236) | H1 | main |
+| RT1 ✅ | Live updates | The admin web and the phone follow changes as they happen: `GET /live` (server-sent events) sends "changed" after every successful write, the apps re-read their live queries; polling stays as a once-a-minute fallback (D43, supersedes the realtime part of D14). Built on `agent/rt1-live-updates`; the owner still has to run "Live updates (RT1)" in testing.md on real phones. One backend instance only — decide LISTEN/NOTIFY in E2 | M1 | main |
 | R2 ⏸ | Material reports (on hold, owner Nov 2026) | consumption vs recipe, waste, cost per mat                                                                                                                                                                           | C2         | main                 |
 | E   | Hardening & deploy        | E1 security · E2 deploy · E3 EAS · E4 factory pilot                                                                                                                                                                  | U3         | main                 |
 
@@ -38,7 +39,7 @@ and only when they don't touch the same files. Merge order: U0 → C1 → U1 →
   Reports → Thresholds since R1 (`app_settings.stuck_hours`).
 - Search covers batch code, unit code, barcode, worker name, car name.
 - Worker pages are admin-only.
-- Deferred (not over-engineering now): ⌘K palette & keyboard shortcuts, audit-log viewer, live updates (WebSocket),
+- Deferred (not over-engineering now): ⌘K palette & keyboard shortcuts, audit-log viewer,
   full settings page, pagination outside the batch list.
 
 ### Open owner questions (from the audit)

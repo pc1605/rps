@@ -16,7 +16,7 @@ to the cutting queue (`POST /worker/batches/:id/release`).
 ## My work (U3, home)
 Card at the top of every home queue: "MY WORK · mats stitched" (or pieces cut / mats packed), **today** and **this week**
 (from Monday), stitchers "n came back for rework this week" + "n waiting for you", packers "n sent to rework this week".
-`GET /worker/me/summary`, refetched every minute and on pull-to-refresh. Counts only, never ₹ (D40).
+`GET /worker/me/summary`, re-read live (RT1) and on pull-to-refresh (once a minute as a fallback). Counts only, never ₹ (D40).
 
 The whole card is a button ("see month" + arrow at the top right) → work history.
 
@@ -32,7 +32,7 @@ numbers the admin sees for that worker and those days (D42); counts only, never 
 - **States**: skeleton while loading; "No work recorded this month"; error → red banner with Retry; offline → the
   yellow offline banner and whatever is cached.
 - `GET /worker/me/history?month=`. TanStack key `["my-history", month]` (`"current"` for the current month, which the
-  server picks): the current month refetches every minute and on pull-to-refresh; a past month is fetched once and
+  server picks): the current month re-reads live (RT1; once a minute as a fallback) and on pull-to-refresh; a past month is fetched once and
   kept for the session (it only changes on an admin undo — pull to refresh gets that).
 
 ## Stitcher
@@ -64,4 +64,4 @@ Home = packing queue (open unless assigned). Join → `PACKED n / m` → **Open 
 
 ## Known UX edges
 - A co-worker's scan finishing the phase while you're still in the scanner → your next scan gets a red "not at your station's phase". Acceptable; could be softened by checking `wrong_phase` and showing "Batch moved on".
-- Progress pill lags for other workers' scans until you scan or re-enter (polling model).
+- ~~Progress pill lags for other workers' scans~~ — follows them live since RT1 (within about a second; 15 s if the live line is down).

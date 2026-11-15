@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/features/auth/store";
+import { LiveUpdates } from "@/lib/live";
 import { GlobalSearch } from "./global-search";
 import { Brand, navItems, Sidebar, SidebarNav } from "./sidebar";
 
@@ -27,6 +28,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
+      <LiveUpdates />
       <Sidebar />
 
       <Sheet open={open} onOpenChange={setOpen}>

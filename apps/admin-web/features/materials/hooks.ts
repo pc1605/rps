@@ -6,10 +6,11 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { live } from "@/lib/live";
 import { type LotFilter, type MovementFilter, materialsApi } from "./api";
 
 // Stock changes with every cut → light polling on the stock views.
-const LIVE = { refetchInterval: 15_000, refetchOnWindowFocus: true } as const;
+const LIVE = { ...live(15_000), refetchOnWindowFocus: true };
 
 export const useMaterialTypes = () =>
   useQuery({ queryKey: ["material-types"], queryFn: materialsApi.types, ...LIVE });
@@ -35,6 +36,7 @@ export const useMovements = (f: Omit<MovementFilter, "cursor">) =>
     queryFn: ({ pageParam }) => materialsApi.movements({ ...f, cursor: pageParam }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.next_cursor,
+    ...live(),
   });
 export const useLotMovements = (lotId: string) => useMovements({ lot_id: lotId });
 
@@ -62,7 +64,7 @@ export const useBatchMaterials = (batchId: string) =>
   useQuery({
     queryKey: ["batch-materials", batchId],
     queryFn: () => materialsApi.batchMaterials(batchId),
-    refetchInterval: 10_000,
+    ...live(10_000),
   });
 
 /** Anything that moves stock or changes catalogue data refreshes every materials view. */

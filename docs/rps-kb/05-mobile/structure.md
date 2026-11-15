@@ -22,7 +22,7 @@ features/auth/
 features/batches/
   types.ts               Batch (queue payload), ScanResult
   api.ts                 myBatches, start, complete, scanUnit
-  hooks.ts               useMyBatches (poll ~10-15s), useStartBatch, useCompleteBatch, useScanUnit (invalidates on phase/batch completion)
+  hooks.ts               useMyBatches (live; polls 15 s only while the live line is down), useStartBatch, useCompleteBatch, useScanUnit (invalidates on phase/batch completion)
 features/me/
   api.ts                 summary (/worker/me/summary), history(month?) (/worker/me/history)
   hooks.ts               useMySummary (1 min), useMyHistory(month | null) — null = current month (1 min); past months kept for the session
@@ -35,6 +35,8 @@ lib/
   strings.hi.ts          Hindi texts (`hi: Strings`)
   language.ts            language store (SecureStore `rps_language`), useStrings(), getStrings(), LANGUAGES
   errors.ts              errorText(strings, error, fallback): server error code → text in the current language
+  live.tsx               live updates (RT1): <LiveUpdates /> holds GET /live while signed in + app on screen (expo/fetch stream);
+                         live(pollMs) = query options: re-read on a note, poll pollMs only while the line is down (1 min while up)
   use-online.ts          NetInfo hook driving offline notice banners across screens
   query-provider.tsx
 ```
@@ -67,5 +69,8 @@ lib/
 ## State rules
 - Server is the source of truth; the app holds almost nothing (token, worker profile, transient enroll draft).
 - Progress on the scanner is seeded from the queue payload (`units_stitched/packed`, `my_done_qty/target`) and then
-  updated from each `ScanResult`. Other workers' scans on the same batch show up on the next poll, not live.
+  updated from each `ScanResult`. Other workers' scans arrive live (RT1): a note re-reads the queue and the pill's batch
+  count is raised to it (never lowered there — a re-read that started before my own scan would show one less).
+- Live updates (RT1, D43): `my-batches`, `my-rework`, `my-summary` and the current month of `my-history` re-read when
+  the server says something changed. The line is closed in the background and reopened (with one re-read) on return.
 - Use `isPending` (not `isLoading`) for "no data yet" — see gotchas.

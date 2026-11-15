@@ -32,6 +32,15 @@
 - `adb install` with multiple devices needs `-s <serial>`; signature mismatch ⇒ uninstall first.
 - Emulator webcam/virtual-scene camera works for QR tests; scanning PDFs off a laptop screen works fine.
 
+## Live updates (RT1)
+- The live hub is in the server process: **one backend instance only** until `internal/live` gets LISTEN/NOTIFY (D43).
+- A proxy in front of the backend must pass `GET /api/v1/live` unbuffered and keep it open longer than 25 s (the
+  heartbeat). If changes arrive only once a minute, the proxy is buffering — the fallback poll is what you are seeing.
+- Never add a Fiber `WriteTimeout` or a compression middleware over `/live` — both break the stream.
+- A new query that should follow the floor needs `...live()` (admin `lib/live.tsx`, phone `lib/live.tsx`); a plain
+  `refetchInterval` is not pushed. Don't mark form / reference data live (a re-read under an open form).
+- Phone: the stream uses `expo/fetch` (React Native's own `fetch` cannot stream). Admin: a hidden tab has no line.
+
 ## Auth / product
 - Enrollment badge tokens are long — never type them; scan the QR or paste. Fast 401s (<1 ms) on `/worker/login` mean badge-not-found; ~100–200 ms means bcrypt ran (badge found, PIN wrong).
 - All dev workers use PIN 1234.

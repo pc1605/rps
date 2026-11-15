@@ -60,6 +60,12 @@ export default function ScanScreen() {
     mine: batch?.my_done_qty ?? 0,
     target: batch?.my_target_qty ?? null,
   });
+  // Live updates (RT1): a co-worker's scan re-reads the queue, so the batch count on the pill follows
+  // it. Only ever raised here — a re-read that started before my last scan would show one less.
+  const queueDone = (isStitcher ? batch?.units_stitched : batch?.units_packed) ?? 0;
+  useEffect(() => {
+    setProgress((p) => (queueDone > p.done ? { ...p, done: queueDone } : p));
+  }, [queueDone]);
   const [flash, setFlash] = useState<FlashState | null>(null);
   const [inspectUnit, setInspectUnit] = useState<string | null>(null);
   const [done, setDone] = useState(false);

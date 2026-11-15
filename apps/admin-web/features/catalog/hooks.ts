@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { live } from "@/lib/live";
 import { catalogApi } from "./api";
 import type { CarItemInput } from "./types";
 
@@ -12,6 +13,7 @@ export const useCarOverview = (id: number, from: string, to: string) =>
     queryFn: () => catalogApi.overview(id, from, to),
     enabled: id > 0,
     placeholderData: keepPreviousData, // no skeleton flash when the range changes
+    ...live(),
   });
 
 export function useCreateBrand() {

@@ -37,7 +37,16 @@ lib/api-client.ts              axios; single-flight 401 → /auth/refresh; base 
 
 ## Data flow
 TanStack Query v5 everywhere. Mutations invalidate `["batches"]`, `["batch", id]`, `["workers"]`, `["car-models"]` as relevant.
-Stats poll every 5s (`LIVE_FAST`, drives sidebar counts). Batch lists and batch details poll every 10s (`LIVE`, `refetchOnWindowFocus: true`). Car models cache for 5 minutes (`staleTime: 5 * 60_000`).
+**Live updates (RT1, D43)**: `lib/live.tsx`. `<LiveUpdates />` (mounted in `AppShell`) holds one open line to `GET /live`
+while the tab is visible; on a "changed" note — and once after every (re)connect — it invalidates every query whose
+options include `...live()` (`meta.live`). `live(pollMs)` also sets the fallback polling: `pollMs` while the line is
+down (stats 5 s, batch lists / details / worker / unit / rework 10 s, materials 15 s, stuck 60 s — the pre-RT1 rates),
+once a minute while it is up. `live()` without a number = pushed only, never polled (workers list, worker summary /
+history, reports, finished stock, spares, movements, car overview). Not live on purpose: reference and form data
+(car items, brands, lines, groups, recipes, overrides, settings, search). A hidden tab closes its line (browsers allow
+~6 connections per server on HTTP/1.1) and reconnects + re-reads when it is shown again. An expired access token gets
+a 401 on the line and a retry; the normal API calls refresh the token meanwhile.
+Car models cache for 5 minutes (`staleTime: 5 * 60_000`).
 
 ## Lint rule that bites: `react-hooks/set-state-in-effect`
 Never `useEffect(() => setState(props…))`. Reset draft state by remounting with a `key` derived from server state

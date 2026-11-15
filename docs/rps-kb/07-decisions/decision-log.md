@@ -46,6 +46,7 @@ Owner rejected identical per-batch stickers ("full details same as inner"). Rewo
 `stitched_by` gives automatic accountability. Photo taken by the packer at flagging (owner's wording "cutter" to be confirmed).
 
 ### D14 — Realtime WebSocket and AI agent cut from v1
+*(Realtime part superseded by D43, Nov 2026.)*
 Polling (5 s stats / 15 s queues) is fine at factory scale. First real realtime use case would be per-scan sticker printing.
 
 ### D15 — Private distribution, no app stores
@@ -227,3 +228,30 @@ no targets, ranking or export.
 **Why**: Owner, 11–13 Nov 2026: the owner pays wages from the admin counts and the worker checks on the phone, so
 there is no argument on payday. Written-off mats: owner decision, 13 Nov 2026 — keep it the same as the admin.
 **Status**: Built (M1); real-phone check by the owner pending.
+
+### D43 — Live updates: the server says "something changed", the apps re-read (Nov 2026)
+**Decision**: The admin web and the phone keep one open line to the server (`GET /live`, server-sent events). After
+every successful write the server sends a note with no content ("changed") to everyone connected; each app then
+re-reads what it is showing through the normal endpoints. So a scan shows on the admin, on co-workers' phones and on
+the worker's own counts within about a second, without anyone refreshing.
+- **No data on the line.** Numbers still come from the one place they always came from, so phone and admin cannot
+  disagree (D42), and a worker's line reveals nothing about anyone else.
+- **One rule on the server**: a middleware on `/api/v1` notifies after any non-GET request that answered 2xx (except
+  `/auth/*`). No per-feature wiring, so a mutation added later is covered without thinking about it.
+- **One rule in the apps**: queries that follow the floor carry `...live()`; a note invalidates exactly those.
+  Reference and form data are not live.
+- **Polling stays as a safety net**: once a minute while the line is up, the old rates (5–15 s) while it is down.
+  If the line fails silently, data is at most a minute old — never wrong.
+- **The line is only held while someone is looking**: visible browser tab; phone app on screen and signed in. Every
+  (re)connect re-reads once, for whatever was missed. Reconnect waits 1 s, 2 s, 5 s, then every 10 s; 60 s without a
+  heartbeat (sent every 25 s) counts as a dead line.
+- **Server-sent events, not WebSocket**: one-way is all this needs; it is plain HTTP with the normal `Authorization`
+  header (fetch streaming in the browser, `expo/fetch` on the phone) and needs no new dependency on either side.
+**Limits (known, accepted)**: (1) the hub is in the server process — with more than one backend instance a change
+saved on one would not reach clients on another; add Postgres LISTEN/NOTIFY in `internal/live` before scaling out
+(decide in E2). (2) A proxy in front must not buffer or time out the stream (`X-Accel-Buffering: no` is sent; idle
+timeout must be above 25 s). (3) This is not offline work and not notifications: a scan still needs the network, and
+nothing reaches a closed app.
+**Why**: Owner, 15 Nov 2026: "make all realtime". Supersedes the realtime part of D14 (polling only).
+**Status**: Built (RT1). Checked: Go tests over a real socket, the shared client against the test backend (connect,
+notes, bursts merged, reconnect after a server restart), the admin web in Chrome. Real-phone check by the owner pending.

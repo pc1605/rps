@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { live } from "../../lib/live";
 import { meApi } from "./api";
 
 /** The worker's own output for the home "My work" card. */
 export function useMySummary() {
-  return useQuery({ queryKey: ["my-summary"], queryFn: meApi.summary, refetchInterval: 60_000 });
+  return useQuery({ queryKey: ["my-summary"], queryFn: meApi.summary, ...live(60_000) });
 }
 
 /**
@@ -15,6 +16,6 @@ export function useMyHistory(month: string | null) {
   return useQuery({
     queryKey: ["my-history", month ?? "current"],
     queryFn: () => meApi.history(month ?? undefined),
-    ...(month ? { staleTime: Infinity, gcTime: Infinity } : { refetchInterval: 60_000 }),
+    ...(month ? { staleTime: Infinity, gcTime: Infinity } : live(60_000)),
   });
 }
