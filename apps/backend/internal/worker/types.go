@@ -22,8 +22,6 @@ type Worker struct {
 	IsActive    bool       `json:"is_active"`
 	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
-	// BadgeToken is only returned once, at creation, for printing the badge.
-	BadgeToken string `json:"badge_token,omitempty"`
 }
 
 type CreateInput struct {
@@ -34,7 +32,8 @@ type CreateInput struct {
 }
 
 type LoginInput struct {
-	BadgeToken string `json:"badge_token"`
-	PIN        string `json:"pin"`
-	DeviceID   string `json:"device_id,omitempty"`
+	// Code is the one-time enrollment code the admin made for this worker (POST /workers/:id/enrollment).
+	Code     string `json:"code"`
+	PIN      string `json:"pin"`
+	DeviceID string `json:"device_id,omitempty"`
 }

@@ -65,29 +65,29 @@ BEGIN
   -- PIN 1234 bcrypt cost 10: $2a$10$WWPbbNHUxC/RVAbmAGUiZ.O58GavfF2Jr/SEiLcj/AzjQVG2vSme.
   SELECT id INTO v_ramesh_id FROM workers WHERE name = 'Ramesh' AND station = 'cutter' LIMIT 1;
   IF v_ramesh_id IS NULL THEN
-    INSERT INTO workers (name, phone, station, badge_token, pin_hash, created_by)
-    VALUES ('Ramesh', '9876543210', 'cutter', 'BADGE-ramesh-cutter', '$2a$10$WWPbbNHUxC/RVAbmAGUiZ.O58GavfF2Jr/SEiLcj/AzjQVG2vSme.', v_owner_id)
+    INSERT INTO workers (name, phone, station, pin_hash, created_by)
+    VALUES ('Ramesh', '9876543210', 'cutter', '$2a$10$WWPbbNHUxC/RVAbmAGUiZ.O58GavfF2Jr/SEiLcj/AzjQVG2vSme.', v_owner_id)
     RETURNING id INTO v_ramesh_id;
   END IF;
 
   SELECT id INTO v_surya_id FROM workers WHERE name = 'Surya' AND station = 'stitcher' LIMIT 1;
   IF v_surya_id IS NULL THEN
-    INSERT INTO workers (name, phone, station, badge_token, pin_hash, created_by)
-    VALUES ('Surya', '9876543211', 'stitcher', 'BADGE-surya-stitcher', '$2a$10$WWPbbNHUxC/RVAbmAGUiZ.O58GavfF2Jr/SEiLcj/AzjQVG2vSme.', v_owner_id)
+    INSERT INTO workers (name, phone, station, pin_hash, created_by)
+    VALUES ('Surya', '9876543211', 'stitcher', '$2a$10$WWPbbNHUxC/RVAbmAGUiZ.O58GavfF2Jr/SEiLcj/AzjQVG2vSme.', v_owner_id)
     RETURNING id INTO v_surya_id;
   END IF;
 
   SELECT id INTO v_mahesh_id FROM workers WHERE name = 'Mahesh' AND station = 'stitcher' LIMIT 1;
   IF v_mahesh_id IS NULL THEN
-    INSERT INTO workers (name, phone, station, badge_token, pin_hash, created_by)
-    VALUES ('Mahesh', '9876543212', 'stitcher', 'BADGE-mahesh-stitcher', '$2a$10$WWPbbNHUxC/RVAbmAGUiZ.O58GavfF2Jr/SEiLcj/AzjQVG2vSme.', v_owner_id)
+    INSERT INTO workers (name, phone, station, pin_hash, created_by)
+    VALUES ('Mahesh', '9876543212', 'stitcher', '$2a$10$WWPbbNHUxC/RVAbmAGUiZ.O58GavfF2Jr/SEiLcj/AzjQVG2vSme.', v_owner_id)
     RETURNING id INTO v_mahesh_id;
   END IF;
 
   SELECT id INTO v_raju_id FROM workers WHERE name = 'Raju' AND station = 'packer' LIMIT 1;
   IF v_raju_id IS NULL THEN
-    INSERT INTO workers (name, phone, station, badge_token, pin_hash, created_by)
-    VALUES ('Raju', '9876543213', 'packer', 'BADGE-raju-packer', '$2a$10$WWPbbNHUxC/RVAbmAGUiZ.O58GavfF2Jr/SEiLcj/AzjQVG2vSme.', v_owner_id)
+    INSERT INTO workers (name, phone, station, pin_hash, created_by)
+    VALUES ('Raju', '9876543213', 'packer', '$2a$10$WWPbbNHUxC/RVAbmAGUiZ.O58GavfF2Jr/SEiLcj/AzjQVG2vSme.', v_owner_id)
     RETURNING id INTO v_raju_id;
   END IF;
 

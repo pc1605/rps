@@ -14,7 +14,7 @@ import (
 // security decision — add consciously.
 var PublicPaths = map[string]bool{
 	"POST /api/v1/auth/login":   true, // admin login
-	"POST /api/v1/worker/login": true, // worker badge + PIN login
+	"POST /api/v1/worker/login": true, // worker one-time enrollment code + PIN login
 	"POST /api/v1/auth/refresh": true, // refresh token
 }
 
@@ -50,11 +50,16 @@ func (s *Service) Guard() fiber.Handler {
 		}
 
 		// Then worker token — refused once the worker is deactivated (U1: deactivate takes effect
-		// immediately, not at the 30-day token expiry).
+		// immediately, not at the 30-day token expiry) or has signed in on another phone since
+		// (one phone per worker: the token's session number is behind the worker's).
 		if wc, err := s.ParseWorkerToken(tokenStr); err == nil {
 			var active bool
-			if err := s.pool.QueryRow(c.Context(), `SELECT is_active FROM workers WHERE id = $1`, wc.WorkerID).Scan(&active); err != nil || !active {
+			var session int
+			if err := s.pool.QueryRow(c.Context(), `SELECT is_active, session_no FROM workers WHERE id = $1`, wc.WorkerID).Scan(&active, &session); err != nil || !active {
 				return httpx.Unauthorized(c, "worker deactivated — ask your admin")
+			}
+			if wc.Session != session {
+				return httpx.Error(c, fiber.StatusUnauthorized, "signed_in_elsewhere", "signed in on another phone — ask your admin to set this phone up again")
 			}
 			c.Locals("worker_id", wc.WorkerID)
 			c.Locals("station", wc.Station)

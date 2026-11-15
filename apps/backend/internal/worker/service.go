@@ -3,16 +3,18 @@ package worker
 import (
 	"context"
 	"crypto/rand"
-	"encoding/base64"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"regexp"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/pc1605/rps/apps/backend/internal/audit"
@@ -20,7 +22,7 @@ import (
 
 var (
 	ErrInvalidInput = errors.New("invalid input")
-	ErrInvalidLogin = errors.New("invalid badge or pin")
+	ErrInvalidLogin = errors.New("invalid code or pin")
 	ErrNotFound     = errors.New("worker not found")
 )
 
@@ -34,18 +36,29 @@ func NewService(pool *pgxpool.Pool) *Service {
 	return &Service{pool: pool}
 }
 
-// generateBadgeToken makes a random, unguessable token for the QR badge.
-func generateBadgeToken() (string, error) {
-	b := make([]byte, 24)
-	if _, err := rand.Read(b); err != nil {
+// EnrollCodeTTL is how long a fresh enrollment code can be used.
+const EnrollCodeTTL = 10 * time.Minute
+
+// maxEnrollTries: wrong PINs allowed against one enrollment code before it dies.
+const maxEnrollTries = 5
+
+// generateEnrollCode makes a random 6-digit code — short enough for the admin to type on the phone.
+// It works once, for 10 minutes, together with the worker's PIN.
+func generateEnrollCode() (string, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(1_000_000))
+	if err != nil {
 		return "", err
 	}
-	// URL-safe, no padding — clean for QR encoding
-	return "BADGE-" + base64.RawURLEncoding.EncodeToString(b), nil
+	return fmt.Sprintf("%06d", n.Int64()), nil
 }
 
-// Create makes a worker with a generated badge token + hashed PIN.
-// Returns the badge_token ONCE so the admin can print the badge.
+func hashEnrollCode(code string) string {
+	sum := sha256.Sum256([]byte(code))
+	return hex.EncodeToString(sum[:])
+}
+
+// Create makes a worker with a hashed PIN. The phone is set up afterwards with a one-time
+// enrollment code (NewEnrollmentCode).
 func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID, actorRole, ip string) (*Worker, error) {
 	if in.Name == "" || in.Station == "" {
 		return nil, fmt.Errorf("%w: name and station required", ErrInvalidInput)
@@ -59,10 +72,6 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 		return nil, fmt.Errorf("%w: invalid station", ErrInvalidInput)
 	}
 
-	badgeToken, err := generateBadgeToken()
-	if err != nil {
-		return nil, err
-	}
 	pinHash, err := bcrypt.GenerateFromPassword([]byte(in.PIN), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
@@ -76,10 +85,10 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 
 	var w Worker
 	err = tx.QueryRow(ctx, `
-		INSERT INTO workers (name, phone, station, badge_token, pin_hash, created_by)
-		VALUES ($1, NULLIF($2,''), $3, $4, $5, $6)
+		INSERT INTO workers (name, phone, station, pin_hash, created_by)
+		VALUES ($1, NULLIF($2,''), $3, $4, $5)
 		RETURNING id, name, COALESCE(phone,''), station, is_active, last_login_at, created_at
-	`, in.Name, in.Phone, in.Station, badgeToken, string(pinHash), actorID).Scan(
+	`, in.Name, in.Phone, in.Station, string(pinHash), actorID).Scan(
 		&w.ID, &w.Name, &w.Phone, &w.Station, &w.IsActive, &w.LastLoginAt, &w.CreatedAt,
 	)
 	if err != nil {
@@ -102,51 +111,132 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 		return nil, err
 	}
 
-	w.BadgeToken = badgeToken // returned ONCE for badge printing
 	return &w, nil
 }
 
-// Login verifies badge_token + PIN (two-factor).
-func (s *Service) Login(ctx context.Context, badgeToken, pin string) (*Worker, error) {
-	if badgeToken == "" || pin == "" {
-		return nil, ErrInvalidLogin
+// NewEnrollmentCode makes a fresh one-time code for setting up this worker's phone and returns it
+// with its expiry. Any earlier code for the worker stops working. Only the hash is stored.
+func (s *Service) NewEnrollmentCode(ctx context.Context, id, actorID uuid.UUID, actorRole, ip string) (string, time.Time, error) {
+	// 6 digits can collide with another worker's waiting code (unique index) — draw again.
+	for attempt := 0; ; attempt++ {
+		code, expires, err := s.tryNewEnrollmentCode(ctx, id, actorID, actorRole, ip)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" && attempt < 5 {
+			continue
+		}
+		return code, expires, err
 	}
+}
+
+func (s *Service) tryNewEnrollmentCode(ctx context.Context, id, actorID uuid.UUID, actorRole, ip string) (string, time.Time, error) {
+	code, err := generateEnrollCode()
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	// Expired codes only take up numbers — clear them first.
+	if _, err := tx.Exec(ctx, `
+		UPDATE workers SET enroll_code_hash = NULL, enroll_expires_at = NULL, enroll_tries = 0
+		WHERE enroll_expires_at <= NOW()`); err != nil {
+		return "", time.Time{}, err
+	}
+	var expires time.Time
+	err = tx.QueryRow(ctx, `
+		UPDATE workers
+		SET enroll_code_hash = $2, enroll_expires_at = NOW() + $3::interval, enroll_tries = 0
+		WHERE id = $1 AND is_active
+		RETURNING enroll_expires_at
+	`, id, hashEnrollCode(code), fmt.Sprintf("%d seconds", int(EnrollCodeTTL.Seconds()))).Scan(&expires)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", time.Time{}, ErrNotFound
+	}
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	if err := audit.Write(ctx, tx, audit.Entry{
+		ActorID: actorID.String(), ActorRole: actorRole, EntityType: "worker", EntityID: id.String(),
+		Action: audit.ActionUpdate, After: map[string]any{"event": "enrollment_code_issued"}, IP: ip,
+	}); err != nil {
+		return "", time.Time{}, err
+	}
+	return code, expires, tx.Commit(ctx)
+}
+
+// Login signs a phone in with a one-time enrollment code + the worker's PIN. On success the code is
+// used up and the worker's session number goes up, which signs out any other phone (one phone per
+// worker). Returns the worker and the new session number for the token.
+func (s *Service) Login(ctx context.Context, code, pin, ip string) (*Worker, int, error) {
+	if code == "" || pin == "" {
+		return nil, 0, ErrInvalidLogin
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer tx.Rollback(ctx)
 
 	var (
 		w       Worker
 		pinHash string
 		station string
+		tries   int
 	)
-	err := s.pool.QueryRow(ctx, `
-		SELECT id, name, COALESCE(phone,''), station, pin_hash, is_active, created_at
+	err = tx.QueryRow(ctx, `
+		SELECT id, name, COALESCE(phone,''), station, pin_hash, is_active, created_at, enroll_tries
 		FROM workers
-		WHERE badge_token = $1 AND is_active = TRUE
-	`, badgeToken).Scan(&w.ID, &w.Name, &w.Phone, &station, &pinHash, &w.IsActive, &w.CreatedAt)
-
+		WHERE enroll_code_hash = $1 AND enroll_expires_at > NOW() AND is_active = TRUE
+		FOR UPDATE
+	`, hashEnrollCode(code)).Scan(&w.ID, &w.Name, &w.Phone, &station, &pinHash, &w.IsActive, &w.CreatedAt, &tries)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrInvalidLogin // don't reveal whether badge exists
+		return nil, 0, ErrInvalidLogin // don't reveal whether the code exists
 	}
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(pinHash), []byte(pin)); err != nil {
-		return nil, ErrInvalidLogin
+		// Count the wrong PIN; after too many the code is dead and the admin must make a new one.
+		if _, err := tx.Exec(ctx, `
+			UPDATE workers
+			SET enroll_tries      = CASE WHEN enroll_tries + 1 >= $2 THEN 0 ELSE enroll_tries + 1 END,
+			    enroll_code_hash  = CASE WHEN enroll_tries + 1 >= $2 THEN NULL ELSE enroll_code_hash END,
+			    enroll_expires_at = CASE WHEN enroll_tries + 1 >= $2 THEN NULL ELSE enroll_expires_at END
+			WHERE id = $1`, w.ID, maxEnrollTries); err != nil {
+			return nil, 0, err
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return nil, 0, err
+		}
+		return nil, 0, ErrInvalidLogin
+	}
+
+	var session int
+	if err := tx.QueryRow(ctx, `
+		UPDATE workers
+		SET enroll_code_hash = NULL, enroll_expires_at = NULL, enroll_tries = 0,
+		    session_no = session_no + 1, last_login_at = NOW()
+		WHERE id = $1
+		RETURNING session_no, last_login_at`, w.ID).Scan(&session, &w.LastLoginAt); err != nil {
+		return nil, 0, err
+	}
+	if err := audit.Write(ctx, tx, audit.Entry{
+		ActorID: w.ID.String(), ActorRole: station, EntityType: "worker", EntityID: w.ID.String(),
+		Action: audit.ActionUpdate, After: map[string]any{"event": "phone_enrolled"}, IP: ip,
+	}); err != nil {
+		return nil, 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, 0, err
 	}
 
 	w.Station = Station(station)
-
-	// Update last_login_at in the background. Detached on purpose: the request ctx
-	// is cancelled once the response is sent. Bounded by a timeout instead.
-	go func() { //nolint:gosec // G118: intentional detached context
-		bg, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if _, err := s.pool.Exec(bg, `UPDATE workers SET last_login_at = NOW() WHERE id = $1`, w.ID); err != nil {
-			log.Warn().Err(err).Str("worker_id", w.ID.String()).Msg("update last_login_at")
-		}
-	}()
-
-	return &w, nil
+	return &w, session, nil
 }
 
 // List returns all workers (for admin management).

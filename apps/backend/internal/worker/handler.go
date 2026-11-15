@@ -52,22 +52,38 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	return httpx.OK(c, workers)
 }
 
-// Login — public (badge + PIN). Issues a worker JWT.
+// NewEnrollment — POST /workers/:id/enrollment (admin). Makes a fresh one-time code for setting up
+// the worker's phone: valid once, for 10 minutes. The code is returned here and never again.
+func (h *Handler) NewEnrollment(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid worker id")
+	}
+	uid, _ := auth.UserID(c)
+	code, expires, err := h.svc.NewEnrollmentCode(c.Context(), id, uid, auth.RoleFromCtx(c), c.IP())
+	if err != nil {
+		return workerErr(c, err, "make enrollment code")
+	}
+	return httpx.OK(c, fiber.Map{"code": code, "expires_at": expires})
+}
+
+// Login — public (one-time enrollment code + PIN). Issues a worker JWT.
 func (h *Handler) Login(c *fiber.Ctx) error {
 	var in LoginInput
 	if err := c.BodyParser(&in); err != nil {
 		return httpx.BadRequest(c, "invalid request body")
 	}
 
-	w, err := h.svc.Login(c.Context(), in.BadgeToken, in.PIN)
+	w, session, err := h.svc.Login(c.Context(), strings.TrimSpace(in.Code), in.PIN, c.IP())
 	if err != nil {
 		if errors.Is(err, ErrInvalidLogin) {
-			return httpx.Unauthorized(c, "invalid badge or pin")
+			return httpx.Unauthorized(c, "invalid code or pin")
 		}
+		log.Error().Err(err).Msg("worker login")
 		return httpx.Internal(c, "login failed")
 	}
 
-	tokens, err := h.authSvc.IssueWorkerToken(w.ID, string(w.Station))
+	tokens, err := h.authSvc.IssueWorkerToken(w.ID, string(w.Station), session)
 	if err != nil {
 		return httpx.Internal(c, "failed to issue token")
 	}

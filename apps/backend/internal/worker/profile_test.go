@@ -33,7 +33,6 @@ func TestWorkerPage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create worker: %v", err)
 	}
-	badge := w.BadgeToken
 	var batchID, logID uuid.UUID
 	code := fmt.Sprintf("T-%d", time.Now().UnixNano()%1e9)
 	if err := pool.QueryRow(ctx, `
@@ -138,13 +137,21 @@ func TestWorkerPage(t *testing.T) {
 	if err != nil || len(pin) != 4 {
 		t.Fatalf("reset pin: %q %v", pin, err)
 	}
-	if _, err := s.Login(ctx, badge, pin); err != nil {
-		t.Errorf("login with new pin: %v", err)
+	enroll := func() string {
+		t.Helper()
+		code, _, err := s.NewEnrollmentCode(ctx, w.ID, adminID, "owner", "127.0.0.1")
+		if err != nil {
+			t.Fatalf("enrollment code: %v", err)
+		}
+		return code
 	}
 	if pin != "4321" {
-		if _, err := s.Login(ctx, badge, "4321"); err == nil {
+		if _, _, err := s.Login(ctx, enroll(), "4321", "127.0.0.1"); err == nil {
 			t.Error("old pin still logs in")
 		}
+	}
+	if _, _, err := s.Login(ctx, enroll(), pin, "127.0.0.1"); err != nil {
+		t.Errorf("login with new pin: %v", err)
 	}
 	if _, err := s.ResetPIN(ctx, w.ID, "12a4", adminID, "owner", "127.0.0.1"); !errors.Is(err, ErrInvalidInput) {
 		t.Errorf("bad pin: %v", err)
