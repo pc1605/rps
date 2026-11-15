@@ -247,7 +247,7 @@ export function ActiveToggle({ worker }: { worker: WorkerDetail }) {
               ? openWork > 0
                 ? `They still have ${openWork} open batch${openWork === 1 ? "" : "es"}. Reassign first — deactivating will be refused until then.`
                 : "Their phone is signed out immediately and they disappear from assignment lists. History stays."
-              : `${STATION_LABEL[worker.station]} again: they can sign in with their badge and PIN.`}
+              : `${STATION_LABEL[worker.station]} again. If their phone is signed out, set it up again from Set up phone.`}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

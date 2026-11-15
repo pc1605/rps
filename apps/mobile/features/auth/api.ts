@@ -2,10 +2,10 @@ import { http } from "../../lib/api-client";
 import type { Worker, WorkerLoginResponse } from "./types";
 
 export const authApi = {
-  // Enrollment code IS the badge_token — backend unchanged.
+  // The one-time enrollment code the admin made for this worker (works once, for 10 minutes) + the PIN.
   login: async (enrollmentCode: string, pin: string): Promise<WorkerLoginResponse> => {
     const res = await http.post("/worker/login", {
-      badge_token: enrollmentCode.trim(),
+      code: enrollmentCode.trim(),
       pin,
       device_id: "emulator-dev", // real device id later
     });

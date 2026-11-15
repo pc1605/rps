@@ -1,9 +1,6 @@
 "use client";
 
-import { ENROLL_PREFIX } from "@rps/shared";
-
-import { Check, Copy, QrCode } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import { QrCode } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +11,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { http } from "@/lib/api-client";
+import { EnrollmentCode } from "./enrollment-code";
 
 export function EnrollmentQrDialog({
   workerId,
@@ -26,24 +23,17 @@ export function EnrollmentQrDialog({
   /** Custom trigger (defaults to a QR icon button). */
   trigger?: React.ReactNode;
 }) {
-  const [badge, setBadge] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  const load = async (open: boolean) => {
-    if (!open) return setBadge(null);
-    const res = await http.get(`/workers/${workerId}/enrollment`);
-    setBadge((res.data?.data ?? res.data).badge_token);
-  };
+  const [open, setOpen] = useState(false);
 
   return (
-    <Dialog onOpenChange={load}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
           <Button
             variant="ghost"
             size="icon"
-            title="Show enrollment QR"
-            aria-label={`Show enrollment QR for ${workerName}`}
+            title="Set up phone"
+            aria-label={`Set up ${workerName}’s phone`}
           >
             <QrCode className="h-4 w-4" />
           </Button>
@@ -51,37 +41,14 @@ export function EnrollmentQrDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Enroll {workerName}</DialogTitle>
+          <DialogTitle>Set up {workerName}’s phone</DialogTitle>
           <DialogDescription>
-            On their phone: RPS Worker → Scan enrollment code → enter PIN.
+            On their phone: RPS Worker → Scan enrollment code → enter PIN. Do it here, with the phone in front
+            of you.
           </DialogDescription>
         </DialogHeader>
-        {badge ? (
-          <>
-            <div className="flex justify-center rounded-lg border bg-white p-4">
-              <QRCodeSVG value={`${ENROLL_PREFIX}${badge}`} size={200} level="M" />
-            </div>
-            <div className="rounded-lg border bg-muted/40 p-3 flex items-center justify-between gap-3">
-              <code className="font-mono text-xs break-all">{badge}</code>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-                aria-label={copied ? "Copied" : "Copy enrollment code"}
-                onClick={() => {
-                  navigator.clipboard.writeText(badge);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                }}
-              >
-                {copied ? <Check className="h-4 w-4 text-working" /> : <Copy className="h-4 w-4" />}
-              </Button>
-            </div>
-          </>
-        ) : (
-          <p className="font-mono text-sm text-muted-foreground">Loading…</p>
-        )}
+        {/* Mounted only while open: every opening makes a fresh one-time code. */}
+        {open ? <EnrollmentCode workerId={workerId} /> : null}
       </DialogContent>
     </Dialog>
   );

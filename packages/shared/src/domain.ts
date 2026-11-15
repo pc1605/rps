@@ -269,7 +269,12 @@ export interface Worker {
   is_active: boolean;
   last_login_at?: string;
   created_at: string;
-  badge_token?: string; // only on create
+}
+
+/** One-time code for setting up a worker's phone (POST /workers/:id/enrollment): works once, for 10 minutes. */
+export interface EnrollmentCode {
+  code: string;
+  expires_at: string;
 }
 
 export type PeekReason =

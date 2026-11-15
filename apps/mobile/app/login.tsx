@@ -6,7 +6,7 @@ import { AppButton } from "../components/ui/AppButton";
 import { LanguagePicker } from "../components/LanguagePicker";
 import { Banner } from "../components/ui/Banner";
 import { Screen } from "../components/ui/Screen";
-import { useEnrollDraft } from "../features/auth/enroll-draft";
+import { ENROLL_CODE_RE, useEnrollDraft } from "../features/auth/enroll-draft";
 import { useAuth } from "../features/auth/store";
 import { ApiError } from "../lib/api-client";
 import { errorText } from "../lib/errors";
@@ -15,7 +15,7 @@ import { useStrings } from "../lib/language";
 export default function Login() {
   const strings = useStrings();
   const router = useRouter();
-  const { login, error, submitting } = useAuth();
+  const { login, error, submitting, signedOutElsewhere } = useAuth();
   // On this screen "unauthorized" can only mean a wrong code or PIN.
   const errorMessage =
     error == null
@@ -24,10 +24,24 @@ export default function Login() {
         ? strings.login.wrongCodeOrPin
         : errorText(strings, error, strings.common.loginFailed);
   const [pin, setPin] = useState("");
-  const code = useEnrollDraft((s) => s.badge);
-  const setCode = useEnrollDraft((s) => s.setBadge);
+  const code = useEnrollDraft((s) => s.code);
+  const setCode = useEnrollDraft((s) => s.setCode);
+  // The code is never shown: a scanned one is only confirmed, a typed one (by the admin) shows as dots.
+  const [typing, setTyping] = useState(false);
+  const scanned = !typing && ENROLL_CODE_RE.test(code);
 
-  const canSubmit = code.trim().length > 0 && /^\d{4}$/.test(pin) && !submitting;
+  const canSubmit = ENROLL_CODE_RE.test(code) && /^\d{4}$/.test(pin) && !submitting;
+
+  const handleScan = () => {
+    setTyping(false);
+    setCode("");
+    router.push("/enroll-scan");
+  };
+
+  const handleType = () => {
+    setCode("");
+    setTyping(true);
+  };
 
   const handleLogin = async () => {
     const ok = await login(code, pin);
@@ -67,27 +81,37 @@ export default function Login() {
       {/* Primary Scan Button at top of form */}
       <View style={styles.scanBtnWrap}>
         <AppButton
-          title={code ? strings.login.scanDifferent : strings.login.scanCode}
+          title={scanned ? strings.login.scanDifferent : strings.login.scanCode}
           icon={<Text style={styles.camIcon}>📷</Text>}
-          variant={code ? "secondary" : "primary"}
+          variant={scanned ? "secondary" : "primary"}
           size="lg"
-          onPress={() => router.push("/enroll-scan")}
+          onPress={handleScan}
         />
       </View>
 
-      {/* Fallback code input */}
-      <View style={styles.field}>
-        <Text style={styles.fieldLabel}>{strings.login.codeLabel}</Text>
-        <TextInput
-          value={code}
-          onChangeText={setCode}
-          placeholder={strings.login.codePlaceholder}
-          placeholderTextColor={styles.placeholder.color}
-          autoCapitalize="none"
-          autoCorrect={false}
-          style={[styles.input, styles.codeInput, !!code && styles.inputFilled]}
-        />
-      </View>
+      {scanned ? (
+        <Text style={styles.codeScanned} accessibilityRole="text">
+          {strings.login.codeScanned}
+        </Text>
+      ) : typing ? (
+        /* Camera not working: the admin types the code from their screen. Shown as dots, like the PIN. */
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>{strings.login.codeLabel}</Text>
+          <TextInput
+            value={code}
+            onChangeText={(t) => setCode(t.replace(/\D/g, "").slice(0, 6))}
+            placeholder="••••••"
+            placeholderTextColor={styles.placeholder.color}
+            keyboardType="number-pad"
+            secureTextEntry
+            maxLength={6}
+            autoFocus
+            style={[styles.input, styles.pinInput]}
+          />
+        </View>
+      ) : (
+        <AppButton title={strings.login.typeCode} variant="ghost" size="md" onPress={handleType} />
+      )}
 
       {/* PIN Input */}
       <View style={styles.field}>
@@ -107,6 +131,10 @@ export default function Login() {
       {errorMessage ? (
         <View style={styles.errorWrap}>
           <Banner kind="danger" text={errorMessage} />
+        </View>
+      ) : signedOutElsewhere ? (
+        <View style={styles.errorWrap}>
+          <Banner kind="warning" text={strings.login.signedOutElsewhere} />
         </View>
       ) : null}
     </Screen>
@@ -159,17 +187,18 @@ const styles = StyleSheet.create((theme) => ({
     color: theme.colors.text,
     minHeight: theme.touch.min,
   },
-  codeInput: {
-    ...theme.text.code,
+  codeScanned: {
+    ...theme.text.bodyMed,
+    color: theme.colors.success,
+    textAlign: "center",
+    minHeight: theme.touch.min,
+    textAlignVertical: "center",
   },
   pinInput: {
     ...theme.text.title,
     fontVariant: ["tabular-nums"],
     letterSpacing: 12,
     textAlign: "center",
-  },
-  inputFilled: {
-    borderColor: theme.colors.accent,
   },
   placeholder: {
     color: theme.colors.textFaint,

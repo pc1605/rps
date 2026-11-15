@@ -1,9 +1,6 @@
 "use client";
 
-import { ENROLL_PREFIX } from "@rps/shared";
-
-import { Check, Copy, Plus } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -20,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreateWorker } from "../hooks";
+import { EnrollmentCode } from "./enrollment-code";
 import type { Station } from "../types";
 
 export function CreateWorkerDialog() {
@@ -28,8 +26,7 @@ export function CreateWorkerDialog() {
   const [phone, setPhone] = useState("");
   const [station, setStation] = useState<Station | "">("");
   const [pin, setPin] = useState("");
-  const [createdBadge, setCreatedBadge] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
   const createWorker = useCreateWorker();
   const canSubmit = name.trim().length > 0 && !!station && /^\d{4}$/.test(pin) && !createWorker.isPending;
@@ -39,8 +36,7 @@ export function CreateWorkerDialog() {
     setPhone("");
     setStation("");
     setPin("");
-    setCreatedBadge(null);
-    setCopied(false);
+    setCreatedId(null);
   };
 
   const submit = async (e?: React.FormEvent) => {
@@ -53,23 +49,12 @@ export function CreateWorkerDialog() {
         station: station as Station,
         pin,
       });
-      setCreatedBadge(worker.badge_token ?? null);
+      setCreatedId(worker.id);
       toast.success(`${worker.name} added`);
     } catch (err) {
       toast.error("Couldn't add worker", {
         description: (err as Error).message,
       });
-    }
-  };
-
-  const copyBadge = async () => {
-    if (!createdBadge) return;
-    try {
-      await navigator.clipboard.writeText(createdBadge);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error("Couldn't copy — select the code and copy it manually");
     }
   };
 
@@ -87,12 +72,12 @@ export function CreateWorkerDialog() {
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
-        {!createdBadge ? (
+        {!createdId ? (
           <form onSubmit={submit} className="grid gap-4">
             <DialogHeader>
               <DialogTitle>Add worker</DialogTitle>
               <DialogDescription>
-                Create a worker and set their PIN. You’ll get an enrollment QR next.
+                Create a worker and set their PIN. You’ll set up their phone next.
               </DialogDescription>
             </DialogHeader>
 
@@ -166,40 +151,13 @@ export function CreateWorkerDialog() {
             <DialogHeader>
               <DialogTitle>{name} added</DialogTitle>
               <DialogDescription>
-                Enroll their phone now, or any time later from Workers → Enroll.
+                Set up their phone now — RPS Worker → Scan enrollment code → enter PIN — or any time later
+                from Workers → Set up phone.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-3 py-2">
-              <div className="flex justify-center rounded-lg border bg-white p-4">
-                <QRCodeSVG value={`${ENROLL_PREFIX}${createdBadge}`} size={180} level="M" />
-              </div>
-              <ol className="list-decimal space-y-1 pl-5 text-small text-muted-foreground">
-                <li>On their phone, open RPS Worker.</li>
-                <li>
-                  Tap <span className="font-medium text-foreground">Scan enrollment code</span> and point at
-                  this QR.
-                </li>
-                <li>Enter their PIN.</li>
-              </ol>
-              <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 p-3">
-                <div className="min-w-0">
-                  <div className="text-caption text-muted-foreground">
-                    Can’t scan? Share this code instead
-                  </div>
-                  <code className="font-mono text-small break-all">{createdBadge}</code>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={copyBadge}
-                  className="shrink-0"
-                  aria-label={copied ? "Copied" : "Copy enrollment code"}
-                >
-                  {copied ? <Check className="h-4 w-4 text-working" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
+            <div className="py-2">
+              <EnrollmentCode workerId={createdId} />
             </div>
 
             <DialogFooter>
