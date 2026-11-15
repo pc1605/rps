@@ -21,6 +21,7 @@ import (
 	"github.com/pc1605/rps/apps/backend/internal/factorytime"
 	"github.com/pc1605/rps/apps/backend/internal/files"
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
+	"github.com/pc1605/rps/apps/backend/internal/live"
 	"github.com/pc1605/rps/apps/backend/internal/materials"
 	"github.com/pc1605/rps/apps/backend/internal/reference"
 	"github.com/pc1605/rps/apps/backend/internal/report"
@@ -71,6 +72,11 @@ func main() {
 	api.Use(authSvc.Guard()) // default-deny: everything under /api/v1 requires auth
 	// unless listed in auth.PublicPaths or under /public/
 
+	// Live updates (RT1): every successful write tells connected clients "something changed".
+	liveHub := live.NewHub()
+	api.Use(liveHub.Middleware())
+	api.Get("/live", liveHub.Handler())
+
 	auth.RegisterRoutes(api, authSvc)
 	batch.RegisterRoutes(api, batchSvc, authSvc)
 	reference.RegisterRoutes(api, refSvc, authSvc.RequireRole("owner", "supervisor"))
@@ -80,7 +86,7 @@ func main() {
 	materials.RegisterRoutes(api, materialsSvc, authSvc.RequireRole("owner", "supervisor"))
 
 	// ───── Lifecycle ─────
-	runServer(app, cfg)
+	runServer(app, cfg, liveHub)
 }
 
 // newApp builds the Fiber app with all global middleware.
@@ -115,7 +121,7 @@ func newApp(cfg *config.Config) *fiber.App {
 }
 
 // runServer starts the server and handles graceful shutdown.
-func runServer(app *fiber.App, cfg *config.Config) {
+func runServer(app *fiber.App, cfg *config.Config, liveHub *live.Hub) {
 	go func() {
 		log.Info().Str("port", cfg.Port).Str("env", cfg.Env).Msg("✓ RPS backend listening")
 		if err := app.Listen(":" + cfg.Port); err != nil {
@@ -127,6 +133,7 @@ func runServer(app *fiber.App, cfg *config.Config) {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	log.Info().Msg("shutting down...")
+	liveHub.Close() // end the open live lines, or they would hold the shutdown until its timeout
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
