@@ -155,6 +155,34 @@ endpoint; no migration). A stitcher phone is enough; a cutter and a packer for i
    and total are 1 lower (and the home card too).
 10. [ ] **Light and dark.** Both themes: arrows, rows and the faded arrow are readable.
 
+## Live updates (RT1) — admin browser and real phones, run by the owner
+Automated: `go test ./internal/live` (hub; and the real stream over a socket: connect, a write sends "changed", reads /
+failed writes / `/auth/*` don't, shutdown ends the line). Postman can't hold a stream open, so there is no request for it.
+Quick look with curl (test backend): `curl -N -H "Authorization: Bearer $T" http://localhost:8082/api/v1/live` prints
+`: connected`, then `data: changed` whenever any write succeeds, and `: ping` every 25 s.
+Setup for the checks below: restart the backend (new endpoint); reload the admin; reload the phone app (JS only — no
+native rebuild). One admin browser, one stitcher phone, one packer or second stitcher phone. Tick each:
+1. [ ] **Admin follows a scan.** Admin on the batch page (units grid). Stitcher scans a mat → the mat turns stitched
+   and the count goes up within about a second, without touching the browser. Same on Batches (list) and the sidebar counts.
+2. [ ] **Admin pages that never refreshed before.** Reports → Workers open; a scan → that worker's count goes up by
+   itself. Workers list open in one browser; create a worker in another → it appears.
+3. [ ] **Phone follows the admin.** Stitcher phone on the queue. Admin assigns a batch to that stitcher → the batch
+   appears on the phone within about a second (no pull-to-refresh).
+4. [ ] **Phone follows a co-worker.** Two stitchers in the same batch, both in the scanner. A scans → B's pill
+   ("… · 5/10 batch") goes up within about a second without B scanning.
+5. [ ] **My work follows.** Home card and the work history (current month) go up right after the worker's own scan;
+   an admin "Undo last scan" lowers them within about a second.
+6. [ ] **App in the background.** Put the phone app in the background for a minute, make a change from the admin,
+   bring the app back → it shows the change at once.
+7. [ ] **Wi-Fi drop.** Turn the phone's Wi-Fi off for 30 s and on again → within about 10 s of being back it is
+   live again (repeat check 3). While off, the offline banner shows as before.
+8. [ ] **Server restart.** Restart the backend with the admin and a phone open → nothing breaks; within about 10 s
+   both are live again (repeat checks 1 and 3).
+9. [ ] **Hidden tab.** Open the admin in 8 tabs → every tab still loads (only the visible one holds a line). Switch
+   to another tab → it is up to date at once.
+10. [ ] **Through ngrok / the hotspot** (however the phones reach the backend): check 3 still works — a proxy that
+    buffers the stream would make changes arrive late (they would still arrive within a minute by the fallback).
+
 ## Admin browser checks (P1, 2 Nov 2026, rps_test)
 Checked in Chrome against the test backend: Spare mats → **Write off** dialog (opens, counts, writes off 1 → list updates),
 **Edit** (opens; only shown once nobody holds the batch), **Cancel batch** (warning: cutting "<name> is cutting it now — cuts

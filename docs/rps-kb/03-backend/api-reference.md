@@ -109,6 +109,12 @@ All routes above require an **admin** token (`owner`/`supervisor`); worker token
 | GET | `/worker/rework` | Stitcher rework queue: lists open rework items where `route = 'stitcher'` and `stitched_by = worker_id` |
 | POST | `/worker/units/scan` | `{unit_code}` → `ScanResult`. Marks stitched / packed, or repairs rework (`rework_fixed: true`). 404 unit_not_found · 409 wrong_phase / not_started / quota_reached / in_rework / written_off / spare / rework_pending_decision · 403 not_your_rework |
 
+## Live updates (any admin or worker token)
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/live` | **RT1 (D43)** server-sent event stream (`text/event-stream`), kept open. `: connected` once, then `data: changed` after every successful write anywhere under `/api/v1` (any non-GET request that answered 2xx, except `/auth/*`), and `: ping` every 25 s. A note carries no data — the client re-reads what it shows through the normal endpoints. Bursts are merged (at most one note waiting per client). Sent by `live.Hub.Middleware()` after the handler returns, i.e. after the commit. In-process hub: one backend instance only (see D43). 401 without a token |
+
 ## Scan endpoint behaviour by station
 - cutter → 409 wrong_phase (cutters don't scan).
 - stitcher on normal batch → marks `stitched_by/at`; last one → phase_completed.

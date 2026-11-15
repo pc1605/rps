@@ -32,6 +32,9 @@ Monorepo (pnpm workspace, hoisted node_modules):
 - SELECT columns and Scan targets must match 1:1 (most common bug here). Nullable columns → pointer fields.
 - Migrations: run from repo root: `set -a; source .env; set +a; migrate -path apps/backend/migrations -database "$DATABASE_URL" up`. Use the next free number. Enum names: `batch_phase`, `batch_status`, `unit_status`, `worker_station`, `car_size`, `material_unit`, `movement_kind`.
 - Seeds: run from repo root: `scripts/seed-dev.sh <db_name> [--force]` (database name required; `rps` requires `--force`). Chains `go run ./cmd/seed` → `seeds/01-catalog.sql` → `seeds/02-demo.sql` → `scripts/seed-uploads.sh`.
+- Live updates (D43): every successful non-GET under `/api/v1` already notifies clients (`internal/live` middleware) — don't
+  call the hub from handlers. No `WriteTimeout` / compression over `GET /live`. A change made outside a request (a job,
+  a script) must call `Hub.Notify()` itself.
 - Photos: signed URLs (`?exp=&sig=`), public file route verifies the signature. Never require auth headers on image URLs.
 
 ## Admin web rules
@@ -42,6 +45,8 @@ Monorepo (pnpm workspace, hoisted node_modules):
 - Forms: `<form onSubmit>`, `Label htmlFor` + `id`, explicit button `type`. Mutations: success + error toast. Destructive actions: `AlertDialog`.
 - Don't edit `components/ui/dialog.tsx` (contains the Radix nested-menu race fix). Combobox in dialog: `<Popover modal>`.
 - Images: `RemoteImage` (opacity fade, never `hidden` + `loading="lazy"`).
+- Data that follows the factory floor: add `...live(pollMs)` from `lib/live.tsx` to the query (pushed by the server, D43) —
+  never a bare `refetchInterval`. Reference / form data is not live.
 
 ## Mobile rules
 
@@ -55,6 +60,7 @@ Monorepo (pnpm workspace, hoisted node_modules):
   on the phone, not from `@rps/shared` labels or `ApiError.message` (those are English only) — use `errorText()` (`lib/errors.ts`).
 - Back arrows: `BackIcon` / `BackLabel` (`components/ui/BackIcon.tsx`), never a "←" or "‹" character in a text.
 - Feedback (haptic + sound) via `lib/feedback.ts`.
+- Queries that follow the floor use `...live(pollMs)` from `lib/live.tsx` (pushed by the server, D43), never a bare `refetchInterval`.
 
 ## Verify before saying "done" (paste the output)
 
