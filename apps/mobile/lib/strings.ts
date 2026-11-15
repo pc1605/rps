@@ -122,14 +122,16 @@ export const en = {
   login: {
     eyebrow: "AMBIKA · RIDDHI",
     title: "RPS Worker",
-    subtitle:
-      "Scan the enrollment QR from your admin, or type the code, then enter your PIN to set up this phone.",
+    subtitle: "Your admin sets up this phone. Scan the code on the admin's screen, then enter your PIN.",
     submit: "Set up this phone →",
     footnote: "One-time setup. You'll stay signed in on this phone.",
     scanCode: "Scan enrollment code",
     scanDifferent: "Scan a different code",
-    codeLabel: "Enrollment code",
-    codePlaceholder: "or type the code",
+    codeScanned: "Code scanned ✓",
+    typeCode: "Enter code by hand",
+    codeLabel: "Code — the admin types it",
+    signedOutElsewhere:
+      "This phone was signed out because you signed in on another phone. Ask your admin to set it up again.",
     pinLabel: "4-digit PIN",
     wrongCodeOrPin: "Wrong code or PIN",
   },

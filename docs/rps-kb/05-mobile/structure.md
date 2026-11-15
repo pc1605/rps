@@ -8,17 +8,18 @@ app/
   _layout.tsx            imports ../lib/unistyles FIRST; QueryProvider; <Stack headerShown=false>
   index.tsx              cold start: SecureStore token? → /home : /login
   login.tsx              scan button → code field (store-backed) → PIN → "Set up this phone"
-  enroll-scan.tsx        camera; accepts RPS-ENROLL:<badge>; writes useEnrollDraft.badge; router.back()
+  enroll-scan.tsx        camera; accepts RPS-ENROLL:<6 digits>; writes useEnrollDraft.code; router.back()
   home.tsx               header (station queue label, name, sign out); queue FlatList of BatchCard; pull-to-refresh; error state
   history.tsx            work history (M1): month row, month total, one row per worked day; opened from the My work card
   batch/[id].tsx         station-specific action card (cutter: Start / blocked / qty+Complete; stitcher/packer: Join / progress+Open scanner)
   scan/[batchId].tsx     CameraView scanner: local validation, scan lock, feedback flashes, progress pill, done screen
 components/MyWorkCard.tsx       home "My work" card (today / this week); tap → /history
 components/ui/           AppButton, BackIcon (the one back arrow, drawn — never type "←" / "‹" in a text; ForwardIcon = the same arrow mirrored), Banner, Card, Chip, Screen, Skeleton, Stat
+components/SessionGuard.tsx     signed out because the worker signed in on another phone → login screen (mounted in _layout)
 components/LanguagePicker.tsx   "English | हिन्दी" — on login (top) and in the home header
 features/auth/
   store.ts               zustand: worker, login(code,pin), restore() (/worker/me), logout(); token in SecureStore
-  enroll-draft.ts        zustand: badge scanned on enroll-scan, consumed by login (cleared after login)
+  enroll-draft.ts        zustand: the one-time code (scanned, or typed by the admin) until login consumes it; never shown
 features/batches/
   types.ts               Batch (queue payload), ScanResult
   api.ts                 myBatches, start, complete, scanUnit

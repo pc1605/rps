@@ -191,11 +191,14 @@ type WorkerClaims struct {
 	WorkerID uuid.UUID `json:"wid"`
 	Station  string    `json:"station"`
 	Type     string    `json:"typ"` // "worker"
+	// Session is the worker's session number when the token was issued. The Guard refuses a token
+	// whose number is behind workers.session_no — the worker has signed in on another phone since.
+	Session int `json:"sn"`
 	jwt.RegisteredClaims
 }
 
 // IssueWorkerToken creates a worker access token.
-func (s *Service) IssueWorkerToken(workerID uuid.UUID, station string) (*TokenPair, error) {
+func (s *Service) IssueWorkerToken(workerID uuid.UUID, station string, session int) (*TokenPair, error) {
 	now := time.Now()
 	workerTTL := 30 * 24 * time.Hour
 
@@ -203,6 +206,7 @@ func (s *Service) IssueWorkerToken(workerID uuid.UUID, station string) (*TokenPa
 		WorkerID: workerID,
 		Station:  station,
 		Type:     "worker",
+		Session:  session,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "rps",
 			Subject:   workerID.String(),
@@ -284,13 +288,4 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (*User, *Tok
 		return nil, nil, err
 	}
 	return &u, tokens, nil
-}
-
-func (s *Service) BadgeToken(ctx context.Context, id uuid.UUID) (string, error) {
-	var badge string
-	err := s.pool.QueryRow(ctx, `SELECT badge_token FROM workers WHERE id=$1 AND is_active`, id).Scan(&badge)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", ErrNotFound
-	}
-	return badge, err
 }

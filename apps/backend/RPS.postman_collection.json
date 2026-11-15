@@ -34,10 +34,6 @@
       "value": ""
     },
     {
-      "key": "badgeToken",
-      "value": ""
-    },
-    {
       "key": "workerToken",
       "value": ""
     },
@@ -50,23 +46,11 @@
       "value": ""
     },
     {
-      "key": "stitcherBadge",
-      "value": ""
-    },
-    {
       "key": "stitcherToken",
       "value": ""
     },
     {
-      "key": "stitcher2Badge",
-      "value": ""
-    },
-    {
       "key": "stitcher2Token",
-      "value": ""
-    },
-    {
-      "key": "packerBadge",
       "value": ""
     },
     {
@@ -242,10 +226,6 @@
       "value": ""
     },
     {
-      "key": "u1Badge",
-      "value": ""
-    },
-    {
       "key": "u1Pin",
       "value": ""
     },
@@ -310,15 +290,7 @@
       "value": ""
     },
     {
-      "key": "u3bCutterBadge",
-      "value": ""
-    },
-    {
       "key": "u3bCutterToken",
-      "value": ""
-    },
-    {
-      "key": "u3bStitcherBadge",
       "value": ""
     },
     {
@@ -579,16 +551,13 @@
                   "if (responseData.id) {",
                   "    pm.collectionVariables.set('workerId', responseData.id);",
                   "}",
-                  "if (responseData.badge_token) {",
-                  "    pm.collectionVariables.set('badgeToken', responseData.badge_token);",
-                  "    console.log('\u2713 workerId + badgeToken saved. Badge:', responseData.badge_token);",
-                  "}",
                   "",
                   "pm.test('Response status code is 201', function () {",
                   "    pm.response.to.have.status(201);",
                   "});",
-                  "pm.test('Badge token is returned once at creation', function () {",
-                  "    pm.expect(responseData.badge_token).to.be.a('string').and.to.have.length.above(0);",
+                  "pm.test('No enrollment secret in the response (codes come from POST /workers/:id/enrollment)', function () {",
+                  "    pm.expect(responseData.badge_token).to.be.undefined;",
+                  "    pm.expect(responseData.code).to.be.undefined;",
                   "});",
                   "pm.test('Worker has the requested station', function () {",
                   "    pm.expect(responseData.station).to.eql('cutter');",
@@ -749,14 +718,233 @@
           }
         }
       ],
-      "description": "Admin CRUD for workers. Prereqs: Auth -> Login. Run top to bottom to create sample workers and store badges."
+      "description": "Admin CRUD for workers. Prereqs: Auth -> Login. Run top to bottom to create sample workers."
     },
     {
       "name": "Worker Auth",
       "item": [
         {
-          "name": "Worker Login (badge + PIN)",
+          "name": "Worker Login (enrollment code + PIN)",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The admin makes a one-time enrollment code for this worker (valid once, 10 minutes).",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/workers/' + pm.collectionVariables.get('workerId') + '/enrollment', method: 'POST',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken') } }, (err, res) => {",
+                  "  pm.collectionVariables.set('enrollCode', res.json().data.code);",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data || pm.response.json();",
+                  "",
+                  "if (responseData.tokens) {",
+                  "    pm.collectionVariables.set('workerToken', responseData.tokens.access_token);",
+                  "    console.log('\u2713 workerToken saved');",
+                  "}",
+                  "",
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Worker object is present', function () {",
+                  "    pm.expect(responseData.worker).to.be.an('object');",
+                  "});",
+                  "pm.test('Worker access token issued', function () {",
+                  "    pm.expect(responseData.tokens.access_token).to.be.a('string').and.to.have.length.above(0);",
+                  "});",
+                  "pm.collectionVariables.set('usedEnrollCode', pm.collectionVariables.get('enrollCode'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{enrollCode}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"tablet-cutting-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Worker Login (wrong PIN)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The admin makes a one-time enrollment code for this worker (valid once, 10 minutes).",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/workers/' + pm.collectionVariables.get('workerId') + '/enrollment', method: 'POST',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken') } }, (err, res) => {",
+                  "  pm.collectionVariables.set('enrollCode', res.json().data.code);",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Error message does not reveal whether the code exists', function () {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.expect(responseData.error).to.eql('invalid code or pin');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{enrollCode}}\",\n  \"pin\": \"9999\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Worker Login (unknown code)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Same vague error for an unknown code (no info leak)', function () {",
+                  "    const responseData = pm.response.json();",
+                  "    pm.expect(responseData.error).to.eql('invalid code or pin');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"not-a-code\",\n  \"pin\": \"1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Enrollment code works only once",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('A used code is refused (401)', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().error).to.eql('invalid code or pin');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{usedEnrollCode}}\",\n  \"pin\": \"1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/worker/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "worker",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Worker signs in on a second phone",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('firstPhoneToken', pm.collectionVariables.get('workerToken'));",
+                  "// The admin makes a one-time enrollment code for this worker (valid once, 10 minutes).",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/workers/' + pm.collectionVariables.get('workerId') + '/enrollment', method: 'POST',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken') } }, (err, res) => {",
+                  "  pm.collectionVariables.set('enrollCode', res.json().data.code);",
+                  "});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -792,7 +980,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"badge_token\": \"{{badgeToken}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"tablet-cutting-01\"\n}"
+              "raw": "{\n  \"code\": \"{{enrollCode}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"tablet-cutting-01\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/worker/login",
@@ -807,87 +995,37 @@
           }
         },
         {
-          "name": "Worker Login (wrong PIN)",
+          "name": "First phone is signed out (one phone per worker)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Response status code is 401', function () {",
+                  "pm.test('Old token refused with signed_in_elsewhere (401)', function () {",
                   "    pm.response.to.have.status(401);",
-                  "});",
-                  "pm.test('Error message does not reveal whether badge exists', function () {",
-                  "    const responseData = pm.response.json();",
-                  "    pm.expect(responseData.error).to.eql('invalid badge or pin');",
+                  "    pm.expect(pm.response.json().code).to.eql('signed_in_elsewhere');",
                   "});"
                 ]
               }
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
+                "key": "Authorization",
+                "value": "Bearer {{firstPhoneToken}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"badge_token\": \"{{badgeToken}}\",\n  \"pin\": \"9999\"\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/worker/login",
+              "raw": "{{baseUrl}}/worker/me",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "worker",
-                "login"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Worker Login (unknown badge)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Response status code is 401', function () {",
-                  "    pm.response.to.have.status(401);",
-                  "});",
-                  "pm.test('Same vague error for unknown badge (no info leak)', function () {",
-                  "    const responseData = pm.response.json();",
-                  "    pm.expect(responseData.error).to.eql('invalid badge or pin');",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"badge_token\": \"BADGE-does-not-exist\",\n  \"pin\": \"1234\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/worker/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "worker",
-                "login"
+                "me"
               ]
             }
           }
@@ -1001,14 +1139,14 @@
           }
         },
         {
-          "name": "Worker cannot fetch an enrollment badge (G4)",
+          "name": "Worker cannot make an enrollment code (G4)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('Worker token rejected on GET /workers/{{workerId}}/enrollment (403)', function () {",
+                  "pm.test('Worker token rejected on POST /workers/:id/enrollment (403)', function () {",
                   "    pm.response.to.have.status(403);",
                   "});"
                 ]
@@ -1016,7 +1154,7 @@
             }
           ],
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
               {
                 "key": "Authorization",
@@ -1079,7 +1217,7 @@
           }
         }
       ],
-      "description": "Worker station login with badge token and PIN. Prereqs: Workers (Admin) -> Create Worker. Run top to bottom to set workerToken."
+      "description": "Worker login with a one-time enrollment code (made by the admin) and PIN; one phone per worker. Prereqs: Workers (Admin) -> Create Worker. Run top to bottom to set workerToken."
     },
     {
       "name": "Cars & Reference",
@@ -2368,11 +2506,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "const responseData = pm.response.json().data || pm.response.json();",
-                  "if (responseData.badge_token) { pm.collectionVariables.set('stitcherBadge', responseData.badge_token); }",
                   "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
-                  "if (responseData.id) { pm.collectionVariables.set('stitcherId', responseData.id); }",
-                  "if (responseData.id) { pm.collectionVariables.set('stitcherId', responseData.id); }",
-                  "if (responseData.id) { pm.collectionVariables.set('stitcherId', responseData.id); }",
                   "if (responseData.id) { pm.collectionVariables.set('stitcherId', responseData.id); }"
                 ]
               }
@@ -2414,11 +2548,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "const responseData = pm.response.json().data || pm.response.json();",
-                  "if (responseData.badge_token) { pm.collectionVariables.set('stitcher2Badge', responseData.badge_token); }",
                   "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
-                  "if (responseData.id) { pm.collectionVariables.set('stitcher2Id', responseData.id); }",
-                  "if (responseData.id) { pm.collectionVariables.set('stitcher2Id', responseData.id); }",
-                  "if (responseData.id) { pm.collectionVariables.set('stitcher2Id', responseData.id); }",
                   "if (responseData.id) { pm.collectionVariables.set('stitcher2Id', responseData.id); }"
                 ]
               }
@@ -2460,11 +2590,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "const responseData = pm.response.json().data || pm.response.json();",
-                  "if (responseData.badge_token) { pm.collectionVariables.set('packerBadge', responseData.badge_token); }",
                   "pm.test('Response status code is 201', function () { pm.response.to.have.status(201); });",
-                  "if (responseData.id) { pm.collectionVariables.set('packerId', responseData.id); }",
-                  "if (responseData.id) { pm.collectionVariables.set('packerId', responseData.id); }",
-                  "if (responseData.id) { pm.collectionVariables.set('packerId', responseData.id); }",
                   "if (responseData.id) { pm.collectionVariables.set('packerId', responseData.id); }"
                 ]
               }
@@ -2501,6 +2627,19 @@
           "name": "Setup: Login Stitcher A",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The admin makes a one-time enrollment code for this worker (valid once, 10 minutes).",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/workers/' + pm.collectionVariables.get('stitcherId') + '/enrollment', method: 'POST',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken') } }, (err, res) => {",
+                  "  pm.collectionVariables.set('enrollCode', res.json().data.code);",
+                  "});"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -2522,7 +2661,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"badge_token\": \"{{stitcherBadge}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"pm-stitcher-a\"\n}"
+              "raw": "{\n  \"code\": \"{{enrollCode}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"pm-stitcher-a\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/worker/login",
@@ -2539,6 +2678,19 @@
         {
           "name": "Setup: Login Stitcher B",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The admin makes a one-time enrollment code for this worker (valid once, 10 minutes).",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/workers/' + pm.collectionVariables.get('stitcher2Id') + '/enrollment', method: 'POST',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken') } }, (err, res) => {",
+                  "  pm.collectionVariables.set('enrollCode', res.json().data.code);",
+                  "});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -2561,7 +2713,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"badge_token\": \"{{stitcher2Badge}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"pm-stitcher-b\"\n}"
+              "raw": "{\n  \"code\": \"{{enrollCode}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"pm-stitcher-b\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/worker/login",
@@ -2578,6 +2730,19 @@
         {
           "name": "Setup: Login Packer",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The admin makes a one-time enrollment code for this worker (valid once, 10 minutes).",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/workers/' + pm.collectionVariables.get('packerId') + '/enrollment', method: 'POST',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken') } }, (err, res) => {",
+                  "  pm.collectionVariables.set('enrollCode', res.json().data.code);",
+                  "});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -2600,7 +2765,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"badge_token\": \"{{packerBadge}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"pm-packer\"\n}"
+              "raw": "{\n  \"code\": \"{{enrollCode}}\",\n  \"pin\": \"1234\",\n  \"device_id\": \"pm-packer\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/worker/login",
@@ -7332,9 +7497,9 @@
                   "const admin = { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken') };",
                   "pm.sendRequest({ url: base + '/workers', header: admin }, (e1, r1) => {",
                   "  const cutter = r1.json().data.find((w) => w.station === 'cutter' && w.is_active);",
-                  "  pm.sendRequest({ url: base + '/workers/' + cutter.id + '/enrollment', header: admin }, (e2, r2) => {",
+                  "  pm.sendRequest({ url: base + '/workers/' + cutter.id + '/enrollment', method: 'POST', header: admin }, (e2, r2) => {",
                   "    pm.sendRequest({ url: base + '/worker/login', method: 'POST', header: { 'Content-Type': 'application/json' },",
-                  "      body: { mode: 'raw', raw: JSON.stringify({ badge_token: r2.json().data.badge_token, pin: '1234' }) } }, (e3, r3) => {",
+                  "      body: { mode: 'raw', raw: JSON.stringify({ code: r2.json().data.code, pin: '1234' }) } }, (e3, r3) => {",
                   "      pm.collectionVariables.set('matCutterToken', r3.json().data.tokens.access_token);",
                   "    });",
                   "  });",
@@ -8092,8 +8257,7 @@
                 "exec": [
                   "pm.test('status 201', () => pm.response.to.have.status(201));",
                   "const d = pm.response.json().data;",
-                  "pm.collectionVariables.set('u1WorkerId', d.id);",
-                  "pm.collectionVariables.set('u1Badge', d.badge_token);"
+                  "pm.collectionVariables.set('u1WorkerId', d.id);"
                 ]
               }
             }
@@ -8256,6 +8420,19 @@
           "name": "Worker logs in with the new PIN",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The admin makes a one-time enrollment code for this worker (valid once, 10 minutes).",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/workers/' + pm.collectionVariables.get('u1WorkerId') + '/enrollment', method: 'POST',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken') } }, (err, res) => {",
+                  "  pm.collectionVariables.set('enrollCode', res.json().data.code);",
+                  "});"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -8278,7 +8455,7 @@
             "url": "{{baseUrl}}/worker/login",
             "body": {
               "mode": "raw",
-              "raw": "{\"badge_token\": \"{{u1Badge}}\", \"pin\": \"{{u1Pin}}\"}"
+              "raw": "{\"code\": \"{{enrollCode}}\", \"pin\": \"{{u1Pin}}\"}"
             }
           }
         },
@@ -9950,7 +10127,7 @@
                 "exec": [
                   "pm.test('status 201', () => pm.response.to.have.status(201));",
                   "const d = pm.response.json().data;",
-                  "pm.collectionVariables.set('u3bCutterBadge', d.badge_token);"
+                  "pm.collectionVariables.set('u3bCutterId', d.id);"
                 ]
               }
             }
@@ -9983,6 +10160,19 @@
           "name": "Setup \u00b7 cutter login",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The admin makes a one-time enrollment code for this worker (valid once, 10 minutes).",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/workers/' + pm.collectionVariables.get('u3bCutterId') + '/enrollment', method: 'POST',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken') } }, (err, res) => {",
+                  "  pm.collectionVariables.set('enrollCode', res.json().data.code);",
+                  "});"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -10005,7 +10195,7 @@
             "url": "{{baseUrl}}/worker/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"badge_token\": \"{{u3bCutterBadge}}\",\n  \"pin\": \"4321\"\n}",
+              "raw": "{\n  \"code\": \"{{enrollCode}}\",\n  \"pin\": \"4321\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -10024,7 +10214,7 @@
                 "exec": [
                   "pm.test('status 201', () => pm.response.to.have.status(201));",
                   "const d = pm.response.json().data;",
-                  "pm.collectionVariables.set('u3bStitcherBadge', d.badge_token); pm.collectionVariables.set('u3bStitcherId', d.id);"
+                  "pm.collectionVariables.set('u3bStitcherId', d.id);"
                 ]
               }
             }
@@ -10057,6 +10247,19 @@
           "name": "Setup \u00b7 stitcher login",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// The admin makes a one-time enrollment code for this worker (valid once, 10 minutes).",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/workers/' + pm.collectionVariables.get('u3bStitcherId') + '/enrollment', method: 'POST',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken') } }, (err, res) => {",
+                  "  pm.collectionVariables.set('enrollCode', res.json().data.code);",
+                  "});"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
@@ -10079,7 +10282,7 @@
             "url": "{{baseUrl}}/worker/login",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"badge_token\": \"{{u3bStitcherBadge}}\",\n  \"pin\": \"4321\"\n}",
+              "raw": "{\n  \"code\": \"{{enrollCode}}\",\n  \"pin\": \"4321\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

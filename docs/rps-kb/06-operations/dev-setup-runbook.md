@@ -49,7 +49,7 @@ See `02-domain/data-model.md` → Reset. Demo data: create an empty DB (`rps_dem
 ## Handy DB queries
 ```bash
 P='docker exec -it rps_postgres psql -U rps_dev -d rps -c'
-$P "SELECT name, station, badge_token FROM workers WHERE is_active;"                       # badges for enrollment
+$P "SELECT name, station, session_no, enroll_expires_at FROM workers WHERE is_active;"     # sign-ins / a waiting enrollment code
 $P "SELECT batch_code, current_phase, status FROM batches ORDER BY created_at DESC LIMIT 10;"
 $P "SELECT w.name, pl.phase, pl.quantity_completed FROM phase_logs pl JOIN workers w ON w.id=pl.worker_id ORDER BY pl.started_at;"
 $P "SELECT bu.unit_code, ws.name stitched_by, wp.name packed_by FROM batch_units bu LEFT JOIN workers ws ON ws.id=bu.stitched_by LEFT JOIN workers wp ON wp.id=bu.packed_by ORDER BY bu.unit_code;"

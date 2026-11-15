@@ -17,6 +17,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useUnistyles } from "react-native-unistyles";
+import { SessionGuard } from "../components/SessionGuard";
 import { LiveUpdates } from "../lib/live";
 import { QueryProvider } from "../lib/query-provider";
 
@@ -41,6 +42,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <QueryProvider>
         <LiveUpdates />
+        <SessionGuard />
         {/* One status bar for the app: dark icons on light theme, light icons on dark. */}
         <StatusBar style={theme.isDark ? "light" : "dark"} />
         <Stack

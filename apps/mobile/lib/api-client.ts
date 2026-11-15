@@ -61,11 +61,21 @@ http.interceptors.request.use(async (config) => {
   return config;
 });
 
+/**
+ * One phone per worker: when the worker signs in on another phone, the server refuses this phone's
+ * token with `signed_in_elsewhere`. The auth store registers what to do then (sign out here).
+ */
+let onSignedInElsewhere: (() => void) | null = null;
+export const setSignedInElsewhereHandler = (handler: () => void) => {
+  onSignedInElsewhere = handler;
+};
+
 http.interceptors.response.use(
   (res) => res,
   (error) => {
     const status = error.response?.status ?? 0;
     const body = error.response?.data;
+    if (status === 401 && body?.code === "signed_in_elsewhere") onSignedInElsewhere?.();
     return Promise.reject(
       new ApiError(
         status,

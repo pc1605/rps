@@ -14,7 +14,7 @@ The QR payload is the bare unit code; the mobile scanner validates `^B-\d{4}-\d{
 | Taffeta (unit, fabric, stitched into mat) | Admin clicks **Assign & print labels** (batch entering stitching) | `assign-stitchers-card.tsx` → `save(true)` |
 | Taffeta reprint | Any time | Batch detail → "Labels PDF" |
 | Packing sticker (unit, paper, on polybag) | Batch enters packing → Batches → Packing view → **Print stickers** (→ "Reprint" once `stickers_printed_at` set via `POST /batches/:id/stickers-printed`) | `batch-list.tsx` `stickerColumn` |
-| Enrollment QR | Create-worker success screen; Workers list → QR icon | `qrcode.react`, payload `RPS-ENROLL:<badge_token>` |
+| Enrollment QR | Create-worker success screen; Workers list → QR icon | `qrcode.react`, payload `RPS-ENROLL:<one-time 6-digit code>` |
 
 Owner-friendly rule: **each stage's labels print when work arrives at that stage.**
 

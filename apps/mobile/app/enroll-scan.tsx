@@ -11,14 +11,14 @@ import { AppButton } from "../components/ui/AppButton";
 import { BackIcon, BackLabel } from "../components/ui/BackIcon";
 import { Screen } from "../components/ui/Screen";
 import { Skeleton } from "../components/ui/Skeleton";
-import { useEnrollDraft } from "../features/auth/enroll-draft";
+import { ENROLL_CODE_RE, useEnrollDraft } from "../features/auth/enroll-draft";
 import { useStrings } from "../lib/language";
 
 export default function EnrollScan() {
   const strings = useStrings();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const setBadge = useEnrollDraft((s) => s.setBadge);
+  const setCode = useEnrollDraft((s) => s.setCode);
   const [permission, requestPermission] = useCameraPermissions();
   const [error, setError] = useState<string | null>(null);
   const lock = useRef(false);
@@ -55,9 +55,10 @@ export default function EnrollScan() {
   const onScanned = ({ data }: { data: string }) => {
     if (lock.current) return;
     lock.current = true;
-    const code = data.trim();
+    const scanned = data.trim();
+    const code = scanned.startsWith(ENROLL_PREFIX) ? scanned.slice(ENROLL_PREFIX.length) : "";
 
-    if (!code.startsWith(ENROLL_PREFIX)) {
+    if (!ENROLL_CODE_RE.test(code)) {
       const msg = strings.enroll.notEnrollCode;
       setError(msg);
       try {
@@ -80,7 +81,7 @@ export default function EnrollScan() {
       // Ignore haptics failure
     }
 
-    setBadge(code.slice(ENROLL_PREFIX.length));
+    setCode(code);
     router.back();
   };
 

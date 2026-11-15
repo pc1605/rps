@@ -9,7 +9,7 @@ app/(dashboard)/
   batches/[id]/page.tsx        detail: header (phase/ready badge, Labels PDF), ShortCutPanel, AssignStitchersCard, BatchTimeline, units grid
   cars/page.tsx                flat items catalog list, ItemDialog, brand & product line filters
   stock/page.tsx               Raw (rolls) / Finished tabs
-  workers/page.tsx             WorkerList (+ enrollment QR per row), CreateWorkerDialog
+  workers/page.tsx             WorkerList (+ "Set up phone" per row), CreateWorkerDialog
   reports/page.tsx             RangePicker presets + WorkerReportTable + summary strip
 components/layout/
   sidebar.tsx                  nav items; renders <BatchSubNav/> under Batches (inside <Suspense>)
@@ -30,7 +30,7 @@ features/
       short-cut-panel.tsx      split / reduce / recut resolution actions for short cuts
       batch-timeline.tsx       vertical rail of phase_logs entries (multi-entry per phase supported)
       assign-stitchers-card.tsx  checkbox per active stitcher + quota inputs + Split evenly + Save / Assign & print
-  workers/                     types, api, hooks, components (worker-list, create-worker-dialog w/ QR, enrollment-qr-dialog)
+  workers/                     types, api, hooks, components (worker-list, create-worker-dialog, enrollment-qr-dialog, enrollment-code = the one-time code block)
   stock/, reports/             same pattern
 lib/api-client.ts              axios; single-flight 401 → /auth/refresh; base URL from env
 ```

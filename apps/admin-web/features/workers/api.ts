@@ -1,4 +1,10 @@
-import type { WorkerDetail, WorkerHistoryPage, WorkerSummary, WorkerUpdateInput } from "@rps/shared";
+import type {
+  EnrollmentCode,
+  WorkerDetail,
+  WorkerHistoryPage,
+  WorkerSummary,
+  WorkerUpdateInput,
+} from "@rps/shared";
 import { http } from "@/lib/api-client";
 import type { CreateWorkerInput, Worker } from "./types";
 
@@ -17,4 +23,6 @@ export const workerApi = {
   /** Returns the new PIN once (random when `pin` is omitted). */
   resetPin: async (id: string, pin?: string): Promise<{ pin: string }> =>
     d(await http.post(`/workers/${id}/reset-pin`, pin ? { pin } : {})),
+  /** Makes a fresh one-time code for setting up the worker's phone; any earlier code stops working. */
+  enrollment: async (id: string): Promise<EnrollmentCode> => d(await http.post(`/workers/${id}/enrollment`)),
 };

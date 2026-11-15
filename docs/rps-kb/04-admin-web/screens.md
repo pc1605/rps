@@ -50,8 +50,9 @@ Catalog management of flat car items.
 - **Add / Edit Item dialog** (`ItemDialog`): Brand select or inline new brand creation, car model name, size class, pieces per set (default 4), product line select, barcode input with "Generate on save" wand helper. Programmatic `<Label htmlFor="…">` and `<form onSubmit>` handling.
 
 ## Workers
-Table: name · station badge · active · last login · **QR icon** → EnrollmentQrDialog (fetches `/workers/:id/enrollment`, shows
-`RPS-ENROLL:` QR + copyable text). Create dialog → success view shows QR + text code + instructions.
+Table: name · station badge · active · last login · **QR icon** → "Set up phone" dialog (`EnrollmentQrDialog` →
+`EnrollmentCode`): every opening calls `POST /workers/:id/enrollment` and shows the one-time code as QR + 6 digits, the
+time left (10 min), and "New code". Nothing to copy — the code works once. Create dialog → second step is the same block.
 
 ## Stock — `/stock`
 Finished goods (packed mats by item), with a pointer to Materials. The old Raw-material/Rolls tab was removed in C2.
@@ -84,7 +85,7 @@ detail crumbs go back to the batch's own phase view.
 - **Worker — `/workers/[id]`**: Now (open claims with my_done/target, assigned-not-joined, open rework) · Output
   (range picker; today / 7 days / range / per active hour; stitchers rework caused (rate, reasons) + fixed (median
   turnaround); packers sent-to-rework; per-day bars in the station colour) · Work history (load more). Actions:
-  Enrollment QR, **Hand over open work** (U3, stitchers with open work: one person takes all by default, per-batch
+  Set up phone, **Hand over open work** (U3, stitchers with open work: one person takes all by default, per-batch
   override, one `POST /stitching/hand-over`), Reset PIN (shown once), Edit (name, phone, station), Deactivate/Reactivate (AlertDialog; refused
   while the worker has open work).
 - **Unit — `/units/[code]`**: journey — batch created → cut (who, pieces, roll) → stitched → rework rounds (reasons,

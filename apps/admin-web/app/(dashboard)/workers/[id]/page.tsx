@@ -79,7 +79,7 @@ export default function WorkerPage({ params }: { params: Promise<{ id: string }>
               workerName={w.name}
               trigger={
                 <Button type="button" variant="outline">
-                  <QrCode className="h-4 w-4" aria-hidden /> Enrollment QR
+                  <QrCode className="h-4 w-4" aria-hidden /> Set up phone
                 </Button>
               }
             />

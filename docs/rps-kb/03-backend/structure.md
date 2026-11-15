@@ -17,7 +17,7 @@ internal/
                           ScanUnit, SetAssignments, MarkStickersPrinted; nextPhase; error sentinels
     handler.go            Fiber handlers + transitionResponse(err) mapping
     routes.go             RegisterRoutes(api, svc, authSvc)
-  worker/                 CRUD, worker login (badge+PIN → 30d token), BadgeToken (enrollment re-show)
+  worker/                 CRUD, one-time enrollment codes (NewEnrollmentCode), worker login (code + PIN → 30d token, one phone per worker)
   reference/              GET car-models, rolls
   stock/                  rolls (create/patch/list, is_low at 10 m), finished goods aggregation
   report/                 WorkerProductivity aggregation (see api-reference.md)

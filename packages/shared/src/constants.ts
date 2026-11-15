@@ -32,7 +32,7 @@ export function factoryDay(d: Date = new Date()): string {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
-/** Enrollment QR payload prefix: RPS-ENROLL:<badge_token>. */
+/** Enrollment QR payload prefix: RPS-ENROLL:<one-time 6-digit code>. */
 export const ENROLL_PREFIX = "RPS-ENROLL:";
 
 export const PHASE_FOR_STATION: Record<Station, Phase> = {
@@ -140,4 +140,5 @@ export type ApiErrorCode =
   | "no_claim"
   | "cannot_undo"
   | "unauthorized"
+  | "signed_in_elsewhere"
   | "internal";

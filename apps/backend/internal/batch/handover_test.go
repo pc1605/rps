@@ -34,9 +34,9 @@ func TestHandOver(t *testing.T) {
 		t.Helper()
 		var id uuid.UUID
 		if err := pool.QueryRow(ctx, `
-			INSERT INTO workers (name, station, badge_token, pin_hash, created_by)
-			VALUES ($1, 'stitcher', $2, $3, $4) RETURNING id`,
-			fmt.Sprintf("%s %d", name, sfx), fmt.Sprintf("t-hand-%s-%d", name, sfx),
+			INSERT INTO workers (name, station, pin_hash, created_by)
+			VALUES ($1, 'stitcher', $2, $3) RETURNING id`,
+			fmt.Sprintf("%s %d", name, sfx),
 			"$2a$10$"+strings.Repeat("x", 53), adminID).Scan(&id); err != nil {
 			t.Fatal(err)
 		}

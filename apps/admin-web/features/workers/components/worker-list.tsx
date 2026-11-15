@@ -74,7 +74,7 @@ const columns: Column<Worker>[] = [
   },
   {
     key: "enroll",
-    header: "Enroll",
+    header: "Phone",
     align: "right",
     width: "w-[70px]",
     cell: (w) => <EnrollmentQrDialog workerId={w.id} workerName={w.name} />,

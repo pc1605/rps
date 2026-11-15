@@ -1,9 +1,14 @@
 # Worker Flows (as built)
 
-## Enrollment (once per phone)
-Login → **📷 Scan enrollment code** → camera → admin's QR (`RPS-ENROLL:<badge>`) → back with code filled (accent border)
-→ or type the code → PIN (4 digits) → **Set up this phone →** → `/home`. Draft cleared after success.
-Wrong QR (a mat label, a URL) → red "Not an enrollment code — ask your admin for the QR".
+## Enrollment (in front of the admin — D44)
+Login → **📷 Scan enrollment code** → camera → the QR on the admin's screen (`RPS-ENROLL:` + 6 digits, valid once,
+10 minutes) → back; the screen says **Code scanned ✓** and never shows the code → PIN (4 digits) →
+**Set up this phone →** → `/home`. Draft cleared after success.
+Camera not working → **Enter code by hand** → a field that shows dots; the admin types the digits from their screen.
+Wrong QR (a mat label, a URL, an old badge QR) → red "Not an enrollment code — ask your admin for the QR".
+Wrong / used / expired code or wrong PIN → "Wrong code or PIN" (scan again; the admin makes a new code if needed).
+**One phone per worker**: when the worker signs in on another phone, this phone's next request is refused
+(`signed_in_elsewhere`); it signs out, drops to the login screen and says why (`components/SessionGuard.tsx`).
 
 ## Cutter
 Home = cutting queue (open; blocked/dimmed cards for batches another cutter has in progress).

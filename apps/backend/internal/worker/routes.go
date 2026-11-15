@@ -9,7 +9,7 @@ import (
 func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 	h := NewHandler(svc, authSvc)
 
-	// Public — worker login (badge + PIN)
+	// Public — worker login (one-time enrollment code + PIN)
 	api.Post("/worker/login", h.Login)
 
 	// Worker-authenticated
@@ -28,4 +28,5 @@ func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 	api.Get("/workers/:id/history", admin, h.History)
 	api.Patch("/workers/:id", admin, h.Update)
 	api.Post("/workers/:id/reset-pin", admin, h.ResetPIN)
+	api.Post("/workers/:id/enrollment", admin, h.NewEnrollment)
 }

@@ -47,9 +47,9 @@ func newU3(t *testing.T, tag string) *u3fx {
 		t.Helper()
 		var id uuid.UUID
 		if err := f.pool.QueryRow(f.ctx, `
-			INSERT INTO workers (name, station, badge_token, pin_hash, created_by)
-			VALUES ($1, 'stitcher', $2, $3, $4) RETURNING id`,
-			fmt.Sprintf("%s %s %d", tag, name, sfx), fmt.Sprintf("t-%s-%s-%d", tag, name, sfx),
+			INSERT INTO workers (name, station, pin_hash, created_by)
+			VALUES ($1, 'stitcher', $2, $3) RETURNING id`,
+			fmt.Sprintf("%s %s %d", tag, name, sfx),
 			"$2a$10$"+strings.Repeat("x", 53), f.admin).Scan(&id); err != nil {
 			t.Fatal(err)
 		}
