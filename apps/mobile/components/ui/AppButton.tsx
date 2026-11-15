@@ -13,6 +13,8 @@ type Props = {
   accessibilityLabel?: string;
 };
 
+const HIT_SLOP = 6;
+
 export function AppButton({
   title,
   onPress,
@@ -27,6 +29,12 @@ export function AppButton({
   const off = disabled || loading;
   return (
     <Pressable
+      // A new Pressable each time the button switches on or off: on the phone, a tap on a button that
+      // had just come back on (Join batch → Open scanner) was sometimes ignored.
+      key={off ? "off" : "on"}
+      // A tap that lands just outside the button still counts. Half the gap between stacked buttons,
+      // so two neighbours never claim the same spot.
+      hitSlop={HIT_SLOP}
       onPress={onPress}
       disabled={off}
       accessibilityRole={accessibilityRole}
