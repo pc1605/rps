@@ -7,12 +7,13 @@ import type {
   ShortReason,
 } from "@rps/shared";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { live } from "@/lib/live";
 import { batchApi } from "./api";
 import type { AssignmentInput, CreateBatchInput, Phase } from "./types";
 
 // Live-ish data: everything the floor changes gets an interval.
-const LIVE = { refetchInterval: 10_000, refetchOnWindowFocus: true } as const;
-const LIVE_FAST = { refetchInterval: 5_000, refetchOnWindowFocus: true } as const;
+const LIVE = { ...live(10_000), refetchOnWindowFocus: true };
+const LIVE_FAST = { ...live(5_000), refetchOnWindowFocus: true };
 
 /** A page of the batch list (U2: server-side filters, sort, paging). */
 export const useBatchPage = (params: BatchListParams) =>

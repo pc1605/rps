@@ -6,11 +6,12 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { live } from "@/lib/live";
 import { workerApi } from "./api";
 import type { CreateWorkerInput } from "./types";
 
 export function useWorkers() {
-  return useQuery({ queryKey: ["workers"], queryFn: workerApi.list });
+  return useQuery({ queryKey: ["workers"], queryFn: workerApi.list, ...live() });
 }
 
 export function useCreateWorker() {
@@ -26,7 +27,7 @@ export const useWorker = (id: string) =>
   useQuery({
     queryKey: ["worker", id],
     queryFn: () => workerApi.detail(id),
-    refetchInterval: 10_000,
+    ...live(10_000),
     refetchOnWindowFocus: true,
   });
 
@@ -35,6 +36,7 @@ export const useWorkerSummary = (id: string, from: string, to: string) =>
     queryKey: ["worker-summary", id, from, to],
     queryFn: () => workerApi.summary(id, from, to),
     placeholderData: keepPreviousData,
+    ...live(),
   });
 
 export const useWorkerHistory = (id: string) =>
@@ -43,6 +45,7 @@ export const useWorkerHistory = (id: string) =>
     queryFn: ({ pageParam }) => workerApi.history(id, pageParam),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.next_cursor,
+    ...live(),
   });
 
 export function useUpdateWorker(id: string) {

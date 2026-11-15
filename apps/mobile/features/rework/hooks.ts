@@ -1,5 +1,6 @@
 import type { ReworkReason } from "@rps/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { live } from "../../lib/live";
 import { useAuth } from "../auth/store";
 import { reworkApi } from "./api";
 
@@ -11,7 +12,7 @@ export function useMyRework() {
     queryKey: ["my-rework"],
     queryFn: reworkApi.listMyRework,
     enabled: isStitcher,
-    refetchInterval: 15_000,
+    ...live(15_000),
   });
 }
 

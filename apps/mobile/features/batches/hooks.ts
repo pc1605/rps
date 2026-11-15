@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { live } from "../../lib/live";
 import { batchApi } from "./api";
 
 export function useMyBatches() {
   return useQuery({
     queryKey: ["my-batches"],
     queryFn: batchApi.myBatches,
-    refetchInterval: 15_000,
+    ...live(15_000),
   });
 }
 

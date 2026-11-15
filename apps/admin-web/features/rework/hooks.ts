@@ -1,8 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ReworkDecision, ReworkEntry } from "@rps/shared";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { live } from "@/lib/live";
 import { type ListReworkParams, reworkApi } from "./api";
 
-const LIVE = { refetchInterval: 10_000, refetchOnWindowFocus: true } as const;
+const LIVE = { ...live(10_000), refetchOnWindowFocus: true };
 
 export function useReworkQueue(params?: ListReworkParams) {
   return useQuery({
