@@ -767,3 +767,18 @@ today's row is marked with "today" (line 60). A day row reads weekday + date: "M
 
 236. Couldn't load your work. Check connection and retry.  
    **आपका काम नहीं खुला। इंटरनेट देखें और फिर कोशिश करें।**
+
+## Packer queue — mats out for rework
+
+Shown to packers on the queue card and the batch screen when mats of the batch are in rework (lines 237–238 sit on
+one line: "1 in rework · 0 left to pack"). Line 239 is the chip on a batch where everything left is in rework.
+
+237. 1 in rework  
+   **1 रीवर्क में**
+
+238. 0 left to pack  
+   **0 पैक करना बाकी**  
+   ❓ पैक करना बाकी, or "पैक होने बाकी"
+
+239. Waiting for rework  
+   **रीवर्क का इंतज़ार**

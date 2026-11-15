@@ -12,6 +12,7 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { Stat } from "../../components/ui/Stat";
 import { useAuth } from "../../features/auth/store";
 import { useCompleteBatch, useMyBatches, useReleaseBatch, useStartBatch } from "../../features/batches/hooks";
+import { packingRework } from "../../features/batches/packing";
 import { errorText } from "../../lib/errors";
 import { useStrings } from "../../lib/language";
 import { useOnline } from "../../lib/use-online";
@@ -71,6 +72,8 @@ export default function BatchAction() {
   const qtyNum = parseInt(quantity, 10);
   const qtyValid = !Number.isNaN(qtyNum) && qtyNum >= 1 && qtyNum <= remaining;
   const sizeText = strings.size[batch.size_class] ?? batch.size_class;
+  // Packer: mats out for rework stay in the batch — say so, so "3 / 4 packed" is not read as work left.
+  const rework = worker?.station === "packer" ? packingRework(batch) : null;
 
   const onError = (e: unknown) => {
     Alert.alert(strings.common.couldntDoThat, errorText(strings, e, strings.common.somethingWrong));
@@ -221,6 +224,13 @@ export default function BatchAction() {
             big
           />
         )}
+        {rework && rework.inRework > 0 ? (
+          <Text style={styles.reworkLine}>
+            {strings.home.inRework(rework.inRework)}
+            {" · "}
+            {strings.home.leftToPack(rework.left)}
+          </Text>
+        ) : null}
       </Card>
 
       {/* Info Rows */}
@@ -358,6 +368,11 @@ const styles = StyleSheet.create((theme) => ({
   statCard: {
     marginTop: theme.spacing.xs,
     padding: theme.spacing.lg,
+    gap: theme.spacing.xs,
+  },
+  reworkLine: {
+    ...theme.text.small,
+    color: theme.colors.textMuted,
   },
   infoSection: {
     gap: theme.spacing.sm,

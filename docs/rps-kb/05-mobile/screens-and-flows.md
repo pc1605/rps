@@ -65,6 +65,13 @@ Home = packing queue (open unless assigned). Join → `PACKED n / m` → **Open 
    found" on the next back). The rework "fixed" screen does the same.
 7. Torch toggle in the top bar. Back returns to the batch screen; progress is server-side, so leaving mid-way loses nothing.
 
+## Packer queue — mats out for rework
+A mat sent to rework stays in its batch, so the batch stays in the packer's queue until the mat is fixed and packed (or
+written off). To stop "3 / 4 packed" reading as work left: the card and the batch screen add "1 in rework · 0 left to
+pack" (`rework_open`; left = total − packed − written off − in rework). When nothing is left but rework, the card is
+dimmed, gets a "Waiting for rework" chip and sorts to the bottom of the queue (`features/batches/packing.ts`; phone
+side only, the server order is unchanged). It returns to normal by itself when the mat comes back (live, RT1).
+
 ## Known UX edges
 - A co-worker's scan finishing the phase while you're still in the scanner → your next scan gets a red "not at your station's phase". Acceptable; could be softened by checking `wrong_phase` and showing "Batch moved on".
 - ~~Progress pill lags for other workers' scans~~ — follows them live since RT1 (within about a second; 15 s if the live line is down).
