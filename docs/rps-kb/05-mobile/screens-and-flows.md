@@ -60,6 +60,9 @@ Home = packing queue (open unless assigned). Join → `PACKED n / m` → **Open 
 6. `phase_completed` / `batch_completed` → done screen: stitcher "Stitching complete — batch sent to packing"; packer
    "<batch> complete — all N mats packed and sent to the stockyard". Batch code is frozen in state at mount because the
    batch leaves the queue when the phase advances.
+   "Back to my queue" (and the back gesture on the done screen) returns to the queue screen that is already open
+   (`router.dismissTo("/home")`) — never `replace`, which left the finished batch's screen underneath ("batch not
+   found" on the next back). The rework "fixed" screen does the same.
 7. Torch toggle in the top bar. Back returns to the batch screen; progress is server-side, so leaving mid-way loses nothing.
 
 ## Known UX edges

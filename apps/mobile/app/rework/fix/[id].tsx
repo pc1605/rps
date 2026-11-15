@@ -55,13 +55,18 @@ export default function ReworkFixScreen() {
     requestAnimationFrame(() => router.back());
   }, [router]);
 
+  // The mat is fixed and has left the rework list: the rework screen under this one has nothing to
+  // show, so go back to the queue that is already open instead of opening a second one on top.
+  const goHome = useCallback(() => router.dismissTo("/home"), [router]);
+
   useEffect(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
-      handleBack();
+      if (fixed) goHome();
+      else handleBack();
       return true;
     });
     return () => sub.remove();
-  }, [handleBack]);
+  }, [fixed, goHome, handleBack]);
 
   const flashAndUnlock = useCallback(
     (fb: FlashState) => {
@@ -192,12 +197,7 @@ export default function ReworkFixScreen() {
   // --- success screen ---
   if (fixed) {
     return (
-      <Screen
-        centered
-        footer={
-          <AppButton title={strings.rework.backToQueue} size="lg" onPress={() => router.replace("/home")} />
-        }
-      >
+      <Screen centered footer={<AppButton title={strings.rework.backToQueue} size="lg" onPress={goHome} />}>
         <View style={styles.doneContent}>
           <Text style={styles.doneEmoji}>✓</Text>
           <Text style={styles.doneTitle}>{strings.rework.fixedTitle}</Text>
