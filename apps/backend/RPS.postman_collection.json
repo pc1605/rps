@@ -14,10 +14,6 @@
       "value": ""
     },
     {
-      "key": "refreshToken",
-      "value": ""
-    },
-    {
       "key": "batchId",
       "value": ""
     },
@@ -382,7 +378,6 @@
                   "",
                   "if (responseData.tokens) {",
                   "    pm.collectionVariables.set('accessToken', responseData.tokens.access_token);",
-                  "    pm.collectionVariables.set('refreshToken', responseData.tokens.refresh_token);",
                   "    console.log('\u2713 tokens saved');",
                   "}",
                   "",
@@ -394,6 +389,16 @@
                   "});",
                   "pm.test('User object is present', function () {",
                   "    pm.expect(responseData.user).to.be.an('object');",
+                  "});",
+                  "pm.test('Refresh token is not in the body', function () {",
+                  "    pm.expect(responseData.tokens).to.not.have.property('refresh_token');",
+                  "});",
+                  "pm.test('Refresh token comes as an httpOnly cookie for the auth routes only', function () {",
+                  "    const setCookie = pm.response.headers.get('Set-Cookie') || '';",
+                  "    pm.expect(setCookie).to.match(/^rps_refresh=[^;]+;/);",
+                  "    pm.expect(setCookie).to.include('HttpOnly');",
+                  "    pm.expect(setCookie).to.include('SameSite=Strict');",
+                  "    pm.expect(setCookie).to.include('path=/api/v1/auth');",
                   "});"
                 ]
               }
@@ -531,9 +536,114 @@
               ]
             }
           }
+        },
+        {
+          "name": "Refresh (cookie from login)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const responseData = pm.response.json().data;",
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('A new access token, and no refresh token in the body', function () {",
+                  "    pm.expect(responseData.tokens.access_token).to.be.a('string').and.to.have.length.above(0);",
+                  "    pm.expect(responseData.tokens).to.not.have.property('refresh_token');",
+                  "    pm.collectionVariables.set('accessToken', responseData.tokens.access_token);",
+                  "});",
+                  "pm.test('The cookie is renewed', function () {",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie') || '').to.match(/^rps_refresh=[^;]+;/);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout (removes the cookie)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('The refresh cookie is emptied', function () {",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie') || '').to.match(/^rps_refresh=;/);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Refresh after logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test('Error code is unauthorized', function () {",
+                  "    pm.expect(pm.response.json().code).to.eql('unauthorized');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            }
+          }
         }
       ],
-      "description": "Admin user authentication (login, me, token refresh). Run top to bottom to set accessToken."
+      "description": "Admin user authentication (login, me, refresh by httpOnly cookie, logout). Run top to bottom to set accessToken."
     },
     {
       "name": "Workers (Admin)",

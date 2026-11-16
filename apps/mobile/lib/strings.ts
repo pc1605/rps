@@ -35,6 +35,7 @@ export type PhoneErrorCode =
       | "spare"
       | "no_claim"
       | "unauthorized"
+      | "too_many_attempts"
       | "internal"
     >
   | "bad_request"
@@ -89,6 +90,7 @@ export const en = {
     written_off: "Written off — keep it aside",
     spare: "Spare stock — keep it aside",
     no_claim: "Nobody is cutting this batch right now",
+    too_many_attempts: "Too many wrong tries — wait 15 minutes, then try again",
   } satisfies Record<PhoneErrorCode, string>,
   batch: {
     notFoundTitle: "Batch not found",

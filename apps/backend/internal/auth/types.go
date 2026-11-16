@@ -29,8 +29,9 @@ type LoginInput struct {
 }
 
 type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken string `json:"access_token"`
+	// RefreshToken is empty for admins: theirs travels only in the httpOnly refresh cookie.
+	RefreshToken string `json:"refresh_token,omitempty"`
 	ExpiresIn    int    `json:"expires_in"`
 }
 

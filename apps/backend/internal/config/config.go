@@ -19,13 +19,20 @@ type Config struct {
 	JWTRefreshSecret string
 	JWTAccessTTL     time.Duration
 	JWTRefreshTTL    time.Duration
-	QRHashSecret     string
 	CORSOrigins      []string
 	UploadDir        string
 	FileURLSecret    string
 	FileURLTTL       time.Duration
 	FactoryTZ        string // IANA zone for calendar days (reports, "today")
+	// LoginMaxFailures is how many failed logins one address may make per httpx.LoginWindow.
+	LoginMaxFailures int
+	// ProxyHeader names the request header that carries the real client address when the backend
+	// runs behind a host's proxy (set at deploy; empty = use the connection's address).
+	ProxyHeader string
 }
+
+// IsProduction reports whether this is the deployed system (ENV=production).
+func (c *Config) IsProduction() bool { return c.Env == "production" }
 
 func Load() (*Config, error) {
 	// Load .env from repo root (two levels up from apps/backend)
@@ -40,11 +47,16 @@ func Load() (*Config, error) {
 		DatabaseURL:      mustEnv("DATABASE_URL"),
 		JWTAccessSecret:  mustEnv("JWT_ACCESS_SECRET"),
 		JWTRefreshSecret: mustEnv("JWT_REFRESH_SECRET"),
-		QRHashSecret:     getEnv("QR_HASH_SECRET", ""),
 		CORSOrigins:      strings.Split(getEnv("CORS_ORIGINS", "http://localhost:3000"), ","),
 		UploadDir:        getEnv("UPLOAD_DIR", "./uploads"),
 		FileURLSecret:    getEnv("FILE_URL_SECRET", ""),
 		FactoryTZ:        getEnv("FACTORY_TZ", "Asia/Kolkata"),
+		ProxyHeader:      getEnv("PROXY_HEADER", ""),
+	}
+
+	c.LoginMaxFailures, _ = strconv.Atoi(getEnv("LOGIN_MAX_FAILURES", "10"))
+	if c.LoginMaxFailures <= 0 {
+		c.LoginMaxFailures = 10
 	}
 
 	accessMin, _ := strconv.Atoi(getEnv("JWT_ACCESS_TTL_MINUTES", "15"))
@@ -66,15 +78,35 @@ func Load() (*Config, error) {
 	}
 
 	if c.FileURLSecret == "" {
-		if c.Env == "production" {
+		if c.IsProduction() {
 			return nil, fmt.Errorf("FILE_URL_SECRET is required in production")
 		}
 		// Dev default derived from JWT_ACCESS_SECRET
 		c.FileURLSecret = c.JWTAccessSecret
 	}
 
+	// The development secrets are the placeholders in .env.example — public in the repository.
+	// Production must run on its own freshly generated values.
+	if c.IsProduction() {
+		for name, value := range map[string]string{
+			"JWT_ACCESS_SECRET":  c.JWTAccessSecret,
+			"JWT_REFRESH_SECRET": c.JWTRefreshSecret,
+			"FILE_URL_SECRET":    c.FileURLSecret,
+		} {
+			if strings.HasPrefix(value, devSecretPrefix) {
+				return nil, fmt.Errorf("%s still has its development value — generate a new one for production", name)
+			}
+		}
+		if c.JWTAccessSecret == c.JWTRefreshSecret {
+			return nil, fmt.Errorf("JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must differ in production")
+		}
+	}
+
 	return c, nil
 }
+
+// devSecretPrefix starts every placeholder secret in .env.example.
+const devSecretPrefix = "change-me"
 
 func getEnv(key, fallback string) string {
 	if v, ok := os.LookupEnv(key); ok && v != "" {

@@ -271,3 +271,22 @@ minutes — plus the worker's PIN. The permanent badge code is gone (`workers.ba
   next sign-in. Phones need the new app build to sign in again (the old build sends the old field).
 - Supersedes the "one-time, expiring enrollment codes" item in the hardening gaps of `auth-model.md`.
 
+### D45 — Login limit, refresh token in a cookie, no development secrets in production (E1, Nov 2026)
+**Decision**: The parts of the security slice that don't depend on the hosting platform.
+- **Login limit**: 10 failed tries per address per 15 minutes on `/auth/login` and on `/worker/login` (separate
+  counts), then 429 `too_many_attempts`. Per address, not per account: a per-account lock would let anyone who knows
+  the owner's email lock the owner out. In memory, no new dependency — one backend instance is already a rule (D43).
+  The real client address behind a proxy comes from `PROXY_HEADER`, chosen at deploy.
+- **Refresh cookie**: the admin's refresh token moves from `localStorage` to an httpOnly, `SameSite=Strict` cookie
+  limited to `/api/v1/auth`; `/auth/refresh` accepts only the cookie; new `POST /auth/logout`. The 15-minute access
+  token stays in `localStorage` (the live line and every API call send it as a header).
+  **Consequence for E2**: the admin web and the API need names under one domain (`app.` / `api.`). Free host names
+  on two platforms (`*.vercel.app` + `*.up.railway.app`) will not work — browsers treat them as different sites, and
+  the alternative (`SameSite=None`) is blocked as a third-party cookie by Safari and Firefox anyway.
+- **Seed**: `SEED_ADMIN_PASSWORD` sets the owner's password; `ENV=production` refuses the demo one.
+- **Secrets**: `.env` was never committed, but development runs on the `.env.example` placeholders, which are public.
+  Production refuses any `change-me…` secret. `QR_HASH_SECRET` (never used) removed.
+**Not done here**: taking back single refresh tokens (needs a table; not needed for two admins), the deploy itself.
+**Status**: Built. Checked: Go tests (limit, cookie, seed password, production secrets), Postman 326 requests / 552
+assertions, and the admin web in headless Chrome on rps_test — login, silent refresh after the access token ran out,
+sign-out; the cookie is never visible to page scripts.

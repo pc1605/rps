@@ -5,21 +5,22 @@ if (!API_URL) throw new Error("NEXT_PUBLIC_API_URL is not set — check apps/adm
 
 export const apiOrigin = API_URL.replace(/\/api\/v1\/?$/, "");
 // ───────────────────────── Token storage ─────────────────────────
+// Only the short-lived access token is kept here. The refresh token lives in an httpOnly cookie
+// the server sets on login — page scripts (and so an injected script) can never read it.
 const ACCESS_KEY = "rps_access";
-const REFRESH_KEY = "rps_refresh";
+const OLD_REFRESH_KEY = "rps_refresh"; // where the refresh token was kept before the cookie
 
 export const tokenStore = {
   access: (): string | null => (typeof window === "undefined" ? null : localStorage.getItem(ACCESS_KEY)),
-  refresh: (): string | null => (typeof window === "undefined" ? null : localStorage.getItem(REFRESH_KEY)),
-  set: (access: string, refresh?: string) => {
+  set: (access: string) => {
     if (typeof window === "undefined") return;
     localStorage.setItem(ACCESS_KEY, access);
-    if (refresh) localStorage.setItem(REFRESH_KEY, refresh);
+    localStorage.removeItem(OLD_REFRESH_KEY);
   },
   clear: () => {
     if (typeof window === "undefined") return;
     localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(OLD_REFRESH_KEY);
   },
 };
 
@@ -61,16 +62,14 @@ function onRefreshed(token: string | null) {
 }
 
 // Bare axios (no interceptors) to avoid an infinite refresh loop.
+// `withCredentials` makes the browser send the refresh cookie (and store the renewed one).
 async function refreshAccessToken(): Promise<string | null> {
-  const refresh = tokenStore.refresh();
-  if (!refresh) return null;
   try {
-    const res = await axios.post(`${API_URL}/auth/refresh`, { refresh_token: refresh });
+    const res = await axios.post(`${API_URL}/auth/refresh`, null, { withCredentials: true });
     const data = res.data?.data ?? res.data;
-    const newAccess: string = data.tokens?.access_token ?? data.access_token;
-    const newRefresh: string | undefined = data.tokens?.refresh_token ?? data.refresh_token;
+    const newAccess: string | undefined = data.tokens?.access_token;
     if (newAccess) {
-      tokenStore.set(newAccess, newRefresh);
+      tokenStore.set(newAccess);
       return newAccess;
     }
     return null;
@@ -86,8 +85,9 @@ http.interceptors.response.use(
     const original = error.config as InternalAxiosRequestConfig & { _retried?: boolean };
     const status = error.response?.status ?? 0;
 
-    // Attempt one transparent refresh on 401
-    if (status === 401 && original && !original._retried) {
+    // Attempt one transparent refresh on 401 — not for the auth calls themselves: a wrong
+    // password is a 401 too, and must not be answered by reviving an older session.
+    if (status === 401 && original && !original._retried && !original.url?.startsWith("/auth/")) {
       original._retried = true;
 
       if (isRefreshing) {

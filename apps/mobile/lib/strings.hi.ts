@@ -48,6 +48,7 @@ export const hi: Strings = {
     written_off: "यह मैट रद्द है — अलग रखें",
     spare: "स्पेयर माल — अलग रखें",
     no_claim: "इस बैच को अभी कोई नहीं काट रहा",
+    too_many_attempts: "बहुत बार गलत कोशिश हुई — 15 मिनट रुकें, फिर कोशिश करें",
   },
   batch: {
     notFoundTitle: "बैच नहीं मिला",

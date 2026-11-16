@@ -32,6 +32,8 @@ mapping: `handler.go` (`transitionResponse` for start/complete; dedicated switch
 Worker login always returns the vague `invalid code or pin` (401) whether the code exists or not — intentional.
 `signed_in_elsewhere` (401): the worker signed in on another phone since this token was issued (one phone per worker,
 D44) — the phone signs itself out and shows the login screen.
+`too_many_attempts` (429, with `Retry-After` seconds): 10 failed logins from one address within 15 minutes, on
+`/auth/login` or `/worker/login` (E1, `httpx.LoginLimiter`). A correct login is refused too until the window ends.
 
 Mobile mapping: green ok · amber `already_done` · blue `quota_reached` · red everything else (scanner flashes);
 `Alert` dialogs on the batch screen for start/complete errors.
