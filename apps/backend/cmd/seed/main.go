@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -9,6 +10,28 @@ import (
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// demoAdminPassword is the owner's password on development and test databases. It is public
+// (docs, Postman), so a production seed must bring its own in SEED_ADMIN_PASSWORD.
+const (
+	demoAdminPassword    = "admin123"
+	minAdminPasswordSize = 12
+)
+
+// adminPassword picks the owner's password: SEED_ADMIN_PASSWORD when set, else the demo one —
+// which production refuses. fromEnv tells the caller not to print it.
+func adminPassword(fromEnvValue, env string) (password string, fromEnv bool, err error) {
+	if fromEnvValue != "" {
+		if len(fromEnvValue) < minAdminPasswordSize || fromEnvValue == demoAdminPassword {
+			return "", false, fmt.Errorf("SEED_ADMIN_PASSWORD must be at least %d characters", minAdminPasswordSize)
+		}
+		return fromEnvValue, true, nil
+	}
+	if env == "production" {
+		return "", false, errors.New("ENV=production: set SEED_ADMIN_PASSWORD — refusing to seed the demo password")
+	}
+	return demoAdminPassword, false, nil
+}
 
 func main() {
 	_ = godotenv.Load("../../.env")
@@ -28,7 +51,12 @@ func main() {
 	ctx := context.Background()
 
 	// ───── Owner account ─────
-	hash, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+	password, fromEnv, err := adminPassword(os.Getenv("SEED_ADMIN_PASSWORD"), os.Getenv("ENV"))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		panic(err)
 	}
@@ -40,7 +68,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("✓ owner seeded — owner@ambika.local / admin123")
+	if fromEnv {
+		fmt.Println("✓ owner seeded — owner@ambika.local / password from SEED_ADMIN_PASSWORD")
+	} else {
+		fmt.Println("✓ owner seeded — owner@ambika.local / " + demoAdminPassword + " (demo password, development only)")
+	}
 
 	// ───── Car brands + models ─────
 	// Upsert brands, capture ids, then upsert their models.

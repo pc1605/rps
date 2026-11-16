@@ -15,7 +15,8 @@ import (
 var PublicPaths = map[string]bool{
 	"POST /api/v1/auth/login":   true, // admin login
 	"POST /api/v1/worker/login": true, // worker one-time enrollment code + PIN login
-	"POST /api/v1/auth/refresh": true, // refresh token
+	"POST /api/v1/auth/refresh": true, // admin refresh — proven by the httpOnly refresh cookie
+	"POST /api/v1/auth/logout":  true, // clears the refresh cookie
 }
 
 // Guard is the global default-deny auth middleware.

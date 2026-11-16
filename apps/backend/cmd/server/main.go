@@ -77,7 +77,11 @@ func main() {
 	api.Use(liveHub.Middleware())
 	api.Get("/live", liveHub.Handler())
 
-	auth.RegisterRoutes(api, authSvc)
+	// Login limit (E1): failed tries per address, counted separately for admins and workers.
+	api.Post("/auth/login", httpx.LoginLimiter(cfg.LoginMaxFailures))
+	api.Post("/worker/login", httpx.LoginLimiter(cfg.LoginMaxFailures))
+
+	auth.RegisterRoutes(api, authSvc, cfg.IsProduction())
 	batch.RegisterRoutes(api, batchSvc, authSvc)
 	reference.RegisterRoutes(api, refSvc, authSvc.RequireRole("owner", "supervisor"))
 	worker.RegisterRoutes(api, workerSvc, authSvc)
@@ -95,6 +99,9 @@ func newApp(cfg *config.Config) *fiber.App {
 		AppName:               "RPS Backend v0.1",
 		DisableStartupMessage: true,
 		BodyLimit:             20 * 1024 * 1024,
+		// Behind a host's proxy the real client address is in a header (PROXY_HEADER); c.IP() reads it.
+		ProxyHeader:        cfg.ProxyHeader,
+		EnableIPValidation: cfg.ProxyHeader != "",
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			log.Error().Err(err).Str("path", c.Path()).Msg("request error")
 			return httpx.Internal(c, "something went wrong")
@@ -109,6 +116,8 @@ func newApp(cfg *config.Config) *fiber.App {
 		AllowOrigins: joinOrigins(cfg.CORSOrigins),
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 		AllowMethods: "GET, POST, PATCH, DELETE, OPTIONS,PUT",
+		// The admin web sends the refresh cookie to /auth/* from its own origin.
+		AllowCredentials: true,
 	}))
 
 	// Health check — outside /api/v1 on purpose, so Railway can probe
