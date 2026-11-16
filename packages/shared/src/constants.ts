@@ -141,4 +141,5 @@ export type ApiErrorCode =
   | "cannot_undo"
   | "unauthorized"
   | "signed_in_elsewhere"
+  | "too_many_attempts"
   | "internal";
