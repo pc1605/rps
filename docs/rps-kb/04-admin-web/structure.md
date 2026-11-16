@@ -32,7 +32,7 @@ features/
       assign-stitchers-card.tsx  checkbox per active stitcher + quota inputs + Split evenly + Save / Assign & print
   workers/                     types, api, hooks, components (worker-list, create-worker-dialog, enrollment-qr-dialog, enrollment-code = the one-time code block)
   stock/, reports/             same pattern
-lib/api-client.ts              axios; single-flight 401 → /auth/refresh; base URL from env
+lib/api-client.ts              axios; single-flight 401 → /auth/refresh (httpOnly cookie, E1); base URL from env
 ```
 
 ## Data flow

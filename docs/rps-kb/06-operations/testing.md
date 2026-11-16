@@ -32,11 +32,16 @@ working directory, so a run from `apps/backend` fails 24 assertions):
 ```bash
 npx --no-install newman run apps/backend/RPS.postman_collection.json -e apps/backend/RPS-test.postman_environment.json
 ```
-Expected: 0 failed requests, 0 failed assertions (Nov 2026: 323 requests, 543 assertions). It can be re-run on the
+Expected: 0 failed requests, 0 failed assertions (Nov 2026: 326 requests, 552 assertions). It can be re-run on the
 same rps_test without resetting it. Add `--folder "<name>"` (repeatable) to run part of it. In the Postman app, set
 Settings → General → Working directory to the repo root for the photo upload. Scripts read `baseUrl` with
 `pm.variables.get` (environment wins), never `pm.collectionVariables.get` (that's the :8080 default); `Health` derives
 the server root from `baseUrl`.
+
+Login limit (E1): one run makes 1 failed admin login and 3 failed worker logins; the limit is 10 per 15 minutes per
+route. From the 4th run within 15 minutes the logins answer 429 and the run fails — restart the test backend (the
+counters are in memory) or start it with `LOGIN_MAX_FAILURES=1000`. The `Auth` folder also checks the refresh cookie:
+newman keeps cookies between requests, so `Refresh` works with no body.
 
 Variables: `baseUrl` (localhost:8080/api/v1), `accessToken`, `workerToken` (cutter), `stitcherToken`, `stitcher2Token`,
 `packerToken`, `enrollCode` (set by each login's pre-request script), `batchId`, `workerBatchId`, `scanBatchId/Code`, `stockRollId`, `reportFrom/To`.

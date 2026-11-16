@@ -37,8 +37,10 @@ Kept for history.
 - Scan idempotency doubles as wage-fraud protection — mention in demo.
 
 ## Slice E — Hardening + Deploy
-- §3 workers: `is_active` check per request; one-time expiring enrollment codes (same endpoint); login rate-limit; admin PIN reset UI.
-- §4 admin: refresh token in httpOnly cookie; rotate all secrets (dev `.env` is in git history); `SEED_ADMIN_PASSWORD` env.
+- §3 workers: `is_active` check per request ✅ (U1); one-time expiring enrollment codes ✅ (D44); login rate-limit ✅ (E1, D45); admin PIN reset UI ✅ (U1).
+- §4 admin: refresh token in httpOnly cookie ✅; `SEED_ADMIN_PASSWORD` env ✅; production refuses the development secrets ✅
+  (all E1, D45). Left for the deploy itself: generate the new secrets, set `PROXY_HEADER`, put the admin web and the
+  API on one site (`01-architecture/auth-model.md`).
 - Deploy: Railway (API + Postgres, healthz check), Vercel (admin), EAS Build (keystore) + EAS Update (OTA). API URL → domain.
 - Pilot week on real phones on the factory network; validate taffeta/sticker scan quality once a printer exists.
 

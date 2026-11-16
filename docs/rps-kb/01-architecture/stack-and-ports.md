@@ -14,7 +14,8 @@ Android package id: `com.pc165.rpsworker`. App name "RPS Worker", slug/scheme `r
 
 ## Credentials (dev)
 - Postgres: user `rps_dev`, password `rps_dev_password`, db `rps`.
-- Admin seed user: `owner@ambika.local` / `admin123` (created by `go run ./cmd/seed` in backend).
+- Admin seed user: `owner@ambika.local` / `admin123` (created by `go run ./cmd/seed` in backend). Development only:
+  with `SEED_ADMIN_PASSWORD` set the seed uses that instead, and with `ENV=production` it requires it.
 - All test workers were created with PIN **1234**. Demo seed worker `Suresh` badge `DEMO-SURESH-001` (PIN = Ramesh's hash copy).
 
 ## Environment files
@@ -24,7 +25,8 @@ Android package id: `com.pc165.rpsworker`. App name "RPS Worker", slug/scheme `r
   - LAN (emulator + phones on same WiFi): `http://192.168.1.9:8080/...` (DHCP — may change)
   - Laptop hotspot (stable): `http://10.42.0.1:8080/...`
   - ngrok (phones anywhere): `https://<domain>.ngrok-free.dev/api/v1` — needs `ngrok-skip-browser-warning` header (already added in api-client)
-- Secrets note: early `.env` values are in git history → rotate everything at first deploy (§4 hardening).
+- Secrets note: the development secrets are the public placeholders from `.env.example` → generate new ones for the
+  first deploy; the backend refuses the placeholders when `ENV=production` (see `auth-model.md` → Secrets).
 
 ## Monorepo tooling
 pnpm workspace with **hoisted** node_modules — required by Expo/Metro. Both settings must exist:

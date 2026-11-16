@@ -795,3 +795,6 @@ one line: "1 in rework · 0 left to pack"). Line 239 is the chip on a batch wher
    **आपने दूसरे फ़ोन में लॉगिन किया, इसलिए यह फ़ोन बंद हो गया। इसे फिर चालू करने के लिए एडमिन से कहें।**  
    ❓ बंद हो गया, or "लॉग आउट हो गया"
 
+242. Too many wrong tries — wait 15 minutes, then try again  
+   **बहुत बार गलत कोशिश हुई — 15 मिनट रुकें, फिर कोशिश करें**  
+   (login, after 10 wrong codes or PINs from one place — E1)

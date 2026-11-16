@@ -7,8 +7,9 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | Method | Path | Body → Response |
 |---|---|---|
 | GET | `/healthz` (root, not under /api/v1) | `{"status":"ok"}` |
-| POST | `/auth/login` | `{email,password}` → `{user, tokens{access_token, refresh_token}}` |
-| POST | `/auth/refresh` | `{refresh_token}` → tokens |
+| POST | `/auth/login` | `{email,password}` → `{user, tokens{access_token, expires_in}}` + `Set-Cookie: rps_refresh` (httpOnly, path `/api/v1/auth`). 10 failed tries per address per 15 min, then 429 `too_many_attempts` (E1) |
+| POST | `/auth/refresh` | no body — reads the `rps_refresh` cookie → `{user, tokens{access_token, expires_in}}` + renewed cookie. 401 without / with a bad cookie |
+| POST | `/auth/logout` | public — removes the `rps_refresh` cookie → `{signed_out: true}` |
 | POST | `/worker/login` | `{code, pin, device_id?}` → `{worker, tokens{access_token}}` (30d). `code` = one-time enrollment code (D44): used up on success, dead after 5 wrong PINs; signing in signs out the worker's other phone. Always 401 `invalid code or pin` on failure |
 | GET | `/files/rework/:name?exp=<unix>&sig=<hmac>` | Public signed URL for rework photos. Validates HMAC-SHA256 signature against `FILE_URL_SECRET`. 403 `invalid_signature` if expired or tampered |
 

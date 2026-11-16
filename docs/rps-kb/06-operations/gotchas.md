@@ -42,5 +42,11 @@
 - Phone: the stream uses `expo/fetch` (React Native's own `fetch` cannot stream). Admin: a hidden tab has no line.
 
 ## Auth / product
+- **429 `too_many_attempts` on login** = 10 failed tries from that address in 15 minutes (E1). Wait, or restart the
+  backend (counters are in memory). If *everyone* gets it in production, `PROXY_HEADER` is not set and all users share
+  the proxy's address.
+- **Admin signed out every 15 minutes** (after deploy) = the browser is not sending the refresh cookie: the admin web
+  and the API are not on the same site, `CORS_ORIGINS` doesn't name the admin origin, or the site is not on HTTPS
+  (the cookie is `Secure` in production). See `auth-model.md` → Admin refresh cookie.
 - Enrollment codes are one-time (D44): seeded workers have a PIN (1234) but nothing to log in with until an admin opens Workers → Set up phone. Fast 401s (<1 ms) on `/worker/login` mean no live code matched; ~100–200 ms means bcrypt ran (code found, PIN wrong — 5 of those kill the code). Opening the dialog twice kills the first code.
 - All dev workers use PIN 1234.
