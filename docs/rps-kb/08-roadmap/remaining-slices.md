@@ -41,6 +41,8 @@ Kept for history.
 - §4 admin: refresh token in httpOnly cookie ✅; `SEED_ADMIN_PASSWORD` env ✅; production refuses the development secrets ✅
   (all E1, D45). Left for the deploy itself: generate the new secrets, set `PROXY_HEADER`, put the admin web and the
   API on one site (`01-architecture/auth-model.md`).
+- Built ahead of the deploy: backend image (`apps/backend/Dockerfile`, see `01-architecture/stack-and-ports.md`); the
+  upload folder was already a setting (`UPLOAD_DIR`).
 - Deploy: Railway (API + Postgres, healthz check), Vercel (admin), EAS Build (keystore) + EAS Update (OTA). API URL → domain.
 - Pilot week on real phones on the factory network; validate taffeta/sticker scan quality once a printer exists.
 

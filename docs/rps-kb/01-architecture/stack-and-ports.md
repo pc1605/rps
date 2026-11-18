@@ -33,3 +33,14 @@ pnpm workspace with **hoisted** node_modules — required by Expo/Metro. Both se
 - root `.npmrc`: `node-linker=hoisted`
 - `pnpm-workspace.yaml`: `nodeLinker: hoisted` plus `allowBuilds` list (sharp, unrs-resolver, core-js). Add packages via `pnpm approve-builds` when pnpm blocks a postinstall.
 `metro.config.js` has workspace `watchFolders`.
+
+## Backend image (for the deploy, E2)
+`apps/backend/Dockerfile` — build with `docker build -t rps-backend apps/backend` (about 38 MB). Not used in development.
+- Runs `rps-server` as the user `rps` (not root), with `ENV=production`, `PORT=8080`, `UPLOAD_DIR=/data/uploads`.
+- Also holds `rps-seed`, the migrations (`/app/migrations`) and `migrate` 4.17.0. Database changes are their own step,
+  before the new server starts: `migrate -path /app/migrations -database "$DATABASE_URL" up`.
+- Must be given: `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `FILE_URL_SECRET` (new values — the
+  server refuses the development ones), `CORS_ORIGINS`; `PROXY_HEADER` behind a proxy; `SEED_ADMIN_PASSWORD` for the seed.
+- **Rework photos** are files in `UPLOAD_DIR` (the database stores only file names, so the folder can be anywhere).
+  The host must mount storage that outlives the container at `/data/uploads`, or photos are lost on every redeploy.
+- No `.env`, uploads or Postman files go into the image (`apps/backend/.dockerignore`).

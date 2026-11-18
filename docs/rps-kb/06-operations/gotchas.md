@@ -41,6 +41,12 @@
   `refetchInterval` is not pushed. Don't mark form / reference data live (a re-read under an open form).
 - Phone: the stream uses `expo/fetch` (React Native's own `fetch` cannot stream). Admin: a hidden tab has no line.
 
+## Backend image
+- `failed to create upload directory … permission denied` at start = the storage mounted at `/data/uploads` belongs
+  to root, and the server runs as the user `rps` (uid 10001). Give the folder to uid 10001, or run the container as root
+  on hosts that can't.
+- Rework photos missing after a redeploy = nothing lasting is mounted at `UPLOAD_DIR` (`/data/uploads` in the image).
+
 ## Auth / product
 - **429 `too_many_attempts` on login** = 10 failed tries from that address in 15 minutes (E1). Wait, or restart the
   backend (counters are in memory). If *everyone* gets it in production, `PROXY_HEADER` is not set and all users share

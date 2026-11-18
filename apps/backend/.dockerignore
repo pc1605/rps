@@ -1,0 +1,8 @@
+# Never in the image: local secrets, uploaded photos, test and tooling files.
+.env
+.env.*
+uploads/
+*.postman_collection.json
+*.postman_environment.json
+Dockerfile
+.dockerignore
