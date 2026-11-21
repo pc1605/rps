@@ -227,6 +227,9 @@ func (s *Service) FlagRework(ctx context.Context, unitCode string, workerID uuid
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	if route == "stitcher" {
+		s.notifyReworkSent(reworkID, stitchedBy)
+	}
 
 	var workerName string
 	_ = s.pool.QueryRow(ctx, `SELECT name FROM workers WHERE id = $1`, workerID).Scan(&workerName)
@@ -554,6 +557,9 @@ func (s *Service) DecideRework(ctx context.Context, reworkID uuid.UUID, decision
 		Photos:        []ReworkPhoto{},
 	}
 	_ = s.attachPhotos(ctx, []*ReworkEntry{entry})
+	if decision == "to_stitcher" {
+		s.notifyReworkSent(reworkID, stitchedBy)
+	}
 	return entry, nil
 }
 

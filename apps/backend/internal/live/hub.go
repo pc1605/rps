@@ -92,7 +92,8 @@ func (h *Hub) Middleware() fiber.Handler {
 		if s := c.Response().StatusCode(); s < 200 || s > 299 {
 			return nil
 		}
-		if strings.HasPrefix(c.Path(), "/api/v1/auth/") {
+		// Sign-in and a phone's push address change nothing anyone is looking at.
+		if strings.HasPrefix(c.Path(), "/api/v1/auth/") || c.Path() == "/api/v1/worker/me/push-token" {
 			return nil
 		}
 		h.Notify()

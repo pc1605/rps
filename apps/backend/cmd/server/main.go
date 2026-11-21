@@ -23,6 +23,7 @@ import (
 	"github.com/pc1605/rps/apps/backend/internal/httpx"
 	"github.com/pc1605/rps/apps/backend/internal/live"
 	"github.com/pc1605/rps/apps/backend/internal/materials"
+	"github.com/pc1605/rps/apps/backend/internal/push"
 	"github.com/pc1605/rps/apps/backend/internal/reference"
 	"github.com/pc1605/rps/apps/backend/internal/report"
 	"github.com/pc1605/rps/apps/backend/internal/stock"
@@ -58,6 +59,8 @@ func main() {
 	// ───── Services (dependency wiring) ─────
 	authSvc := auth.NewService(pool, cfg.JWTAccessSecret, cfg.JWTRefreshSecret, cfg.JWTAccessTTL, cfg.JWTRefreshTTL)
 	batchSvc := batch.NewService(pool, cfg.UploadDir)
+	notifier := push.New(pool, pushSender(ctx, cfg.FCMCredentialsFile))
+	batchSvc.SetNotifier(notifier)
 	refSvc := reference.NewService(pool)
 	workerSvc := worker.NewService(pool)
 	stockSvc := stock.NewService(pool)
@@ -91,6 +94,25 @@ func main() {
 
 	// ───── Lifecycle ─────
 	runServer(app, cfg, liveHub)
+	notifier.Close() // let notifications already on their way finish
+}
+
+// pushSender: Firebase when a key is configured, else nil (notifications off).
+func pushSender(ctx context.Context, keyFile string) push.Sender {
+	if keyFile == "" {
+		log.Info().Msg("phone notifications off (FCM_CREDENTIALS_FILE not set)")
+		return nil
+	}
+	key, err := os.ReadFile(keyFile) //nolint:gosec // path comes from the server's own configuration
+	if err != nil {
+		log.Fatal().Err(err).Msg("read FCM_CREDENTIALS_FILE")
+	}
+	sender, err := push.NewFCM(ctx, key)
+	if err != nil {
+		log.Fatal().Err(err).Msg("FCM_CREDENTIALS_FILE")
+	}
+	log.Info().Msg("✓ phone notifications on")
+	return sender
 }
 
 // newApp builds the Fiber app with all global middleware.
