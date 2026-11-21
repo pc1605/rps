@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -220,7 +221,8 @@ func (s *Service) Login(ctx context.Context, code, pin, ip string) (*Worker, int
 	if err := tx.QueryRow(ctx, `
 		UPDATE workers
 		SET enroll_code_hash = NULL, enroll_expires_at = NULL, enroll_tries = 0,
-		    session_no = session_no + 1, last_login_at = NOW()
+		    session_no = session_no + 1, last_login_at = NOW(),
+		    push_token = NULL, push_token_at = NULL -- the old phone is signed out: no more notifications there
 		WHERE id = $1
 		RETURNING session_no, last_login_at`, w.ID).Scan(&session, &w.LastLoginAt); err != nil {
 		return nil, 0, err
@@ -275,4 +277,33 @@ func (s *Service) GetByID(ctx context.Context, id uuid.UUID) (*Worker, error) {
 		return nil, err
 	}
 	return &w, nil
+}
+
+// maxPushToken bounds what a phone may store (FCM tokens are about 160 characters).
+const maxPushToken = 4096
+
+// SetPushToken saves the signed-in phone's notification address and language (N1).
+func (s *Service) SetPushToken(ctx context.Context, workerID uuid.UUID, token, lang string) error {
+	token = strings.TrimSpace(token)
+	if token == "" || len(token) > maxPushToken {
+		return fmt.Errorf("%w: token required", ErrInvalidInput)
+	}
+	if lang != "en" && lang != "hi" {
+		return fmt.Errorf("%w: lang must be en or hi", ErrInvalidInput)
+	}
+	tag, err := s.pool.Exec(ctx, `UPDATE workers SET push_token = $2, push_lang = $3, push_token_at = NOW() WHERE id = $1`,
+		workerID, token, lang)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// ClearPushToken: the phone is signing out — stop notifying it.
+func (s *Service) ClearPushToken(ctx context.Context, workerID uuid.UUID) error {
+	_, err := s.pool.Exec(ctx, `UPDATE workers SET push_token = NULL, push_token_at = NULL WHERE id = $1`, workerID)
+	return err
 }

@@ -98,6 +98,7 @@ func (s *Service) HandOver(ctx context.Context, fromID uuid.UUID, moves []HandOv
 
 	seen := map[uuid.UUID]bool{}
 	out := make([]HandOverResult, 0, len(moves))
+	var joined []HandOverMove // stitchers new to the batch — told after the commit (N1)
 	for _, m := range moves {
 		if seen[m.BatchID] {
 			return nil, fmt.Errorf("%w: a batch can only be handed over once per request", ErrInvalidInput)
@@ -142,6 +143,9 @@ func (s *Service) HandOver(ctx context.Context, fromID uuid.UUID, moves []HandOv
 			       (SELECT COUNT(*)::int FROM batch_units WHERE batch_id=$1 AND stitched_by=$2 AND NOT prestitched)`,
 			m.BatchID, fromID, m.ToWorkerID).Scan(&fromAssigned, &fromTarget, &toAssigned, &toTarget, &fromDone); err != nil {
 			return nil, err
+		}
+		if !toAssigned {
+			joined = append(joined, m)
 		}
 		if !fromAssigned {
 			return nil, fmt.Errorf("%w: %s is not assigned to %s", ErrInvalidInput, fromName, code)
@@ -211,5 +215,11 @@ func (s *Service) HandOver(ctx context.Context, fromID uuid.UUID, moves []HandOv
 		}
 		out = append(out, HandOverResult{BatchID: m.BatchID, BatchCode: code, Moved: moved})
 	}
-	return out, tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	for _, m := range joined {
+		s.notifyBatchAssigned(m.BatchID, []uuid.UUID{m.ToWorkerID})
+	}
+	return out, nil
 }

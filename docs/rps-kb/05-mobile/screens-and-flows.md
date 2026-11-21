@@ -77,6 +77,18 @@ pack" (`rework_open`; left = total − packed − written off − in rework). Wh
 dimmed, gets a "Waiting for rework" chip and sorts to the bottom of the queue (`features/batches/packing.ts`; phone
 side only, the server order is unchanged). It returns to normal by itself when the mat comes back (live, RT1).
 
+## Notifications (N1, D47 — `lib/notifications.tsx`)
+- After sign-in the app asks for notification permission once (Android 13+), creates the channel "Work for you"
+  (`work`, high importance, sound) and sends its Firebase token + the current language to
+  `PUT /worker/me/push-token`; again when the language changes or Firebase renews the token. Sign-out sends `DELETE`.
+- The server notifies: a batch newly assigned to the worker while it is at their station (also by a hand-over, if
+  they were not on it yet); a rework mat
+  sent to the stitcher (straight after flagging, or when the owner decides "back to stitcher"). Titles in the phone's
+  language, body = codes + car. Shown with sound also while the app is open.
+- Tap → `/batch/[id]` or `/rework/[id]` (also when the tap started the app).
+- No permission, no Firebase file in the build, or no network → the app works as before, without notifications.
+- Needs `apps/mobile/google-services.json` (Firebase console, not committed) **in the build** — a native rebuild.
+
 ## Known UX edges
 - A co-worker's scan finishing the phase while you're still in the scanner → your next scan gets a red "not at your station's phase". Acceptable; could be softened by checking `wrong_phase` and showing "Batch moved on".
 - ~~Progress pill lags for other workers' scans~~ — follows them live since RT1 (within about a second; 15 s if the live line is down).

@@ -11,7 +11,7 @@ pnpm exec expo run:android                                  # emulator dev build
 rm -rf android/app/build && pnpm exec expo run:android --variant release   # release APK for phones
 adb devices                                                 # find serial
 adb -s <SERIAL> install -r android/app/build/outputs/apk/release/app-release.apk
-adb -s <SERIAL> uninstall com.pc165.rpsworker               # if INSTALL_FAILED_UPDATE_INCOMPATIBLE (signature mismatch)
+adb -s <SERIAL> uninstall com.rpsworker.app                 # if INSTALL_FAILED_UPDATE_INCOMPATIBLE (signature mismatch)
 adb reverse tcp:8081 tcp:8081 && adb reverse tcp:8080 tcp:8080   # emulator only; dies on emulator restart
 adb -s <SERIAL> logcat "*:S" ReactNativeJS:V                # JS logs (quote "*:S" in zsh)
 ```

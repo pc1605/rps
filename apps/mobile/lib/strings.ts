@@ -230,6 +230,10 @@ export const en = {
     seeMonth: "see month",
   },
   // Work history (app/history.tsx): the worker's own count per day of a month. Counts only — never ₹ (D40).
+  notifications: {
+    /** Android Settings → Notifications: the name of the channel the server's notifications arrive on. */
+    channelName: "Work for you",
+  },
   history: {
     months: [
       "January",

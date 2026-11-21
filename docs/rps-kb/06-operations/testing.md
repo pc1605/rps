@@ -32,7 +32,7 @@ working directory, so a run from `apps/backend` fails 24 assertions):
 ```bash
 npx --no-install newman run apps/backend/RPS.postman_collection.json -e apps/backend/RPS-test.postman_environment.json
 ```
-Expected: 0 failed requests, 0 failed assertions (Nov 2026: 326 requests, 552 assertions). It can be re-run on the
+Expected: 0 failed requests, 0 failed assertions (Nov 2026: 331 requests, 560 assertions). It can be re-run on the
 same rps_test without resetting it. Add `--folder "<name>"` (repeatable) to run part of it. In the Postman app, set
 Settings → General → Working directory to the repo root for the photo upload. Scripts read `baseUrl` with
 `pm.variables.get` (environment wins), never `pm.collectionVariables.get` (that's the :8080 default); `Health` derives
@@ -187,6 +187,25 @@ native rebuild). One admin browser, one stitcher phone, one packer or second sti
    to another tab → it is up to date at once.
 10. [ ] **Through ngrok / the hotspot** (however the phones reach the backend): check 3 still works — a proxy that
     buffers the stream would make changes arrive late (they would still arrive within a minute by the fallback).
+
+## Notifications (N1) — real phones, run by the owner
+Automated: `go test ./internal/push` (the Firebase request, dead tokens, who gets what in which language),
+`go test ./internal/batch -run TestNotifications` (when the server notifies whom), `go test ./internal/worker -run
+TestPushToken`; Postman "Worker Auth" (push address saved / refused / removed).
+Setup: Firebase key on the backend (`FCM_CREDENTIALS_FILE`), restart it; a new APK built **with**
+`apps/mobile/google-services.json`. Two stitcher phones (A and B), the admin in a browser. Tick each:
+1. [ ] **Permission.** Fresh install, sign in → Android asks to allow notifications → Allow.
+2. [ ] **Assigned, app closed.** Swipe the app away on A, lock the screen. Admin assigns a batch to A → within a few
+   seconds a notification with sound: "📌 New batch assigned to you", batch code + car. Tap → the batch opens.
+3. [ ] **Hindi.** Switch A to हिन्दी, close it, assign another batch → the title comes in Hindi.
+4. [ ] **Helper added.** Admin adds B to the same batch → only B is notified; saving the same assignment again → nobody.
+5. [ ] **Hand-over.** Admin hands A's batch over to B → B is notified.
+6. [ ] **Rework.** Packer flags a mat A stitched as a stitching fault → A gets "🔧 Rework mat to fix"; tap opens it.
+   A cutting fault → nobody until the owner chooses "back to stitcher" → then A.
+7. [ ] **App open.** With RPS on screen, an assignment shows the banner too (and the queue updates live).
+8. [ ] **Sign-out.** Sign A out, assign a batch to A → no notification on that phone.
+9. [ ] **Other phone.** Set A up on a second phone → only the new phone gets A's notifications.
+10. [ ] **Said no.** On a phone where notifications were refused, the app works normally.
 
 ## Admin browser checks (P1, 2 Nov 2026, rps_test)
 Checked in Chrome against the test backend: Spare mats → **Write off** dialog (opens, counts, writes off 1 → list updates),
