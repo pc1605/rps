@@ -291,7 +291,12 @@ func (s *Service) SetPushToken(ctx context.Context, workerID uuid.UUID, token, l
 	if lang != "en" && lang != "hi" {
 		return fmt.Errorf("%w: lang must be en or hi", ErrInvalidInput)
 	}
-	tag, err := s.pool.Exec(ctx, `UPDATE workers SET push_token = $2, push_lang = $3, push_token_at = NOW() WHERE id = $1`,
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	tag, err := tx.Exec(ctx, `UPDATE workers SET push_token = $2, push_lang = $3, push_token_at = NOW() WHERE id = $1`,
 		workerID, token, lang)
 	if err != nil {
 		return err
@@ -299,7 +304,13 @@ func (s *Service) SetPushToken(ctx context.Context, workerID uuid.UUID, token, l
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
-	return nil
+	// One address, one worker: a phone whose last sign-out never reached the server (offline) still
+	// holds that worker's address — the worker now signed in on it takes it over.
+	if _, err := tx.Exec(ctx, `UPDATE workers SET push_token = NULL, push_token_at = NULL
+		WHERE push_token = $2 AND id <> $1`, workerID, token); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 // ClearPushToken: the phone is signing out — stop notifying it.

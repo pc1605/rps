@@ -105,3 +105,35 @@ func TestSignAndVerify(t *testing.T) {
 		}
 	})
 }
+
+// A link stays the same within one TTL window, so a re-read list (live updates) doesn't make the
+// phone or the browser download the photo again; it is still valid for at least the TTL.
+func TestSignStableWithinWindow(t *testing.T) {
+	Configure("stable-window-secret", time.Hour)
+	defer func() { now = time.Now }()
+	base := time.Date(2026, 11, 21, 10, 5, 0, 0, time.UTC)
+	at := func(d time.Duration) string {
+		now = func() time.Time { return base.Add(d) }
+		return Sign("p.jpg", 0)
+	}
+
+	first := at(0)
+	if again := at(30 * time.Minute); again != first {
+		t.Errorf("link changed within the window:\n%s\n%s", first, again)
+	}
+	if next := at(time.Hour); next == first {
+		t.Error("link should change in the next window")
+	}
+
+	for _, d := range []time.Duration{0, 30 * time.Minute, 54*time.Minute + 59*time.Second} {
+		q, _ := url.ParseQuery(at(d))
+		exp, _ := strconv.ParseInt(q.Get("exp"), 10, 64)
+		left := time.Unix(exp, 0).Sub(base.Add(d))
+		if left < time.Hour || left > 2*time.Hour {
+			t.Errorf("at +%v the link lives %v, want between 1 h and 2 h", d, left)
+		}
+		if !Verify("p.jpg", q.Get("exp"), q.Get("sig")) {
+			t.Errorf("at +%v the link doesn't verify", d)
+		}
+	}
+}

@@ -71,4 +71,28 @@ func TestPushToken(t *testing.T) {
 	if tok, _ := stored(); tok != nil {
 		t.Errorf("after sign-in on another phone: %v", *tok)
 	}
+
+	// A phone changes hands without its sign-out reaching the server: the old worker still holds its
+	// address. The new worker signing in on it takes the address over — the old one stops getting it.
+	other, err := s.Create(ctx, CreateInput{Name: fmt.Sprintf("T push other %d", time.Now().UnixNano()), Station: "stitcher", PIN: "4321"}, adminID, "owner", "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = pool.Exec(ctx, `DELETE FROM workers WHERE id = $1`, other.ID) })
+	if err := s.SetPushToken(ctx, w.ID, "tok-shared-phone", "en"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetPushToken(ctx, other.ID, "tok-shared-phone", "hi"); err != nil {
+		t.Fatal(err)
+	}
+	if tok, _ := stored(); tok != nil {
+		t.Errorf("previous worker still holds the phone's address: %v", *tok)
+	}
+	var otherTok *string
+	if err := pool.QueryRow(ctx, `SELECT push_token FROM workers WHERE id = $1`, other.ID).Scan(&otherTok); err != nil {
+		t.Fatal(err)
+	}
+	if otherTok == nil || *otherTok != "tok-shared-phone" {
+		t.Errorf("new worker's address: %v", otherTok)
+	}
 }

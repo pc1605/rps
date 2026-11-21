@@ -198,6 +198,9 @@ func (s *Service) HandOver(ctx context.Context, fromID uuid.UUID, moves []HandOv
 		if err != nil {
 			return nil, err
 		}
+		if err := closeRemovedLogs(ctx, tx, m.BatchID, PhaseStitching, before, after); err != nil {
+			return nil, err
+		}
 		if err := writeEvent(ctx, tx, Event{BatchID: m.BatchID, Kind: EvAssigned, UserID: uid(adminID),
 			Data: map[string]any{"phase": PhaseStitching, "before": before, "after": after,
 				"hand_over": map[string]any{"from": fromID, "to": m.ToWorkerID, "moved": moved}}}); err != nil {

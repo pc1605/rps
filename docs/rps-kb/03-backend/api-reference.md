@@ -10,7 +10,7 @@ Auth: `Authorization: Bearer <token>`; admin token for admin routes, worker toke
 | POST | `/auth/login` | `{email,password}` → `{user, tokens{access_token, expires_in}}` + `Set-Cookie: rps_refresh` (httpOnly, path `/api/v1/auth`). 10 failed tries per address per 15 min, then 429 `too_many_attempts` (E1) |
 | POST | `/auth/refresh` | no body — reads the `rps_refresh` cookie → `{user, tokens{access_token, expires_in}}` + renewed cookie. 401 without / with a bad cookie |
 | POST | `/auth/logout` | public — removes the `rps_refresh` cookie → `{signed_out: true}` |
-| POST | `/worker/login` | `{code, pin, device_id?}` → `{worker, tokens{access_token}}` (30d). `code` = one-time enrollment code (D44): used up on success, dead after 5 wrong PINs; signing in signs out the worker's other phone. Always 401 `invalid code or pin` on failure |
+| POST | `/worker/login` | `{code, pin, device_id?}` → `{worker, tokens{access_token}}` (30d). `code` = one-time enrollment code (D44): used up on success, dead after 5 wrong PINs; signing in signs out the worker's other phone. Always 401 `invalid code or pin` on failure. 50 failed tries per address per 15 min, then 429 `too_many_attempts` |
 | GET | `/files/rework/:name?exp=<unix>&sig=<hmac>` | Public signed URL for rework photos. Validates HMAC-SHA256 signature against `FILE_URL_SECRET`. 403 `invalid_signature` if expired or tampered |
 
 ## Admin (requires admin token)
@@ -110,7 +110,7 @@ All routes above require an **admin** token (`owner`/`supervisor`); worker token
 | POST | `/worker/units/:code/rework` | Multipart form: `reasons` (`stitching_fault`, `stain`, `cutting_fault`, `material_defect`, `other`), `note?`, `photos` (1-3 images). Flags unit in rework |
 | GET | `/worker/batches/:id/materials-needed` | **cutter token only** (else 403 `cutter_only`): for the remaining mats (quantity − cut_qty, while cutting) → per type `type_name, unit, need, lots[{lot_code, color, width, qty}], shortfall`. Read-only |
 | GET | `/worker/rework` | Stitcher rework queue: lists open rework items where `route = 'stitcher'` and `stitched_by = worker_id` |
-| POST | `/worker/units/scan` | `{unit_code}` → `ScanResult`. Marks stitched / packed, or repairs rework (`rework_fixed: true`). 404 unit_not_found · 409 wrong_phase / not_started / quota_reached / in_rework / written_off / spare / rework_pending_decision · 403 not_your_rework |
+| POST | `/worker/units/scan` | `{unit_code}` → `ScanResult`. Marks stitched / packed, or repairs rework (`rework_fixed: true`). 404 unit_not_found · 409 wrong_phase / not_started / quota_reached / in_rework / written_off / spare / rework_pending_decision · 403 not_your_rework / not_assigned (the phase has assignees and the worker is not one — e.g. taken off by a hand-over) |
 
 ## Live updates (any admin or worker token)
 

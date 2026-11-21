@@ -20,6 +20,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtDuration, mats } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { assignFormKey } from "../assign-key";
 import { fill, rebalance, sumOf, type Targets } from "../assign-split";
 import { useBatch, useHandOver, useSetAssignments, useStitcherLoads } from "../hooks";
 import { generateLabelPdf } from "../label-pdf";
@@ -143,16 +144,11 @@ function Body({ batchId, readySince, onDone }: { batchId: string; readySince?: s
     );
   }
 
-  const saved = batch.assignments.filter((a) => a.phase === "stitching");
-  const savedKey = saved
-    .map((a) => `${a.worker_id}:${a.target_qty ?? ""}:${a.done_qty}`)
-    .sort()
-    .join(",");
   return (
     <>
       {header}
       <AssignForm
-        key={`${batch.id}:${batch.status}:${savedKey}`}
+        key={assignFormKey(batch.id, batch.assignments)}
         batch={batch}
         loads={loads.data}
         onDone={onDone}

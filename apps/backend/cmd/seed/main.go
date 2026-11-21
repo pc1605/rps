@@ -15,7 +15,7 @@ import (
 // (docs, Postman), so a production seed must bring its own in SEED_ADMIN_PASSWORD.
 const (
 	demoAdminPassword    = "admin123"
-	minAdminPasswordSize = 12
+	minAdminPasswordSize = 9 // owner's choice (21 Nov 2026) — see D45
 )
 
 // adminPassword picks the owner's password: SEED_ADMIN_PASSWORD when set, else the demo one —

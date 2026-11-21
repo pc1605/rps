@@ -4,6 +4,7 @@ import { LIVE_FALLBACK_POLL_MS, openLive } from "@rps/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { apiOrigin, tokenStore } from "./api-client";
+import { reReadOnNote } from "./live-filter";
 
 // Live updates (RT1, D43): the server tells this tab "something changed" over one open line
 // (GET /live) and every query marked live re-reads. Polling stays as a safety net.
@@ -36,7 +37,7 @@ export function LiveUpdates() {
         fetch: (url, init) => fetch(url, init),
         // An expired token gets a 401 and a retry; the normal API calls refresh it in the meantime.
         getToken: tokenStore.access,
-        onChange: () => queryClient.invalidateQueries({ predicate: (query) => query.meta?.live === true }),
+        onChange: () => queryClient.invalidateQueries({ predicate: reReadOnNote }),
         onStatus: (up) => {
           connected = up;
         },

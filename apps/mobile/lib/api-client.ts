@@ -2,6 +2,7 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 import { getStrings } from "./language";
+import { type SignOutReason, signOutReason } from "./session";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 if (!API_URL) throw new Error("EXPO_PUBLIC_API_URL is not set — check apps/mobile/.env and rebuild the app");
@@ -62,12 +63,13 @@ http.interceptors.request.use(async (config) => {
 });
 
 /**
- * One phone per worker: when the worker signs in on another phone, the server refuses this phone's
- * token with `signed_in_elsewhere`. The auth store registers what to do then (sign out here).
+ * The server ended this phone's session: the worker signed in on another phone (`signed_in_elsewhere`),
+ * or the token is no longer accepted (deactivated, expired). The auth store registers what to do then
+ * (sign out here). No network or a server error never signs out — see lib/session.ts.
  */
-let onSignedInElsewhere: (() => void) | null = null;
-export const setSignedInElsewhereHandler = (handler: () => void) => {
-  onSignedInElsewhere = handler;
+let onSignedOut: ((reason: SignOutReason) => void) | null = null;
+export const setSignedOutHandler = (handler: (reason: SignOutReason) => void) => {
+  onSignedOut = handler;
 };
 
 http.interceptors.response.use(
@@ -75,7 +77,13 @@ http.interceptors.response.use(
   (error) => {
     const status = error.response?.status ?? 0;
     const body = error.response?.data;
-    if (status === 401 && body?.code === "signed_in_elsewhere") onSignedInElsewhere?.();
+    const reason = signOutReason(
+      status,
+      body?.code ?? "",
+      !!error.config?.headers?.Authorization,
+      error.config?.url ?? "",
+    );
+    if (reason) onSignedOut?.(reason);
     return Promise.reject(
       new ApiError(
         status,

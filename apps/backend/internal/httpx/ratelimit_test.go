@@ -73,3 +73,24 @@ func TestLoginLimiter(t *testing.T) {
 		t.Errorf("wrong login after the window: status %d, want 401", got)
 	}
 }
+
+// The worker login allows WorkerLoginFactor times as many failures from one address (the whole
+// factory shares one): 10 → 50, the 51st is refused.
+func TestWorkerLoginLimiter(t *testing.T) {
+	app := fiber.New()
+	app.Post("/worker/login", WorkerLoginLimiter(10), func(c *fiber.Ctx) error { return Unauthorized(c, "wrong") })
+	for i := 1; i <= 51; i++ {
+		res, err := app.Test(httptest.NewRequest(http.MethodPost, "/worker/login", nil), -1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = res.Body.Close()
+		want := http.StatusUnauthorized
+		if i == 51 {
+			want = http.StatusTooManyRequests
+		}
+		if res.StatusCode != want {
+			t.Fatalf("try %d: status %d, want %d", i, res.StatusCode, want)
+		}
+	}
+}

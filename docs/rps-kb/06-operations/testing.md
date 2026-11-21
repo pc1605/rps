@@ -16,6 +16,27 @@ cd apps/backend && go test -race ./...
 - Rows left in a dev DB by test runs from before this isolation: `scripts/cleanup-test-junk.sql` (dry run by
   default; `psql "$DATABASE_URL" -v commit=1 -f scripts/cleanup-test-junk.sql` to apply). Run it yourself — agents don't.
 
+## JS tests (phone, admin, shared)
+`pnpm test` (repo root) runs Node's own test runner on the `*.test.ts` files in `packages/shared/src`,
+`apps/mobile/{lib,features}` and `apps/admin-web/{lib,features}` — no extra dependency (Node ≥ 22 runs TypeScript).
+They cover the pure logic: live reconnect back-off, sign-out decisions, push-token sending, scanner progress / wrong
+batch, assign-form key, the admin's token refresh, which queries a live note re-reads. A test imports with the `.ts`
+extension and starts with `/// <reference types="node" />` (TypeScript 6 includes no `@types` by default).
+
+## Phone checks for the review fixes (Nov 2026) — run by the owner
+1. [ ] **Opened offline stays signed in.** Close the app, Wi-Fi off, open it → home with the offline banner, not the
+   login screen. Wi-Fi on → name and queue load.
+2. [ ] **Deactivated → login screen.** Admin deactivates the worker → the phone's next refresh goes to login with
+   "This phone is signed out". Reactivate + set up again.
+3. [ ] **Notifications after "signed in elsewhere".** Set A up on phone 2, then on phone 1 again (without restarting
+   phone 1's app) → assign A a batch → phone 1 is notified.
+4. [ ] **Next worker sees nothing of the last.** Sign A out, sign B in on the same phone → home card, queue and work
+   history (also an earlier month) are B's.
+5. [ ] **Hand-over while scanning.** A in the scanner; admin hands A's batch over to B → A's next scan: red "This batch
+   is assigned to other workers"; "Wrong batch" still shows for a mat of another batch.
+6. [ ] **Share pill follows the admin.** A in the scanner with 2/4; admin changes A's target to 5 → pill shows 2/5.
+7. [ ] **Admin assign panel keeps typed numbers** while a stitcher scans on that batch.
+
 ## Automated Smoke Tests
 ```bash
 # Real DB query smoke test (validates SELECT/Scan bindings, migrations, column aliases) — on rps_test

@@ -15,7 +15,7 @@ import { useStrings } from "../lib/language";
 export default function Login() {
   const strings = useStrings();
   const router = useRouter();
-  const { login, error, submitting, signedOutElsewhere } = useAuth();
+  const { login, error, submitting, signedOut } = useAuth();
   // On this screen "unauthorized" can only mean a wrong code or PIN.
   const errorMessage =
     error == null
@@ -64,8 +64,13 @@ export default function Login() {
           {/* In the footer, not the form: the footer stays above the keyboard, the form scrolls behind it. */}
           {errorMessage ? (
             <Banner kind="danger" text={errorMessage} />
-          ) : signedOutElsewhere ? (
-            <Banner kind="warning" text={strings.login.signedOutElsewhere} />
+          ) : signedOut ? (
+            <Banner
+              kind="warning"
+              text={
+                signedOut === "elsewhere" ? strings.login.signedOutElsewhere : strings.errors.unauthorized
+              }
+            />
           ) : null}
           <AppButton
             title={strings.login.submit}

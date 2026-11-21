@@ -105,7 +105,7 @@ Shared TypeScript package (`packages/shared/`) contains phase labels, status lab
 ### D27 — Signed photo URLs with HMAC-SHA256 (Oct 2026)
 **Decision**: Rework photo files are served via expiring HMAC-SHA256 signed URLs (`/api/v1/files/rework/:name?exp=<unix>&sig=<hex>`) without Bearer token headers.
 **Why**: Mobile `<Image source={{uri}}>` and web `<img src>` struggle to send custom `Authorization: Bearer <token>` headers across native caching layers and image libraries. Public signed URLs allow native image caching while keeping storage private against tampering and unauthenticated scraping.
-**Consequences**: Secret key `FILE_URL_SECRET` configures signing and constant-time verification; URLs expire after `FILE_URL_TTL_MINUTES` (default 60m).
+**Consequences**: Secret key `FILE_URL_SECRET` configures signing and constant-time verification; URLs expire after `FILE_URL_TTL_MINUTES` (default 60m). Nov 2026: the expiry is rounded up to a whole TTL window, so every link made in one window is the same (valid 1–2 × TTL) — live updates re-read lists often, and a new link each time made phones and browsers download every photo again.
 **Status**: Built & Verified (Slice B).
 
 ### D28 — Typed batch events for time-based reports (Oct 2026)
@@ -273,7 +273,7 @@ minutes — plus the worker's PIN. The permanent badge code is gone (`workers.ba
 
 ### D45 — Login limit, refresh token in a cookie, no development secrets in production (E1, Nov 2026)
 **Decision**: The parts of the security slice that don't depend on the hosting platform.
-- **Login limit**: 10 failed tries per address per 15 minutes on `/auth/login` and on `/worker/login` (separate
+- **Login limit** (worker login raised to 50, 21 Nov 2026: every factory phone shares one address): 10 failed tries per address per 15 minutes on `/auth/login` and on `/worker/login` (separate
   counts), then 429 `too_many_attempts`. Per address, not per account: a per-account lock would let anyone who knows
   the owner's email lock the owner out. In memory, no new dependency — one backend instance is already a rule (D43).
   The real client address behind a proxy comes from `PROXY_HEADER`, chosen at deploy.
@@ -283,7 +283,8 @@ minutes — plus the worker's PIN. The permanent badge code is gone (`workers.ba
   **Consequence for E2**: the admin web and the API need names under one domain (`app.` / `api.`). Free host names
   on two platforms (`*.vercel.app` + `*.up.railway.app`) will not work — browsers treat them as different sites, and
   the alternative (`SameSite=None`) is blocked as a third-party cookie by Safari and Firefox anyway.
-- **Seed**: `SEED_ADMIN_PASSWORD` sets the owner's password; `ENV=production` refuses the demo one.
+- **Seed**: `SEED_ADMIN_PASSWORD` sets the owner's password (at least 9 characters — lowered from 12 by the owner,
+  21 Nov 2026); `ENV=production` refuses the demo one.
 - **Secrets**: `.env` was never committed, but development runs on the `.env.example` placeholders, which are public.
   Production refuses any `change-me…` secret. `QR_HASH_SECRET` (never used) removed.
 **Not done here**: taking back single refresh tokens (needs a table; not needed for two admins), the deploy itself.

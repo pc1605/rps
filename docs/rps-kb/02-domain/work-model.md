@@ -38,6 +38,10 @@ Packing scans: verification of the finished physical mat.
 ## 4. Join / idempotency
 - Stitching/packing Join when already joined → no-op 200.
 - `ScanUnit` is idempotent: already-stitched (or already-packed) mat → `already_done: true` with current progress, no writes.
+  It locks the mat with the batch, so two scans of one mat arriving together record it once (the second is `already_done`).
+- Taken off a phase (hand-over, assignment edit) = out of the batch: the worker's open log closes and their scans are
+  refused with 403 `not_assigned` (any phase with assignees accepts scans from its assignees only). The original
+  stitcher's rework fix-scan is not affected.
 - Scans must belong to the batch the scanner was opened for — enforced **client-side** via unit-code prefix (the server has
   no batch context on a scan). See `05-mobile/screens-and-flows.md`. U3: packers check the peek's `batch_id` instead,
   since a reused stitched spare keeps the code of its old batch.

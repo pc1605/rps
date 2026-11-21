@@ -209,16 +209,18 @@ export default function Home() {
   const { refetch: refetchSummary } = useMySummary();
   const isOnline = useOnline();
 
-  // Cold-start: token exists but profile not loaded yet
+  // Cold start: the token is there but the profile isn't loaded yet. Opened without network (or the
+  // server was down), try again when the phone is back online.
   useEffect(() => {
-    if (!worker) restore();
-  }, [worker, restore]);
+    if (!worker && isOnline) restore();
+  }, [worker, restore, isOnline]);
 
   const stationTitle = worker
     ? strings.home.stationQueue(strings.station[worker.station] ?? worker.station)
     : strings.home.myQueue;
 
   const handleRefresh = () => {
+    if (!worker) restore();
     refetch();
     refetchSummary();
     if (worker?.station === "stitcher") {

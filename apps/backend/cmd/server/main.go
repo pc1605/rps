@@ -82,7 +82,7 @@ func main() {
 
 	// Login limit (E1): failed tries per address, counted separately for admins and workers.
 	api.Post("/auth/login", httpx.LoginLimiter(cfg.LoginMaxFailures))
-	api.Post("/worker/login", httpx.LoginLimiter(cfg.LoginMaxFailures))
+	api.Post("/worker/login", httpx.WorkerLoginLimiter(cfg.LoginMaxFailures))
 
 	auth.RegisterRoutes(api, authSvc, cfg.IsProduction())
 	batch.RegisterRoutes(api, batchSvc, authSvc)

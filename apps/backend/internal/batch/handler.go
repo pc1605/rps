@@ -352,6 +352,8 @@ func (h *Handler) ScanUnit(c *fiber.Ctx) error {
 			return httpx.Error(c, fiber.StatusConflict, "wrong_phase", "this batch is not at your station's phase")
 		case errors.Is(err, ErrQuotaReached):
 			return httpx.Error(c, fiber.StatusConflict, "quota_reached", err.Error())
+		case errors.Is(err, ErrNotAssigned):
+			return httpx.Error(c, fiber.StatusForbidden, "not_assigned", ErrNotAssigned.Error())
 		case errors.Is(err, ErrNotStarted):
 			return httpx.Error(c, fiber.StatusConflict, "not_started", "join this batch before scanning")
 		case errors.Is(err, ErrNotYours):
