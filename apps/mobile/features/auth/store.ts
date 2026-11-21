@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { setSignedInElsewhereHandler, tokenStore } from "../../lib/api-client";
+import { unregisterPush } from "../../lib/notifications";
 import { authApi } from "./api";
 import type { Worker } from "./types";
 
@@ -35,6 +36,7 @@ export const useAuth = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    await unregisterPush(); // while the token still works
     await tokenStore.clear();
     set({ worker: null });
   },
