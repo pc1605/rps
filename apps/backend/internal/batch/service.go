@@ -834,6 +834,9 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 	if err != nil {
 		return err
 	}
+	if err := closeRemovedLogs(ctx, tx, batchID, phase, before, after); err != nil {
+		return err
+	}
 	ev.Data = map[string]any{"phase": phase, "before": before, "after": after}
 	if err := writeEvent(ctx, tx, ev); err != nil {
 		return err
@@ -856,6 +859,26 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 		s.notifyBatchAssigned(batchID, addedWorkers(before, after))
 	}
 	return nil
+}
+
+// closeRemovedLogs ends the open logs of workers taken off a phase's assignment (assignment edit or
+// hand-over), so they leave the batch: "stitching now" no longer names them and their scanner is
+// refused (ScanUnit's assignment gate). The log keeps what they did there (0 when removed — a worker
+// with scans can't be removed). Closed before the stage completes, so an undo never reopens it.
+func closeRemovedLogs(ctx context.Context, tx pgx.Tx, batchID uuid.UUID, phase Phase, before, after []AssignmentTarget) error {
+	removed := addedWorkers(after, before)
+	if len(removed) == 0 {
+		return nil
+	}
+	_, err := tx.Exec(ctx, `
+		UPDATE phase_logs pl
+		SET completed_at = NOW(),
+		    quantity_completed = (SELECT COUNT(*) FROM batch_units bu WHERE bu.batch_id = pl.batch_id
+		      AND CASE WHEN pl.phase = 'stitching' THEN bu.stitched_by = pl.worker_id AND NOT bu.prestitched
+		               ELSE bu.packed_by = pl.worker_id END)
+		WHERE pl.batch_id = $1 AND pl.phase = $2 AND pl.completed_at IS NULL AND pl.worker_id = ANY($3)`,
+		batchID, phase, removed)
+	return err
 }
 
 // addedWorkers: workers in after that were not in before.
@@ -1227,10 +1250,13 @@ func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.U
 		batchPhase  Phase
 		batchStatus Status
 	)
+	// Lock the mat too, not only the batch: a scan that waited for the lock must see the mat as the
+	// scan before it left it (already stitched / packed), not the copy it read before waiting — or two
+	// scans of one mat both count and the credit moves to the second. Same lock order as undo / flag.
 	err = tx.QueryRow(ctx, `
 		SELECT bu.id, bu.status, bu.stitched_at, bu.stitched_by, b.id, b.batch_code, b.current_phase, b.status
 		FROM batch_units bu JOIN batches b ON b.id = bu.batch_id
-		WHERE bu.unit_code = $1 FOR UPDATE OF b
+		WHERE bu.unit_code = $1 FOR UPDATE OF b, bu
 	`, unitCode).Scan(&unitID, &unitStatus, &stitchedAt, &stitchedBy, &batchID, &batchCode, &batchPhase, &batchStatus)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrUnitNotFound
@@ -1360,20 +1386,27 @@ func (s *Service) ScanUnit(ctx context.Context, unitCode string, workerID uuid.U
 	`, batchID, phase, workerID).Scan(&joined); err != nil {
 		return nil, err
 	}
-	// Quota gate: if my assignment carries a target, I can't exceed it.
+	// Assignment + quota gate: a phase with assignees is theirs only — also for a worker who joined and
+	// was taken off it since (hand-over, assignment edit) — and an assignee's target caps their count.
 	{
 		attrCol := "stitched_by"
 		if phase == PhasePacking {
 			attrCol = "packed_by"
 		}
+		var assigned, isMine bool
 		var target *int
 		var mine int
 		err := tx.QueryRow(ctx, `
-			SELECT (SELECT target_qty FROM batch_assignments WHERE batch_id=$1 AND phase=$2 AND worker_id=$3),
+			SELECT EXISTS (SELECT 1 FROM batch_assignments WHERE batch_id=$1 AND phase=$2),
+			       EXISTS (SELECT 1 FROM batch_assignments WHERE batch_id=$1 AND phase=$2 AND worker_id=$3),
+			       (SELECT target_qty FROM batch_assignments WHERE batch_id=$1 AND phase=$2 AND worker_id=$3),
 			       (SELECT COUNT(*) FROM batch_units WHERE batch_id=$1 AND `+attrCol+`=$3 AND NOT (prestitched AND $2 = 'stitching'))
-		`, batchID, phase, workerID).Scan(&target, &mine)
+		`, batchID, phase, workerID).Scan(&assigned, &isMine, &target, &mine)
 		if err != nil {
 			return nil, err
+		}
+		if assigned && !isMine {
+			return nil, ErrNotAssigned
 		}
 		if target != nil && mine >= *target {
 			return nil, fmt.Errorf("%w (%d/%d)", ErrQuotaReached, mine, *target)
