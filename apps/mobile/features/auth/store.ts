@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import { setSignedInElsewhereHandler, tokenStore } from "../../lib/api-client";
+import { setSignedOutHandler, tokenStore } from "../../lib/api-client";
 import { unregisterPush } from "../../lib/notifications";
+import type { SignOutReason } from "../../lib/session";
 import { authApi } from "./api";
 import type { Worker } from "./types";
 
@@ -9,8 +10,8 @@ interface AuthState {
   /** What the last login attempt threw (null = no error). The login screen words it in the current language. */
   error: unknown;
   submitting: boolean;
-  /** This phone was signed out because the worker signed in on another one (one phone per worker). */
-  signedOutElsewhere: boolean;
+  /** The server signed this phone out, and why (null = it didn't). The login screen says why. */
+  signedOut: SignOutReason | null;
   login: (code: string, pin: string) => Promise<boolean>;
   logout: () => Promise<void>;
   restore: () => Promise<void>;
@@ -20,14 +21,14 @@ export const useAuth = create<AuthState>((set) => ({
   worker: null,
   error: null,
   submitting: false,
-  signedOutElsewhere: false,
+  signedOut: null,
 
   login: async (code, pin) => {
     set({ submitting: true, error: null });
     try {
       const resp = await authApi.login(code, pin);
       await tokenStore.set(resp.tokens.access_token);
-      set({ worker: resp.worker, submitting: false, signedOutElsewhere: false });
+      set({ worker: resp.worker, submitting: false, signedOut: null });
       return true;
     } catch (e) {
       set({ error: e ?? new Error("login failed"), submitting: false });
@@ -40,22 +41,23 @@ export const useAuth = create<AuthState>((set) => ({
     await tokenStore.clear();
     set({ worker: null });
   },
+  // Cold start: the token is there, the profile isn't loaded yet. If the server refuses the token, the
+  // signed-out handler below signs out. Anything else (no network, server down) keeps the token — the
+  // home screen tries again when the phone is back online, or on pull-to-refresh.
   restore: async () => {
     try {
       const w = await authApi.me();
       set({ worker: w });
     } catch {
-      // token invalid/expired → clear and let index redirect to login
-      await tokenStore.clear();
-      set({ worker: null });
+      // kept signed in; see above
     }
   },
 }));
 
-// The server refused this phone's token because the worker signed in on another phone: sign out here.
-// <SessionGuard /> (app/_layout.tsx) then shows the login screen, which says why.
-setSignedInElsewhereHandler(() => {
-  if (useAuth.getState().signedOutElsewhere) return;
-  useAuth.setState({ worker: null, signedOutElsewhere: true });
+// The server refused this phone's token (signed in on another phone, deactivated, expired): sign out
+// here. <SessionGuard /> (app/_layout.tsx) then shows the login screen, which says why.
+setSignedOutHandler((reason) => {
+  if (useAuth.getState().signedOut) return;
+  useAuth.setState({ worker: null, signedOut: reason });
   void tokenStore.clear();
 });
