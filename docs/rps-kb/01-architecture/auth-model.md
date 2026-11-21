@@ -57,8 +57,10 @@ request → a deactivated worker's existing 30-day token gets 401 "worker deacti
 - Workers are unchanged: the phone keeps its 30-day token in `expo-secure-store` (no cookie).
 
 ## Login limit (E1, D45)
-- `httpx.LoginLimiter` on `POST /auth/login` and `POST /worker/login` (mounted in `cmd/server/main.go`): **10 failed
-  tries per address per 15 minutes** (`LOGIN_MAX_FAILURES`), counted separately for the two routes. Successful logins
+- `httpx.LoginLimiter` on `POST /auth/login` and `httpx.WorkerLoginLimiter` on `POST /worker/login` (mounted in
+  `cmd/server/main.go`): **10 failed tries per address per 15 minutes** for the admin (`LOGIN_MAX_FAILURES`), **50** for
+  the worker login (× `WorkerLoginFactor` — every factory phone reaches the server from one address, and each code
+  dies after 5 wrong PINs anyway), counted separately for the two routes. Successful logins
   don't count. Then **429 `too_many_attempts`** + `Retry-After`, also for a correct password, until the window ends.
 - Counters are in the server's memory: a restart clears them, and they assume one backend instance (as D43 does).
 - Behind a host's proxy every request seems to come from the proxy. Set `PROXY_HEADER` to the header the host fills

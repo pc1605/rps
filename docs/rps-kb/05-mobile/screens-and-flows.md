@@ -8,7 +8,10 @@ Camera not working → **Enter code by hand** → a field that shows dots; the a
 Wrong QR (a mat label, a URL, an old badge QR) → red "Not an enrollment code — ask your admin for the QR".
 Wrong / used / expired code or wrong PIN → "Wrong code or PIN" (scan again; the admin makes a new code if needed).
 **One phone per worker**: when the worker signs in on another phone, this phone's next request is refused
-(`signed_in_elsewhere`); it signs out, drops to the login screen and says why (`components/SessionGuard.tsx`).
+(`signed_in_elsewhere`); it signs out, drops to the login screen and says why (`components/SessionGuard.tsx`). The
+same for any other refused token (deactivated, 30-day token ran out): "This phone is signed out". No network, a timeout
+or a server error never sign out — opened offline, the app keeps the token and loads the profile when back online
+(`lib/session.ts`). Every sign-out empties the query cache, so the next worker on the phone never sees the last one's data.
 
 ## Cutter
 Home = cutting queue (open; blocked/dimmed cards for batches another cutter has in progress).

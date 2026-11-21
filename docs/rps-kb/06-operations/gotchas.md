@@ -52,7 +52,7 @@
 - Rework photos missing after a redeploy = nothing lasting is mounted at `UPLOAD_DIR` (`/data/uploads` in the image).
 
 ## Auth / product
-- **429 `too_many_attempts` on login** = 10 failed tries from that address in 15 minutes (E1). Wait, or restart the
+- **429 `too_many_attempts` on login** = 10 failed tries (admin) or 50 (worker login — the whole factory shares one address) from that address in 15 minutes (E1). Wait, or restart the
   backend (counters are in memory). If *everyone* gets it in production, `PROXY_HEADER` is not set and all users share
   the proxy's address.
 - **Admin signed out every 15 minutes** (after deploy) = the browser is not sending the refresh cookie: the admin web

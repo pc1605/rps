@@ -11,7 +11,7 @@ mapping: `handler.go` (`transitionResponse` for start/complete; dedicated switch
 | `ErrAlreadyStarted` | this batch has already been started | 409 `already_started` | cutting claim exists (same or other cutter) |
 | `ErrNotStarted` | this batch is not active yet — start or join it first | 409 `not_started` | complete on pending; scan without join (scan handler: "join this batch before scanning") |
 | `ErrNotYours` | this batch was started by another worker | 403 | cutter completing someone else's claim |
-| `ErrNotAssigned` | this batch is assigned to other workers | 403 `not_assigned` | join on an assigned phase by a non-assignee |
+| `ErrNotAssigned` | this batch is assigned to other workers | 403 `not_assigned` | join or scan on an assigned phase by a non-assignee (also a stitcher taken off the batch by hand-over / assignment edit — their open log is closed) |
 | `ErrQuotaReached` | your share of this batch is complete (n/N) | 409 `quota_reached` | scan beyond `target_qty` |
 | `ErrUnitNotFound` | unknown QR — not an RPS unit label | 404 `unit_not_found` | scan of unknown code |
 | `ErrInRework` | This mat is waiting for rework | 409 `in_rework` | packer scans a mat currently flagged in rework |
