@@ -16,6 +16,8 @@ func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 	api.Get("/worker/me", h.Me)
 	api.Get("/worker/me/summary", h.MySummary)
 	api.Get("/worker/me/history", h.MyHistory)
+	api.Put("/worker/me/push-token", h.SetPushToken)      // N1: this phone's notification address
+	api.Delete("/worker/me/push-token", h.ClearPushToken) // signing out: no more notifications here
 
 	// Admin only — manage workers
 	api.Post("/workers", authSvc.RequireRole("owner", "supervisor"), h.Create)

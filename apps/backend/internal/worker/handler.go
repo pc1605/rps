@@ -251,3 +251,36 @@ func (h *Handler) MyHistory(c *fiber.Ctx) error {
 	}
 	return httpx.OK(c, out)
 }
+
+type pushTokenInput struct {
+	Token string `json:"token"`
+	Lang  string `json:"lang"`
+}
+
+// SetPushToken — PUT /worker/me/push-token {token, lang}: where to send this worker's notifications.
+func (h *Handler) SetPushToken(c *fiber.Ctx) error {
+	wid, ok := auth.WorkerID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "not a worker token")
+	}
+	var in pushTokenInput
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	if err := h.svc.SetPushToken(c.Context(), wid, in.Token, in.Lang); err != nil {
+		return workerErr(c, err, "save push token")
+	}
+	return httpx.OK(c, fiber.Map{"saved": true})
+}
+
+// ClearPushToken — DELETE /worker/me/push-token: the phone signs out.
+func (h *Handler) ClearPushToken(c *fiber.Ctx) error {
+	wid, ok := auth.WorkerID(c)
+	if !ok {
+		return httpx.Unauthorized(c, "not a worker token")
+	}
+	if err := h.svc.ClearPushToken(c.Context(), wid); err != nil {
+		return workerErr(c, err, "clear push token")
+	}
+	return httpx.OK(c, fiber.Map{"cleared": true})
+}

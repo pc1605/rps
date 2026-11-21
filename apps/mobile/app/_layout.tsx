@@ -19,6 +19,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useUnistyles } from "react-native-unistyles";
 import { SessionGuard } from "../components/SessionGuard";
 import { LiveUpdates } from "../lib/live";
+import { PushNotifications } from "../lib/notifications";
 import { QueryProvider } from "../lib/query-provider";
 
 export default function RootLayout() {
@@ -43,6 +44,7 @@ export default function RootLayout() {
       <QueryProvider>
         <LiveUpdates />
         <SessionGuard />
+        <PushNotifications />
         {/* One status bar for the app: dark icons on light theme, light icons on dark. */}
         <StatusBar style={theme.isDark ? "light" : "dark"} />
         <Stack

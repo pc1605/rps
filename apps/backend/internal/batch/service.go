@@ -29,6 +29,29 @@ var (
 type Service struct {
 	pool      *pgxpool.Pool
 	uploadDir string
+	notify    Notifier // optional: phone notifications (N1)
+}
+
+// Notifier tells workers' phones about work that has just come to them (N1, D47). Called after the
+// change is saved; implementations return at once and send in the background.
+type Notifier interface {
+	BatchAssigned(batchID uuid.UUID, workerIDs []uuid.UUID)
+	ReworkSent(reworkID, stitcherID uuid.UUID)
+}
+
+// SetNotifier turns phone notifications on. Without it (tests, no Firebase key) nothing is sent.
+func (s *Service) SetNotifier(n Notifier) { s.notify = n }
+
+func (s *Service) notifyBatchAssigned(batchID uuid.UUID, workerIDs []uuid.UUID) {
+	if s.notify != nil && len(workerIDs) > 0 {
+		s.notify.BatchAssigned(batchID, workerIDs)
+	}
+}
+
+func (s *Service) notifyReworkSent(reworkID uuid.UUID, stitcherID *uuid.UUID) {
+	if s.notify != nil && stitcherID != nil {
+		s.notify.ReworkSent(reworkID, *stitcherID)
+	}
 }
 
 type Stats struct {
@@ -686,7 +709,10 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 	defer tx.Rollback(ctx)
 
 	var quantity, cutQty int
-	err = tx.QueryRow(ctx, `SELECT quantity, cut_qty FROM batches WHERE id=$1 FOR UPDATE`, batchID).Scan(&quantity, &cutQty)
+	var currentPhase Phase
+	var currentStatus Status
+	err = tx.QueryRow(ctx, `SELECT quantity, cut_qty, current_phase, status FROM batches WHERE id=$1 FOR UPDATE`,
+		batchID).Scan(&quantity, &cutQty, &currentPhase, &currentStatus)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrNotFound
 	}
@@ -822,7 +848,29 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 	}); err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	// Tell the newly added workers — only when the batch is at their station now (work they can start).
+	if currentPhase == phase && currentStatus != StatusCompleted && currentStatus != StatusCancelled {
+		s.notifyBatchAssigned(batchID, addedWorkers(before, after))
+	}
+	return nil
+}
+
+// addedWorkers: workers in after that were not in before.
+func addedWorkers(before, after []AssignmentTarget) []uuid.UUID {
+	had := make(map[uuid.UUID]bool, len(before))
+	for _, a := range before {
+		had[a.WorkerID] = true
+	}
+	var out []uuid.UUID
+	for _, a := range after {
+		if !had[a.WorkerID] {
+			out = append(out, a.WorkerID)
+		}
+	}
+	return out
 }
 
 type ShortAction string

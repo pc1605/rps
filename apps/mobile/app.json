@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.pc165.rpsworker",
+      "package": "com.rpsworker.app",
       "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
@@ -28,7 +28,20 @@
       "expo-router",
       "expo-status-bar",
       "expo-secure-store",
-      ["expo-camera", { "cameraPermission": "RPS scans batch unit QR labels." }]
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "RPS scans batch unit QR labels."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#B45309",
+          "defaultChannel": "work"
+        }
+      ]
     ]
   }
 }

@@ -29,6 +29,9 @@ type Config struct {
 	// ProxyHeader names the request header that carries the real client address when the backend
 	// runs behind a host's proxy (set at deploy; empty = use the connection's address).
 	ProxyHeader string
+	// FCMCredentialsFile is the Firebase service-account key (JSON) for phone notifications (N1).
+	// Empty = notifications off.
+	FCMCredentialsFile string
 }
 
 // IsProduction reports whether this is the deployed system (ENV=production).
@@ -41,17 +44,18 @@ func Load() (*Config, error) {
 	_ = godotenv.Load(".env")
 
 	c := &Config{
-		Port:             getEnv("PORT", "3000"),
-		Env:              getEnv("ENV", "development"),
-		LogLevel:         getEnv("LOG_LEVEL", "info"),
-		DatabaseURL:      mustEnv("DATABASE_URL"),
-		JWTAccessSecret:  mustEnv("JWT_ACCESS_SECRET"),
-		JWTRefreshSecret: mustEnv("JWT_REFRESH_SECRET"),
-		CORSOrigins:      strings.Split(getEnv("CORS_ORIGINS", "http://localhost:3000"), ","),
-		UploadDir:        getEnv("UPLOAD_DIR", "./uploads"),
-		FileURLSecret:    getEnv("FILE_URL_SECRET", ""),
-		FactoryTZ:        getEnv("FACTORY_TZ", "Asia/Kolkata"),
-		ProxyHeader:      getEnv("PROXY_HEADER", ""),
+		Port:               getEnv("PORT", "3000"),
+		Env:                getEnv("ENV", "development"),
+		LogLevel:           getEnv("LOG_LEVEL", "info"),
+		DatabaseURL:        mustEnv("DATABASE_URL"),
+		JWTAccessSecret:    mustEnv("JWT_ACCESS_SECRET"),
+		JWTRefreshSecret:   mustEnv("JWT_REFRESH_SECRET"),
+		CORSOrigins:        strings.Split(getEnv("CORS_ORIGINS", "http://localhost:3000"), ","),
+		UploadDir:          getEnv("UPLOAD_DIR", "./uploads"),
+		FileURLSecret:      getEnv("FILE_URL_SECRET", ""),
+		FactoryTZ:          getEnv("FACTORY_TZ", "Asia/Kolkata"),
+		ProxyHeader:        getEnv("PROXY_HEADER", ""),
+		FCMCredentialsFile: getEnv("FCM_CREDENTIALS_FILE", ""),
 	}
 
 	c.LoginMaxFailures, _ = strconv.Atoi(getEnv("LOGIN_MAX_FAILURES", "10"))

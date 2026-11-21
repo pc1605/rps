@@ -183,6 +183,9 @@ export const hi: Strings = {
     flagged: (n: number) => `इस हफ़्ते ${n} रीवर्क में भेजे`,
     seeMonth: "महीना देखें",
   },
+  notifications: {
+    channelName: "आपका काम",
+  },
   history: {
     months: [
       "जनवरी",

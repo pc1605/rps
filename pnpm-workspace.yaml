@@ -17,6 +17,7 @@ minimumReleaseAgeExclude:
   - '@expo/config@57.0.5'
   - '@expo/devtools@57.0.1'
   - '@expo/env@2.4.2'
+  - '@expo/env@2.4.4'
   - '@expo/fingerprint@0.20.5'
   - '@expo/image-utils@0.11.3'
   - '@expo/inline-modules@0.1.3'

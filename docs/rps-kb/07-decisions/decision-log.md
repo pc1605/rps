@@ -290,3 +290,26 @@ minutes — plus the worker's PIN. The permanent badge code is gone (`workers.ba
 **Status**: Built. Checked: Go tests (limit, cookie, seed password, production secrets), Postman 326 requests / 552
 assertions, and the admin web in headless Chrome on rps_test — login, silent refresh after the access token ran out,
 sign-out; the cookie is never visible to page scripts.
+
+### D47 — Phone notifications through Firebase, straight from the server (N1, Nov 2026)
+**Decision**: The worker's phone gets a notification, also with the app closed, when work comes to them: a batch
+newly assigned to them while it is at their station (also by a hand-over, if they were not on it yet), or a rework mat sent to them (flagged straight to
+the stitcher, or "back to stitcher" by the owner). Owner, 21 Nov 2026: "assigned to you" notifications.
+- **Firebase Cloud Messaging, sent by our server** (HTTP v1 API, service-account key, `internal/push`) — not Expo's push
+  service: one outside service instead of two, no Expo account needed. The phone sends its Firebase token
+  (`getDevicePushTokenAsync`).
+- **The token lives on the worker row** (migration 021): one phone per worker (D44). The next sign-in clears it, so a
+  phone that was signed out never gets the worker's notifications; a token Firebase calls dead is removed.
+- **Language**: the phone sends its language with the token; titles are written in it (en/hi), the body is codes and
+  names only.
+- **Never in the way**: sent after the change is saved, in the background, with a time limit; a failure is logged and
+  the admin's request is unaffected. No key configured (`FCM_CREDENTIALS_FILE` empty) = notifications off.
+- **Not notified** (on purpose, for now): cutting and packing work (open queues), batches assigned before they reach
+  the worker's station, anything to the admin.
+**Needs from the owner**: a Firebase project (Android app `com.rpsworker.app`): `google-services.json` into the app
+build, and a service-account key on the server.
+**Status**: Built. Checked: Go tests, Postman 331 / 560, and on a real phone (Realme RMX1801, Android 10, debug build,
+Firebase project `riddhi-production-system`, 21 Nov 2026): notifications arrive with the app open and swiped away; an
+admin assignment notified the stitcher; tapping opened the batch. Android 10 asks no permission (the prompt exists from
+Android 13). Not yet checked on a phone: Hindi titles, rework, sign-out, second phone (covered by Go tests) —
+`06-operations/testing.md` → Notifications (N1). App id is `com.rpsworker.app` from this slice on.

@@ -798,3 +798,17 @@ one line: "1 in rework · 0 left to pack"). Line 239 is the chip on a batch wher
 242. Too many wrong tries — wait 15 minutes, then try again  
    **बहुत बार गलत कोशिश हुई — 15 मिनट रुकें, फिर कोशिश करें**  
    (login, after 10 wrong codes or PINs from one place — E1)
+
+## Notifications (N1)
+
+243. Work for you  
+   **आपका काम**  
+   (Android Settings → Notifications: the name of RPS's notification channel)
+
+244. 📌 New batch assigned to you  
+   **📌 आपको नया बैच दिया गया**  
+   (notification title — written by the server, `internal/push/notifier.go`; under it the batch code and car)
+
+245. 🔧 Rework mat to fix  
+   **🔧 ठीक करने के लिए रीवर्क मैट**  
+   (notification title — written by the server; under it the mat code and car)
