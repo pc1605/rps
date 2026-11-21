@@ -613,7 +613,7 @@ const styles = StyleSheet.create((theme) => ({
     width: 20,
     height: 20,
     borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: theme.colors.accentFill,
     justifyContent: "center",
     alignItems: "center",
   },

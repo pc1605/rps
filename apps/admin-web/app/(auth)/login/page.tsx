@@ -17,7 +17,7 @@ export default function LoginPage() {
   }, [user, router]);
 
   return (
-    <main className="min-h-screen grid place-items-center bg-zinc-950 p-6">
+    <main className="min-h-screen grid place-items-center bg-background p-6">
       <LoginForm />
     </main>
   );

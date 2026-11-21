@@ -24,7 +24,8 @@ const fontsHindi: Fonts = {
 
 // 4-pt grid
 const spacing = { xxs: 4, xs: 8, sm: 12, md: 16, lg: 24, xl: 32, xxl: 48 } as const;
-const radius = { sm: 6, md: 10, lg: 14, pill: 999 } as const;
+// button: boxy on purpose (same as the admin web's --radius-button).
+const radius = { button: 4, sm: 6, md: 10, lg: 14, pill: 999 } as const;
 const touch = { min: 48, primary: 56 } as const;
 const motion = { fast: 120, base: 200 } as const;
 
@@ -75,7 +76,10 @@ interface ThemeColors {
   text: string;
   textMuted: string;
   textFaint: string;
+  /** Amber for text, icons and borders (readable on this theme's background). */
   accent: string;
+  /** Amber for filled shapes (primary button): always the logo colour #B45309. */
+  accentFill: string;
   accentFg: string;
   accentSoft: string;
   phase: PhaseColors;
@@ -117,6 +121,7 @@ const light: ThemeColors = {
   textMuted: "#6B6560",
   textFaint: "#9C958E",
   accent: "#B45309",
+  accentFill: "#B45309",
   accentFg: "#FFFFFF",
   accentSoft: "rgba(180,83,9,0.10)",
   phase: { cutting: "#2563EB", stitching: "#9333EA", packing: "#0F766E", completed: "#15803D" },
@@ -146,9 +151,11 @@ const dark: ThemeColors = {
   text: "#F5F5F0",
   textMuted: "#A8A29E",
   textFaint: "#6B6560",
-  accent: "#F59E0B",
-  accentFg: "#1C1917",
-  accentSoft: "rgba(245,158,11,0.14)",
+  // The logo colour is too dark for small text here (3.6:1), so text uses the same hue lighter.
+  accent: "#E96C0C",
+  accentFill: "#B45309",
+  accentFg: "#FFFFFF",
+  accentSoft: "rgba(180,83,9,0.18)",
   phase: { cutting: "#60A5FA", stitching: "#C084FC", packing: "#2DD4BF", completed: "#4ADE80" },
   success: "#4ADE80",
   danger: "#F87171",

@@ -35,6 +35,7 @@
   --state-info: #2563eb;
 
   /* shape */
+  --radius-button: 4px; /* boxy on purpose; the phone's radius.button matches */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -77,9 +78,11 @@
   --ink-muted: #a8a29e;
   --ink-faint: #6b6560;
 
-  --accent: #f59e0b;
-  --accent-fg: #1c1917;
-  --accent-soft: rgba(245, 158, 11, 0.14);
+  /* the logo colour is too dark for small text here (3.6:1): text uses the same hue lighter, buttons keep the logo colour */
+  --accent: #e96c0c;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(180, 83, 9, 0.18);
+  --primary: #b45309;
 
   --phase-cutting: #60a5fa;
   --phase-stitching: #c084fc;
@@ -128,6 +131,7 @@
   --color-danger: var(--state-danger);
   --color-info: var(--state-info);
 
+  --radius-button: var(--radius-button);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);

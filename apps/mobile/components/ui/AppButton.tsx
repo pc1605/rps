@@ -72,7 +72,7 @@ export function AppButton({
 
 const styles = StyleSheet.create((theme) => ({
   base: {
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.button,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: theme.spacing.lg,
@@ -81,7 +81,7 @@ const styles = StyleSheet.create((theme) => ({
   lg: { minHeight: theme.touch.primary },
   md: { minHeight: theme.touch.min },
   row: { flexDirection: "row", alignItems: "center", gap: theme.spacing.xs },
-  primary: { backgroundColor: theme.colors.accent },
+  primary: { backgroundColor: theme.colors.accentFill },
   secondary: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
