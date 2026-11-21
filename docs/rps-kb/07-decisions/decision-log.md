@@ -291,6 +291,25 @@ minutes — plus the worker's PIN. The permanent badge code is gone (`workers.ba
 assertions, and the admin web in headless Chrome on rps_test — login, silent refresh after the access token ran out,
 sign-out; the cookie is never visible to page scripts.
 
+### D46 — Hosting: one AWS Lightsail server in Mumbai (Nov 2026)
+**Decision**: Production runs on one Lightsail instance (Mumbai, Ubuntu 24.04, 2 GB): Postgres, backend, admin web and
+Caddy in one Docker Compose project (`deploy/`), one web address (admin at `/`, API at `/api`). Owner, 19 Nov 2026.
+- **Why one server**: live updates need one backend that holds long connections (D43); the login counters are in memory
+  (D45); rework photos are files on disk. A plain server fits all three; app platforms need workarounds for each.
+- **Why one address**: the admin page and the API are then the same site, so the refresh cookie (D45) needs no
+  cross-site setup and CORS only names that address. One DNS record, one certificate.
+- **Why Lightsail Mumbai**: same price as DigitalOcean (~$12/month), 2 vCPUs, closest to Ahmedabad. Free tiers were
+  rejected for production (Oracle halved its free servers in 2026 and reclaims idle ones). Google Cloud with the owner's
+  AI Pro credit ($10/month) was cheaper but tied to a personal subscription.
+- **Why the factory doesn't host it**: power cuts at the factory; the internet is reliable. The factory router needs a UPS.
+- **Low upkeep** (owner looks occasionally): automatic security updates (reboot 03:30 IST if needed), nightly database
+  copy at 03:00 IST checked by listing it, 14 copies kept on the server and 30 days + all photos in a Lightsail bucket,
+  Lightsail daily snapshots, optional healthchecks.io emails. Secrets are generated on the server and never leave it.
+- **Updates** are built on the owner's laptop and sent over SSH (`deploy/ship.sh`): no Git access or builds on the
+  small server; every update makes a database copy first and applies migrations before the new version starts.
+**Status**: Files built and tested on the dev machine (see `06-operations/deploy-runbook.md` → Notes). Waiting for the
+owner's domain and AWS account; `server-setup.sh` and `ship.sh` have not run against a real server yet.
+
 ### D47 — Phone notifications through Firebase, straight from the server (N1, Nov 2026)
 **Decision**: The worker's phone gets a notification, also with the app closed, when work comes to them: a batch
 newly assigned to them while it is at their station (also by a hand-over, if they were not on it yet), or a rework mat sent to them (flagged straight to

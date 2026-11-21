@@ -34,6 +34,11 @@ pnpm workspace with **hoisted** node_modules — required by Expo/Metro. Both se
 - `pnpm-workspace.yaml`: `nodeLinker: hoisted` plus `allowBuilds` list (sharp, unrs-resolver, core-js). Add packages via `pnpm approve-builds` when pnpm blocks a postinstall.
 `metro.config.js` has workspace `watchFolders`.
 
+## Production (D46)
+One AWS Lightsail server in Mumbai, everything in Docker Compose (`deploy/compose.yml`, project name `rps-server`):
+Postgres, backend, admin web (`apps/admin-web/Dockerfile`, Next.js standalone), Caddy for HTTPS. One address: admin
+at `/`, API at `/api/v1`. How to set it up and look after it: `06-operations/deploy-runbook.md`.
+
 ## Backend image (for the deploy, E2)
 `apps/backend/Dockerfile` — build with `docker build -t rps-backend apps/backend` (about 38 MB). Not used in development.
 - Runs `rps-server` as the user `rps` (not root), with `ENV=production`, `PORT=8080`, `UPLOAD_DIR=/data/uploads`.
@@ -41,6 +46,9 @@ pnpm workspace with **hoisted** node_modules — required by Expo/Metro. Both se
   before the new server starts: `migrate -path /app/migrations -database "$DATABASE_URL" up`.
 - Must be given: `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `FILE_URL_SECRET` (new values — the
   server refuses the development ones), `CORS_ORIGINS`; `PROXY_HEADER` behind a proxy; `SEED_ADMIN_PASSWORD` for the seed.
+  With `ENV=production` the seed makes only the owner account (no demo cars or rolls).
+- Phone notifications (N1): `FCM_CREDENTIALS_FILE` = the Firebase service-account key; in the compose setup it is
+  `/srv/rps/secrets/firebase-key.json`, mounted read-only at `/run/secrets` (deploy runbook, step 5).
 - **Rework photos** are files in `UPLOAD_DIR` (the database stores only file names, so the folder can be anywhere).
   The host must mount storage that outlives the container at `/data/uploads`, or photos are lost on every redeploy.
 - No `.env`, uploads or Postman files go into the image (`apps/backend/.dockerignore`).

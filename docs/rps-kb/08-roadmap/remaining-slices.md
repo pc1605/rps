@@ -43,7 +43,9 @@ Kept for history.
   API on one site (`01-architecture/auth-model.md`).
 - Built ahead of the deploy: backend image (`apps/backend/Dockerfile`, see `01-architecture/stack-and-ports.md`); the
   upload folder was already a setting (`UPLOAD_DIR`).
-- Deploy: Railway (API + Postgres, healthz check), Vercel (admin), EAS Build (keystore) + EAS Update (OTA). API URL → domain.
+- Hosting chosen (D46): one AWS Lightsail server, Mumbai — files in `deploy/`, steps in `06-operations/deploy-runbook.md`.
+- ~~Deploy: Railway (API + Postgres, healthz check), Vercel (admin), EAS Build (keystore) + EAS Update (OTA). API URL → domain.~~ (superseded by D46)
+- Phones: EAS Build (keystore) + EAS Update (OTA), API URL `https://<site>/api/v1` (E3).
 - Pilot week on real phones on the factory network; validate taffeta/sticker scan quality once a printer exists.
 
 ## Later / maybe never

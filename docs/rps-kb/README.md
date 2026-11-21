@@ -5,7 +5,7 @@ Manufacturing tracking for a car floor-mat (rexine) factory in Ahmedabad. Built 
 (GitHub `pc1605/rps`) starting July 2026. This KB is written so that any engineer or AI agent can continue the
 work without the original conversation history.
 
-> Last updated: 2026-11-15. State: **C1, C2, U0–U3, R1, P1, H1, M1, RT1 merged; E1 (security, platform-independent part) built.**
+> Last updated: 2026-11-15. State: **C1, C2, U0–U3, R1, P1, H1, M1, RT1 merged; E1 merged; hosting chosen (D46, AWS Lightsail Mumbai), deploy files built, not yet on a server.**
 > See `08-roadmap/NEXT-STEPS.md` for the plan and slice order.
 
 ## How to use this KB
@@ -28,7 +28,7 @@ work without the original conversation history.
 | `03-backend/` | Go package structure, full API reference, the critical queries explained |
 | `04-admin-web/` | Next.js app structure and every screen |
 | `05-mobile/` | Expo app structure, worker flows, build & networking |
-| `06-operations/` | Daily runbook, testing (Postman + manual scripts), gotchas |
+| `06-operations/` | Daily runbook, server runbook (`deploy-runbook.md`), testing (Postman + manual scripts), gotchas |
 | `07-decisions/` | Decision log (ADR style) — the *why* behind everything |
 | `08-roadmap/` | Current status, remaining slices with designs, backlog |
 | `09-design/` | Design system tokens, component primitives, UI patterns, audit notes, polish backlog |

@@ -41,7 +41,11 @@
   `refetchInterval` is not pushed. Don't mark form / reference data live (a re-read under an open form).
 - Phone: the stream uses `expo/fetch` (React Native's own `fetch` cannot stream). Admin: a hidden tab has no line.
 
-## Backend image
+## Backend image / server
+- **Never run a second compose project named `rps` on the dev machine.** Compose matches containers by project +
+  service name: a stack named `rps` with a `postgres` service takes over the dev database container `rps_postgres`
+  (it happened once; the data volume `rps_rps_pgdata` survived). The server project is `rps-server`; test stacks use
+  `-p <own name>`.
 - `failed to create upload directory … permission denied` at start = the storage mounted at `/data/uploads` belongs
   to root, and the server runs as the user `rps` (uid 10001). Give the folder to uid 10001, or run the container as root
   on hosts that can't.

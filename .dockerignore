@@ -1,0 +1,16 @@
+# Build context for apps/admin-web/Dockerfile (repo root). Keep it small and free of secrets.
+**/node_modules
+**/.next
+**/.expo
+.git
+.env
+.env.*
+**/.env
+**/.env.*
+uploads
+apps/backend
+apps/mobile
+docs
+scratch
+postman
+**/*.tsbuildinfo
