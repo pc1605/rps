@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \"packages/shared/src/**/*.test.ts\" \"apps/mobile/{lib,features}/**/*.test.ts\" \"apps/admin-web/{lib,features}/**/*.test.ts\"",
     "format": "prettier --write \"apps/**/*.{ts,tsx,js,jsx,json,css}\"",
     "format:check": "prettier --check \"apps/**/*.{ts,tsx,js,jsx,json,css}\"",
     "lint": "biome lint .",
