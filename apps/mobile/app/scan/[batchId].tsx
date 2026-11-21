@@ -14,6 +14,7 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { useAuth } from "../../features/auth/store";
 import { peekUnit } from "../../features/batches/api";
 import { useMyBatches, useScanUnit } from "../../features/batches/hooks";
+import { isWrongBatch, type ScanProgress, syncWithQueue } from "../../features/batches/scan-progress";
 import { useReworkReturn } from "../../features/rework/store";
 import { ApiError } from "../../lib/api-client";
 import { errorText } from "../../lib/errors";
@@ -51,22 +52,33 @@ export default function ScanScreen() {
   const [releasing, setReleasing] = useState(false);
 
   const batch = batches?.find((b) => b.id === batchId);
+  // Fixed when the scanner opens (it opens from the batch screen, so the queue has the batch). The queue
+  // drops the batch once it's finished or handed over — the wrong-batch check must not go with it.
   const [batchCode] = useState(batch?.batch_code ?? "");
   const isStitcher = worker?.station === "stitcher";
   const isPacker = worker?.station === "packer";
 
-  const [progress, setProgress] = useState({
+  const [progress, setProgress] = useState<ScanProgress>({
     done: (isStitcher ? batch?.units_stitched : batch?.units_packed) ?? 0,
     total: batch?.units_total ?? 0,
     mine: batch?.my_done_qty ?? 0,
     target: batch?.my_target_qty ?? null,
   });
-  // Live updates (RT1): a co-worker's scan re-reads the queue, so the batch count on the pill follows
-  // it. Only ever raised here — a re-read that started before my last scan would show one less.
+  // Live updates (RT1): a co-worker's scan, an admin's new target or a scan whose answer was lost
+  // re-read the queue, and the pill follows it (rules in features/batches/scan-progress.ts).
+  const inQueue = !!batch;
   const queueDone = (isStitcher ? batch?.units_stitched : batch?.units_packed) ?? 0;
+  const queueTotal = batch?.units_total ?? 0;
+  const queueMine = batch?.my_done_qty ?? 0;
+  const queueTarget = batch?.my_target_qty ?? null;
   useEffect(() => {
-    setProgress((p) => (queueDone > p.done ? { ...p, done: queueDone } : p));
-  }, [queueDone]);
+    setProgress((p) =>
+      syncWithQueue(
+        p,
+        inQueue ? { done: queueDone, total: queueTotal, mine: queueMine, target: queueTarget } : undefined,
+      ),
+    );
+  }, [inQueue, queueDone, queueTotal, queueMine, queueTarget]);
   const [flash, setFlash] = useState<FlashState | null>(null);
   const [inspectUnit, setInspectUnit] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -228,7 +240,7 @@ export default function ScanScreen() {
       return;
     }
     // Packers check against the server instead: a reused spare keeps the code of its old batch (U3).
-    if (!isPacker && batch && !code.startsWith(`${batch.batch_code}-`)) {
+    if (!isPacker && isWrongBatch(code, batchCode)) {
       const otherBatch = batchCodeOf(code);
       flashAndUnlock({
         kind: "err",
@@ -401,7 +413,7 @@ export default function ScanScreen() {
           >
             <BackLabel
               tone="overlay"
-              label={batch?.batch_code ?? strings.common.back}
+              label={batchCode || strings.common.back}
               textStyle={styles.topBarText}
             />
           </Pressable>
