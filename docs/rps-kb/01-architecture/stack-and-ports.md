@@ -10,7 +10,7 @@
 | Admin web | Next.js 16 (App Router, Turbopack), shadcn/ui, TanStack Query v5, Zustand, axios | **3000** | `apps/admin-web` |
 | Worker mobile | Expo SDK 57 **dev build** (not Expo Go), expo-router, Unistyles v3, expo-secure-store, expo-camera, TanStack Query, Zustand | Metro **8081** | `apps/mobile` |
 
-Android package id: `com.pc165.rpsworker`. App name "RPS Worker", slug/scheme `rps-worker`.
+Android package id: `com.rpsworker.app` (was `com.pc165.rpsworker` until Nov 2026 — an app installed under the old id is a different app: uninstall it, then set the phone up again). App name "RPS Worker", slug/scheme `rps-worker`.
 
 ## Credentials (dev)
 - Postgres: user `rps_dev`, password `rps_dev_password`, db `rps`.

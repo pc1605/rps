@@ -31,7 +31,7 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
 - `batch_units(id uuid, batch_id, unit_code unique 'B-YYYY-NNN-NNN', unit_number, status default 'pending', packed_by → workers, packed_at, created_at, stitched_by → workers [005], stitched_at [005])`. **Inserted at batch creation** (Hard Rule 18) via `generate_series`.
 
 ### 003 — workers
-- `workers(id uuid, name, phone, station worker_station, pin_hash bcrypt, enroll_code_hash unique (SHA-256 of the one-time enrollment code) + enroll_expires_at + enroll_tries, session_no (one phone per worker — D44), is_active, created_by → users NOT NULL, last_login_at, …)`, `idx_workers_active`.
+- `workers(id uuid, name, phone, station worker_station, pin_hash bcrypt, enroll_code_hash unique (SHA-256 of the one-time enrollment code) + enroll_expires_at + enroll_tries, session_no (one phone per worker — D44), push_token + push_lang (en|hi) + push_token_at (the signed-in phone's notification address — N1, D47), is_active, created_by → users NOT NULL, last_login_at, …)`, `idx_workers_active`.
 
 ### 004 — phase_logs
 - `phase_logs(id uuid, batch_id, phase batch_phase, worker_id, started_at default now(), completed_at nullable, quantity_completed nullable, notes)`.
@@ -130,6 +130,12 @@ Postgres cannot drop an enum value; `ALTER TYPE … ADD VALUE IF NOT EXISTS` mus
 
 ### 019 — scan_undone (U3)
 - `ALTER TYPE batch_event_kind ADD VALUE IF NOT EXISTS 'scan_undone'` (D38). Down deletes those rows.
+
+### 021 — worker_push (N1)
+`workers.push_token TEXT` (Firebase Cloud Messaging token of the worker's signed-in phone, NULL = none),
+`push_lang TEXT NOT NULL DEFAULT 'en' CHECK (en|hi)` (the language the server writes the notification in),
+`push_token_at`. Set by `PUT /worker/me/push-token`; cleared on sign-out, on the next sign-in (the old phone stops
+getting notifications) and when Firebase reports the token dead.
 
 ## Key invariants
 - One open cutting log per batch; many open stitching/packing logs (one per joined worker).
