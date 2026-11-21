@@ -53,17 +53,21 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 // ───────────────────────── 401 refresh logic ─────────────────────────
 // When the access token expires, transparently refresh once and retry.
 // Concurrent 401s are queued so we only refresh a single time.
-let isRefreshing = false;
-let waiters: Array<(token: string | null) => void> = [];
+// A refresh gives: the new access token; `null` = the server refused it (signed out); `undefined` = the
+// server could not be reached (network blip, server restarting) — that never signs the admin out.
+type Refreshed = string | null | undefined;
 
-function onRefreshed(token: string | null) {
+let isRefreshing = false;
+let waiters: Array<(token: Refreshed) => void> = [];
+
+function onRefreshed(token: Refreshed) {
   for (const cb of waiters) cb(token);
   waiters = [];
 }
 
 // Bare axios (no interceptors) to avoid an infinite refresh loop.
 // `withCredentials` makes the browser send the refresh cookie (and store the renewed one).
-async function refreshAccessToken(): Promise<string | null> {
+async function refreshAccessToken(): Promise<Refreshed> {
   try {
     const res = await axios.post(`${API_URL}/auth/refresh`, null, { withCredentials: true });
     const data = res.data?.data ?? res.data;
@@ -73,10 +77,12 @@ async function refreshAccessToken(): Promise<string | null> {
       return newAccess;
     }
     return null;
-  } catch {
-    return null;
+  } catch (e) {
+    return axios.isAxiosError(e) && e.response?.status === 401 ? null : undefined;
   }
 }
+
+const unreachable = () => new ApiError(0, "network_error", "Cannot reach server");
 
 // Response interceptor: normalize errors + handle 401 refresh-and-retry
 http.interceptors.response.use(
@@ -98,7 +104,7 @@ http.interceptors.response.use(
               original.headers.Authorization = `Bearer ${token}`;
               resolve(http(original));
             } else {
-              reject(buildApiError(error));
+              reject(token === undefined ? unreachable() : buildApiError(error));
             }
           });
         });
@@ -113,7 +119,9 @@ http.interceptors.response.use(
         original.headers.Authorization = `Bearer ${newToken}`;
         return http(original);
       }
-      // refresh failed → clear and bubble up so app redirects to login
+      // Server not reached: stay signed in; the next request (or poll) tries the refresh again.
+      if (newToken === undefined) return Promise.reject(unreachable());
+      // The server refused the refresh → clear and bubble up so the app redirects to login.
       tokenStore.clear();
     }
 
