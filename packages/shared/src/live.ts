@@ -8,6 +8,11 @@
 const SILENCE_MS = 60_000;
 /** Wait before reconnecting: 1 s, 2 s, 5 s, then every 10 s. Back to 1 s after a good connection. */
 const RETRY_MS = [1_000, 2_000, 5_000, 10_000] as const;
+/**
+ * A line that stayed up this long was a good connection. One that drops sooner (a proxy that cuts
+ * streams) keeps backing off — otherwise it reconnects, and the app re-reads everything, every second.
+ */
+const STABLE_MS = 30_000;
 /** Several notes in a row (a burst of scans) become one re-read. */
 const COALESCE_MS = 250;
 /** How often the apps poll while the line is up — a safety net only. */
@@ -39,6 +44,7 @@ export function openLive({ url, fetch, getToken, onChange, onStatus }: LiveOptio
   let closed = false;
   let connected = false;
   let attempt = 0;
+  let upSince = 0;
   let abort: AbortController | null = null;
   let silence: ReturnType<typeof setTimeout> | undefined;
   let coalesce: ReturnType<typeof setTimeout> | undefined;
@@ -80,7 +86,7 @@ export function openLive({ url, fetch, getToken, onChange, onStatus }: LiveOptio
       if (!connected) {
         // First bytes (": connected"): the server is subscribed — catch up on anything missed.
         setConnected(true);
-        attempt = 0;
+        upSince = Date.now();
         changed();
       }
       // The stream is plain ASCII, so no TextDecoder is needed (not every phone runtime has one).
@@ -100,6 +106,7 @@ export function openLive({ url, fetch, getToken, onChange, onStatus }: LiveOptio
       }
       clearTimeout(silence);
       abort = null;
+      if (connected && Date.now() - upSince >= STABLE_MS) attempt = 0;
       setConnected(false);
       if (closed) return;
       const wait = RETRY_MS[Math.min(attempt, RETRY_MS.length - 1)] ?? 10_000;
