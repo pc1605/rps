@@ -12,7 +12,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#B45309",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -29,6 +29,19 @@
       "expo-status-bar",
       "expo-secure-store",
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#FAFAF7",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#161514"
+          }
+        }
+      ],
+      [
         "expo-camera",
         {
           "cameraPermission": "RPS scans batch unit QR labels."
@@ -37,7 +50,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/android-icon-monochrome.png",
+          "icon": "./assets/notification-icon.png",
           "color": "#B45309",
           "defaultChannel": "work"
         }
