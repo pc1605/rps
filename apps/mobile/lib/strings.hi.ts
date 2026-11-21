@@ -156,6 +156,8 @@ export const hi: Strings = {
     allStitched: (n: number) => `सभी ${n} मैट सिल गए — बैच पैकिंग में गया।`,
     allPacked: (n: number) => `सभी ${n} मैट पैक होकर गोदाम में गए।`,
     allowCamera: "कैमरा चालू करें",
+    openSettings: "सेटिंग खोलें",
+    cameraBlocked: "RPS के लिए कैमरा बंद है। सेटिंग खोलें, Permissions दबाएँ और Camera चालू करें।",
     cameraNeeded: "कैमरा चाहिए",
     cameraWhy: "RPS मैट के QR लेबल स्कैन करने के लिए कैमरा चलाता है।",
     backToQueueA11y: "लिस्ट पर वापस",

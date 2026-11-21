@@ -61,6 +61,12 @@ export default function Login() {
       }
       footer={
         <View style={styles.bottomActionInner}>
+          {/* In the footer, not the form: the footer stays above the keyboard, the form scrolls behind it. */}
+          {errorMessage ? (
+            <Banner kind="danger" text={errorMessage} />
+          ) : signedOutElsewhere ? (
+            <Banner kind="warning" text={strings.login.signedOutElsewhere} />
+          ) : null}
           <AppButton
             title={strings.login.submit}
             size="lg"
@@ -127,16 +133,6 @@ export default function Login() {
           style={[styles.input, styles.pinInput]}
         />
       </View>
-
-      {errorMessage ? (
-        <View style={styles.errorWrap}>
-          <Banner kind="danger" text={errorMessage} />
-        </View>
-      ) : signedOutElsewhere ? (
-        <View style={styles.errorWrap}>
-          <Banner kind="warning" text={strings.login.signedOutElsewhere} />
-        </View>
-      ) : null}
     </Screen>
   );
 }
@@ -202,9 +198,6 @@ const styles = StyleSheet.create((theme) => ({
   },
   placeholder: {
     color: theme.colors.textFaint,
-  },
-  errorWrap: {
-    marginTop: theme.spacing.xs,
   },
   bottomActionInner: {
     alignSelf: "center",

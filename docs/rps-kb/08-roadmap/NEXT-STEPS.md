@@ -30,6 +30,34 @@
   would fix per-roll counts at the cost of a scan per batch and a label on every roll. Only worth it if the owner
   tracks each roll's remaining metres. Draft plan: `c3-handoff.md` (parked).
 
+- **Billing / GST link** (owner, 15 Nov 2026; nothing designed yet). The accountant uses Vyapar today. RPS stays
+  production-only — no billing or GST code inside RPS; a billing tool runs next to it and RPS hands over finished mats.
+  Full plan: `billing-gst-plan.md` (parked).
+  - Today, no code: Reports → Overview → "Item mix (packed)" CSV already gives mats packed per item for a date range.
+  - First step, if wanted: add barcode / brand / model / size columns to that export so rows match billing items by
+    code — works with Vyapar now and with a replacement later.
+  - Possible Vyapar replacements, from their READMEs only (not run, not checked by the CA):
+    - `IamRamgarhia/Free-GST-Billing-Software` — Vyapar-like desktop app, MIT, imports Vyapar data; no API, so the
+      link is the Excel file.
+    - `nikhilb2/simple-invoicing-free-gst-billing-software` — FastAPI + PostgreSQL, Docker, MIT, REST API with API
+      keys; RPS could push finished mats as stock on batch complete. Small, young project — trial beside Vyapar first.
+    - ERPNext + India Compliance — mature, REST API, GPL-3.0 (run as a separate service, don't mix code); heavy,
+      only if purchase / payroll / accounts should live in one place.
+  - Before real bills on any of them: CA checks a sample invoice and the GSTR-1 output, and whether e-invoice (IRN)
+    is required for the turnover (the two small projects don't mention it).
+
+- **Feature requests → future map** (owner, 21 Nov 2026; nothing built). A chat assistant (Claude / ChatGPT / Gemini
+  project) answers "can RPS do X?" from `docs/rps-kb/11-assistant/` (prompt + a plain-language snapshot of what RPS can and
+  cannot do — refresh it when features change) and writes a request card for anything RPS can't do or anyone
+  wants changed.
+  - Now, no code: people send the card to a Google Form → Google Sheet (or a WhatsApp group); the Sheet is the future map.
+  - Later, after the server is live (E2): a **Requests** list in the admin (who, what, why, importance, status new /
+    planned / done / declined) and a **Claude custom connector** (remote MCP on the RPS server, own login/key; Claude
+    free allows one) with a "save request" tool, so the chat saves the card straight into RPS. Only Claude can do this
+    today — ChatGPT custom GPT actions are being retired for new GPTs, Gemini Gems can't call an API.
+  - Maybe later, separate decision: live read-only answers through the same connector ("Baleno mats packed this
+    week?") — needs a decision on who may see which numbers.
+
 Parallel rule: two agents may run at once only in separate folders (git worktree) on separate branches,
 and only when they don't touch the same files. Merge order: U0 → C1 → U1 → U2 → C2 → …
 

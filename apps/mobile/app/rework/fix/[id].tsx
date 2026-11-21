@@ -1,6 +1,6 @@
 import { UNIT_CODE_RE } from "@rps/shared";
 import { useQueryClient } from "@tanstack/react-query";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView } from "expo-camera";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -17,6 +17,7 @@ import { ApiError } from "../../../lib/api-client";
 import { errorText } from "../../../lib/errors";
 import { feedback as triggerFeedback } from "../../../lib/feedback";
 import { useStrings } from "../../../lib/language";
+import { useCameraPermission } from "../../../lib/use-camera-permission";
 import { useCameraReady } from "../../../lib/use-camera-ready";
 import { useOnline } from "../../../lib/use-online";
 
@@ -32,7 +33,7 @@ export default function ReworkFixScreen() {
   const cameraReady = useCameraReady();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const [permission, requestPermission] = useCameraPermissions();
+  const { permission, blocked, ask } = useCameraPermission();
   const scanUnit = useScanUnit();
   const isOnline = useOnline();
 
@@ -177,11 +178,19 @@ export default function ReworkFixScreen() {
     return (
       <Screen
         centered
-        footer={<AppButton title={strings.scanner.allowCamera} size="lg" onPress={requestPermission} />}
+        footer={
+          <AppButton
+            title={blocked ? strings.scanner.openSettings : strings.scanner.allowCamera}
+            size="lg"
+            onPress={ask}
+          />
+        }
       >
         <View style={styles.permContent}>
           <Text style={styles.permTitle}>{strings.scanner.cameraNeeded}</Text>
-          <Text style={styles.permText}>{strings.scanner.cameraWhy}</Text>
+          <Text style={styles.permText}>
+            {blocked ? strings.scanner.cameraBlocked : strings.scanner.cameraWhy}
+          </Text>
           <AppButton
             title={strings.common.back}
             icon={<BackIcon />}

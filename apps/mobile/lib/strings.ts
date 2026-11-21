@@ -199,6 +199,8 @@ export const en = {
     allStitched: (n: number) => `All ${n} mats stitched — batch sent to packing.`,
     allPacked: (n: number) => `All ${n} mats packed and sent to the stockyard.`,
     allowCamera: "Allow camera",
+    openSettings: "Open settings",
+    cameraBlocked: "The camera is off for RPS. Open settings, tap Permissions and turn on Camera.",
     cameraNeeded: "Camera needed",
     cameraWhy: "RPS uses the camera to scan unit QR labels.",
     backToQueueA11y: "Back to queue",

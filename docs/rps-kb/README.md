@@ -32,6 +32,7 @@ work without the original conversation history.
 | `07-decisions/` | Decision log (ADR style) — the *why* behind everything |
 | `08-roadmap/` | Current status, remaining slices with designs, backlog |
 | `09-design/` | Design system tokens, component primitives, UI patterns, audit notes, polish backlog |
+| `11-assistant/` | Chat-assistant pack for the owner's team: the prompt (`PROJECT-INSTRUCTIONS.md`) and "what RPS can and cannot do" in plain language — no plans, no technical details. Refresh it when a feature ships |
 
 ## Conventions used in this KB
 

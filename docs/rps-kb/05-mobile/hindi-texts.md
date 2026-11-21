@@ -812,3 +812,13 @@ one line: "1 in rework · 0 left to pack"). Line 239 is the chip on a batch wher
 245. 🔧 Rework mat to fix  
    **🔧 ठीक करने के लिए रीवर्क मैट**  
    (notification title — written by the server; under it the mat code and car)
+
+## Camera turned off for RPS (all camera screens)
+
+246. Open settings  
+   **सेटिंग खोलें**  
+   (replaces "Allow camera" when Android won't ask again; opens RPS's page in Android settings)
+
+247. The camera is off for RPS. Open settings, tap Permissions and turn on Camera.  
+   **RPS के लिए कैमरा बंद है। सेटिंग खोलें, Permissions दबाएँ और Camera चालू करें।**  
+   ❓ "Permissions" and "Camera" left in English: on these phones Android settings show them in English

@@ -1,5 +1,5 @@
 import type { ReworkReason } from "@rps/shared";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView } from "expo-camera";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,6 +18,7 @@ import { ApiError } from "../../lib/api-client";
 import { errorText } from "../../lib/errors";
 import { feedback } from "../../lib/feedback";
 import { useStrings } from "../../lib/language";
+import { useCameraPermission } from "../../lib/use-camera-permission";
 import { useCameraReady } from "../../lib/use-camera-ready";
 
 const REASON_KEYS: ReworkReason[] = ["stitching_fault", "stain", "cutting_fault", "material_defect", "other"];
@@ -31,7 +32,7 @@ export default function NewReworkScreen() {
   const router = useRouter();
   const cameraReady = useCameraReady();
   const insets = useSafeAreaInsets();
-  const [permission, requestPermission] = useCameraPermissions();
+  const { permission, blocked, ask } = useCameraPermission();
   const flagRework = useFlagRework();
   const markSent = useReworkReturn((s) => s.markSent);
 
@@ -152,11 +153,19 @@ export default function NewReworkScreen() {
     return (
       <Screen
         centered
-        footer={<AppButton title={strings.scanner.allowCamera} size="lg" onPress={requestPermission} />}
+        footer={
+          <AppButton
+            title={blocked ? strings.scanner.openSettings : strings.scanner.allowCamera}
+            size="lg"
+            onPress={ask}
+          />
+        }
       >
         <View style={styles.permContent}>
           <Text style={styles.permTitle}>{strings.scanner.cameraNeeded}</Text>
-          <Text style={styles.permText}>{strings.rework.cameraWhy}</Text>
+          <Text style={styles.permText}>
+            {blocked ? strings.scanner.cameraBlocked : strings.rework.cameraWhy}
+          </Text>
           <AppButton
             title={strings.common.back}
             icon={<BackIcon />}

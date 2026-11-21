@@ -27,5 +27,5 @@ This backlog records prioritized polish and enhancement opportunities observed a
 
 - [ ] **P3**: Remove deprecated typography keys (`eyebrow`, `label`) from mobile theme once all legacy screens migrate (`apps/mobile/lib/theme.ts:32`).
 - [ ] **P3**: Add keyboard shortcut (`Cmd/Ctrl + K`) to launch global batch search in web header (`apps/admin-web/components/layout/app-shell.tsx:48`).
-- [ ] **P3**: Preload IBM Plex font weights during Expo splash screen rather than lazy font hook loading (`apps/mobile/app/_layout.tsx:28`).
+- [x] **P3**: Preload IBM Plex font weights during Expo splash screen rather than lazy font hook loading (`apps/mobile/app/_layout.tsx`): the splash stays up until `useFonts` is done (expo-splash-screen).
 - [ ] **P3**: Export reusable print stylesheet helper for batch label sheets to support thermal 4x6 label printers (`apps/admin-web/features/batches/label-pdf.ts:40`).

@@ -14,13 +14,18 @@ import {
   NotoSansDevanagari_700Bold,
 } from "@expo-google-fonts/noto-sans-devanagari";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useUnistyles } from "react-native-unistyles";
 import { SessionGuard } from "../components/SessionGuard";
 import { LiveUpdates } from "../lib/live";
 import { PushNotifications } from "../lib/notifications";
 import { QueryProvider } from "../lib/query-provider";
+
+// Keep the splash up until the fonts are in, instead of showing an empty screen for that moment.
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const { theme } = useUnistyles();
@@ -36,6 +41,10 @@ export default function RootLayout() {
     NotoSansDevanagari_600SemiBold,
     NotoSansDevanagari_700Bold,
   });
+
+  useEffect(() => {
+    if (fontsLoaded) SplashScreen.hideAsync();
+  }, [fontsLoaded]);
 
   if (!fontsLoaded) return null;
 

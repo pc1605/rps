@@ -1,5 +1,5 @@
 import { ENROLL_PREFIX } from "@rps/shared";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView } from "expo-camera";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -13,13 +13,14 @@ import { Screen } from "../components/ui/Screen";
 import { Skeleton } from "../components/ui/Skeleton";
 import { ENROLL_CODE_RE, useEnrollDraft } from "../features/auth/enroll-draft";
 import { useStrings } from "../lib/language";
+import { useCameraPermission } from "../lib/use-camera-permission";
 
 export default function EnrollScan() {
   const strings = useStrings();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const setCode = useEnrollDraft((s) => s.setCode);
-  const [permission, requestPermission] = useCameraPermissions();
+  const { permission, blocked, ask } = useCameraPermission();
   const [error, setError] = useState<string | null>(null);
   const lock = useRef(false);
 
@@ -35,11 +36,19 @@ export default function EnrollScan() {
     return (
       <Screen
         centered
-        footer={<AppButton title={strings.scanner.allowCamera} size="lg" onPress={requestPermission} />}
+        footer={
+          <AppButton
+            title={blocked ? strings.scanner.openSettings : strings.scanner.allowCamera}
+            size="lg"
+            onPress={ask}
+          />
+        }
       >
         <View style={styles.permContent}>
           <Text style={styles.permTitle}>{strings.scanner.cameraNeeded}</Text>
-          <Text style={styles.permText}>{strings.enroll.cameraWhy}</Text>
+          <Text style={styles.permText}>
+            {blocked ? strings.scanner.cameraBlocked : strings.enroll.cameraWhy}
+          </Text>
           <AppButton
             title={strings.common.back}
             icon={<BackIcon />}
