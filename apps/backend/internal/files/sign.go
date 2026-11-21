@@ -45,14 +45,29 @@ func Sign(name string, ttl time.Duration) string {
 		ttl = defTTL
 	}
 
-	expUnix := time.Now().Add(ttl).Unix()
-	expStr := strconv.FormatInt(expUnix, 10)
+	expStr := strconv.FormatInt(expiry(ttl), 10)
 
 	mac := hmac.New(sha256.New, []byte(sec))
 	mac.Write([]byte(name + "|" + expStr))
 	sig := hex.EncodeToString(mac.Sum(nil))
 
 	return fmt.Sprintf("exp=%s&sig=%s", expStr, sig)
+}
+
+// now is the clock; tests move it.
+var now = time.Now
+
+// expiry is now+ttl rounded up to a whole multiple of ttl. Every link made within one such window is
+// the same, so phones and browsers keep the photo in their cache instead of downloading it again on
+// every re-read of a list (live updates re-read often); a link is still valid for at least ttl
+// (at most 2×ttl).
+func expiry(ttl time.Duration) int64 {
+	end := now().Add(ttl).Unix()
+	step := int64(ttl / time.Second)
+	if step <= 0 {
+		return end
+	}
+	return (end/step + 1) * step
 }
 
 // Verify validates that the signature for the given file name and expiration timestamp
@@ -76,7 +91,7 @@ func Verify(name, exp, sig string) bool {
 		return false
 	}
 
-	if time.Now().Unix() > expUnix {
+	if now().Unix() > expUnix {
 		return false
 	}
 
