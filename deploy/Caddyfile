@@ -1,0 +1,33 @@
+# One address for everything: the admin web at /, the API at /api, the health check at /healthz.
+# Same site for the admin page and the API → the refresh cookie just works (D45), no cross-site setup.
+# Caddy fetches and renews the HTTPS certificate by itself.
+
+{$SITE_DOMAIN} {
+	# Compress everything except the live stream (D43): compression would hold its notes back.
+	@compressible not path /api/v1/live
+	encode @compressible gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	@backend path /api/* /healthz
+	handle @backend {
+		reverse_proxy backend:8080 {
+			# The backend counts login tries per address (PROXY_HEADER=X-Real-IP).
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle {
+		reverse_proxy admin:3000
+	}
+
+	request_body {
+		max_size 25MB
+	}
+}

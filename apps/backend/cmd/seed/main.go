@@ -74,6 +74,13 @@ func main() {
 		fmt.Println("✓ owner seeded — owner@ambika.local / " + demoAdminPassword + " (demo password, development only)")
 	}
 
+	// Production gets the owner account only — the brands, models and rolls below are demo data.
+	// The real catalogue is entered in the admin web.
+	if os.Getenv("ENV") == "production" {
+		fmt.Println("\n✓ production: owner only, no demo data")
+		return
+	}
+
 	// ───── Car brands + models ─────
 	// Upsert brands, capture ids, then upsert their models.
 	brands := map[string][]struct {

@@ -1,0 +1,70 @@
+# RPS on one server: database, backend, admin web, and Caddy (HTTPS) in front.
+# Lives in /srv/rps on the server next to .env (secrets) — see docs/rps-kb/06-operations/deploy-runbook.md.
+# Only Caddy is reachable from outside (ports 80/443). The database and the apps have no published ports.
+
+name: rps-server  # never "rps": that is the dev database project (docker-compose.yml at the repo root)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rps
+      POSTGRES_USER: rps
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      TZ: Asia/Kolkata
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rps -d rps"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: rps-backend:${RPS_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ENV: production
+      PORT: "8080"
+      DATABASE_URL: postgres://rps:${POSTGRES_PASSWORD}@postgres:5432/rps?sslmode=disable
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?set JWT_ACCESS_SECRET in .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET in .env}
+      FILE_URL_SECRET: ${FILE_URL_SECRET:?set FILE_URL_SECRET in .env}
+      CORS_ORIGINS: https://${SITE_DOMAIN:?set SITE_DOMAIN in .env}
+      PROXY_HEADER: X-Real-IP # Caddy puts the real client address here
+      UPLOAD_DIR: /data/uploads
+      # Phone notifications (N1): /run/secrets/firebase-key.json once the key is on the server; empty = off.
+      FCM_CREDENTIALS_FILE: ${FCM_CREDENTIALS_FILE:-}
+      FACTORY_TZ: Asia/Kolkata
+      LOG_LEVEL: info
+    volumes:
+      - ./uploads:/data/uploads
+      - ./secrets:/run/secrets:ro
+
+  admin:
+    image: rps-admin:${RPS_VERSION:-latest}
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on: [backend, admin]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
