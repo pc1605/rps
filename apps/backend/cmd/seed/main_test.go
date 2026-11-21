@@ -16,6 +16,8 @@ func TestAdminPassword(t *testing.T) {
 		{"production with a value uses it", "a-long-real-password", "production", "a-long-real-password", true, false},
 		{"development with a value uses it", "a-long-real-password", "development", "a-long-real-password", true, false},
 		{"a short value is refused", "short", "production", "", false, true},
+		{"8 characters are refused", "abcdefgh", "production", "", false, true},
+		{"9 characters are enough", "abcdefghi", "production", "abcdefghi", true, false},
 		{"the demo password as the value is refused", demoAdminPassword, "production", "", false, true},
 	}
 	for _, tc := range cases {

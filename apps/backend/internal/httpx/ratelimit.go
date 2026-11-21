@@ -23,6 +23,17 @@ func LoginLimiter(maxFailures int) fiber.Handler {
 	return newLoginLimiter(maxFailures, LoginWindow, time.Now).handle
 }
 
+// WorkerLoginFactor: the worker login allows this many times the admin's failures per address. Every
+// phone in the factory reaches the server from the factory's one internet address, so a day of
+// setting up phones (codes and PINs typed on many phones) adds up there — 10 would block all of them.
+// Guessing stays hopeless: each code dies after 5 wrong PINs and lives 10 minutes.
+const WorkerLoginFactor = 5
+
+// WorkerLoginLimiter is LoginLimiter for POST /worker/login: maxFailures × WorkerLoginFactor per address.
+func WorkerLoginLimiter(maxFailures int) fiber.Handler {
+	return LoginLimiter(maxFailures * WorkerLoginFactor)
+}
+
 type loginLimiter struct {
 	max    int
 	window time.Duration
