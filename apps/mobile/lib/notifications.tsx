@@ -5,6 +5,7 @@ import { Platform } from "react-native";
 import { useAuth } from "../features/auth/store";
 import { http } from "./api-client";
 import { getStrings, useLanguage } from "./language";
+import { pushSender } from "./push-sender";
 
 // Phone notifications (N1, D47): the server tells this phone through Firebase when work comes to the
 // worker — a batch assigned or handed over to them, a rework mat sent to them. Works with the app closed.
@@ -33,14 +34,17 @@ async function ensureChannel() {
   });
 }
 
+/** Sends this phone's address once per signed-in worker (never twice: see lib/push-sender.ts). */
+const sender = pushSender((token, lang) => http.put("/worker/me/push-token", { token, lang }));
+
 /** Ask for permission (Android 13+ shows a prompt once), then hand this phone's address to the server. */
-async function register(language: string): Promise<void> {
+async function register(workerId: string, language: string): Promise<void> {
   await ensureChannel();
   let { status } = await Notifications.getPermissionsAsync();
   if (status !== "granted") status = (await Notifications.requestPermissionsAsync()).status;
   if (status !== "granted") return; // the worker said no: the app works as before, without notifications
   const { data: token } = await Notifications.getDevicePushTokenAsync();
-  await http.put("/worker/me/push-token", { token, lang: language });
+  await sender.send(workerId, token, language);
 }
 
 /** Signing out: stop notifications on this phone. Best effort — signing out never waits on it. */
@@ -70,14 +74,24 @@ export function PushNotifications() {
   const language = useLanguage((s) => s.language);
 
   useEffect(() => {
-    if (!workerId) return;
+    if (!workerId) {
+      // Signed out, by any way (sign-out button, signed in elsewhere, expired): the server drops this
+      // phone's address at the next sign-in, so that sign-in must send it again.
+      sender.forget();
+      return;
+    }
     const run = () =>
-      register(language).catch((e) => {
+      register(workerId, language).catch((e) => {
         // No Firebase setup in this build, no network, … — the app keeps working without notifications.
         console.warn("push registration failed", e);
       });
     void run();
-    const sub = Notifications.addPushTokenListener(() => void run());
+    // Firebase gave this phone a new address. Use the token from the event — never fetch it here: fetching the
+    // token fires this same event, which would loop (expo-notifications emits it on every fetch).
+    const sub = Notifications.addPushTokenListener(({ data }) => {
+      if (typeof data !== "string") return;
+      sender.send(workerId, data, language).catch((e) => console.warn("push registration failed", e));
+    });
     return () => sub.remove();
   }, [workerId, language]);
 
