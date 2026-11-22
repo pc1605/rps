@@ -67,6 +67,10 @@ Catalog management of flat car items.
 Table: name · station badge · active · last login · **QR icon** → "Set up phone" dialog (`EnrollmentQrDialog` →
 `EnrollmentCode`): every opening calls `POST /workers/:id/enrollment` and shows the one-time code as QR + 6 digits, the
 time left (10 min), and "New code". Nothing to copy — the code works once. Create dialog → second step is the same block.
+The block reads `GET /workers/:id/enrollment` (live note + every 5 s while waiting — wrong PINs send no note) and
+replaces the QR with what became of it: **signed in** (used up — a signed-out phone needs a new code), **blocked** (5
+wrong PINs), **replaced** (a newer code from another screen) or **expired**; while waiting it shows wrong PINs left.
+Code requests run one at a time, so the code shown is always the one the server holds.
 
 ## Stock — `/stock`
 Finished goods (packed mats by item), with a pointer to Materials. The old Raw-material/Rolls tab was removed in C2.

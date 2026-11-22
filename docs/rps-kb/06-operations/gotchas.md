@@ -59,4 +59,5 @@
   and the API are not on the same site, `CORS_ORIGINS` doesn't name the admin origin, or the site is not on HTTPS
   (the cookie is `Secure` in production). See `auth-model.md` → Admin refresh cookie.
 - Enrollment codes are one-time (D44): seeded workers have a PIN (1234) but nothing to log in with until an admin opens Workers → Set up phone. Fast 401s (<1 ms) on `/worker/login` mean no live code matched; ~100–200 ms means bcrypt ran (code found, PIN wrong — 5 of those kill the code). Opening the dialog twice kills the first code.
+- **"Wrong code or PIN" on a worker's phone, PIN reset doesn't help** = the code is used up (the worker signed in with it, then signed out), blocked by 5 wrong PINs, or replaced. Resetting the PIN changes nothing; a new code (Set up phone) does. The dialog says which (since the 22 Nov 2026 fix).
 - All dev workers use PIN 1234.

@@ -67,6 +67,20 @@ func (h *Handler) NewEnrollment(c *fiber.Ctx) error {
 	return httpx.OK(c, fiber.Map{"code": code, "expires_at": expires})
 }
 
+// EnrollmentStatus — GET /workers/:id/enrollment (admin). Whether the worker's code is still live, so
+// the "Set up phone" dialog can say when its code was used, blocked by wrong PINs, or replaced.
+func (h *Handler) EnrollmentStatus(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return httpx.BadRequest(c, "invalid worker id")
+	}
+	out, err := h.svc.GetEnrollmentStatus(c.Context(), id)
+	if err != nil {
+		return workerErr(c, err, "load enrollment status")
+	}
+	return httpx.OK(c, out)
+}
+
 // Login — public (one-time enrollment code + PIN). Issues a worker JWT.
 func (h *Handler) Login(c *fiber.Ctx) error {
 	var in LoginInput

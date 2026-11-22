@@ -34,6 +34,8 @@ export function factoryDay(d: Date = new Date()): string {
 
 /** Enrollment QR payload prefix: RPS-ENROLL:<one-time 6-digit code>. */
 export const ENROLL_PREFIX = "RPS-ENROLL:";
+/** How long a fresh enrollment code works (backend worker.EnrollCodeTTL). */
+export const ENROLL_CODE_TTL_MS = 10 * 60 * 1000;
 
 export const PHASE_FOR_STATION: Record<Station, Phase> = {
   cutter: "cutting",
