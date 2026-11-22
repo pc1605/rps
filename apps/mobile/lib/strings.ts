@@ -262,10 +262,10 @@ export const en = {
   cutting: {
     release: "Give back this batch",
     releaseTitle: "Give back this batch?",
-    releaseBody: "It goes back to the cutting queue so any cutter can start it. Nothing is reported as cut.",
+    releaseBody: "It goes back to the admin, who gives it to a cutter again. Nothing is reported as cut.",
     releaseConfirm: "Give back",
     keep: "Keep it",
-    released: (code: string) => `${code} is back in the cutting queue.`,
+    released: (code: string) => `${code} is back with the admin.`,
   },
   rework: {
     title: "Rework",

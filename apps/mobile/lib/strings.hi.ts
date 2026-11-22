@@ -213,11 +213,10 @@ export const hi: Strings = {
   cutting: {
     release: "यह बैच वापस करें",
     releaseTitle: "यह बैच वापस करें?",
-    releaseBody:
-      "यह कटिंग की लिस्ट में वापस जाएगा, ताकि कोई भी कटर इसे शुरू कर सके। कुछ भी कटा हुआ नहीं गिना जाएगा।",
+    releaseBody: "यह एडमिन के पास वापस जाएगा, वे इसे फिर किसी कटर को देंगे। कुछ भी कटा हुआ नहीं गिना जाएगा।",
     releaseConfirm: "वापस करें",
     keep: "रखें",
-    released: (code: string) => `${code} कटिंग की लिस्ट में वापस गया।`,
+    released: (code: string) => `${code} एडमिन के पास वापस गया।`,
   },
   rework: {
     title: "रीवर्क",
