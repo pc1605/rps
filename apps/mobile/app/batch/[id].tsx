@@ -11,10 +11,11 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Stat } from "../../components/ui/Stat";
 import { useAuth } from "../../features/auth/store";
-import { useCompleteBatch, useMyBatches, useReleaseBatch, useStartBatch } from "../../features/batches/hooks";
+import { useCompleteBatch, useMyBatches, useStartBatch } from "../../features/batches/hooks";
 import { packingRework } from "../../features/batches/packing";
 import { errorText } from "../../lib/errors";
 import { useStrings } from "../../lib/language";
+import { useConfirmMissing } from "../../lib/use-confirm-missing";
 import { useOnline } from "../../lib/use-online";
 
 export default function BatchAction() {
@@ -22,16 +23,17 @@ export default function BatchAction() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { worker } = useAuth();
-  const { data: batches, isPending } = useMyBatches();
+  const { data: batches, isPending, isFetching, refetch } = useMyBatches();
   const startBatch = useStartBatch();
   const completeBatch = useCompleteBatch();
-  const releaseBatch = useReleaseBatch();
   const isOnline = useOnline();
 
   const batch = useMemo(() => batches?.find((b) => b.id === id), [batches, id]);
   const [qty, setQty] = useState<string | null>(null); // null = untouched → prefill
+  // Opened from a notification: the queue may not know the batch yet — re-read before "not found".
+  const checking = useConfirmMissing({ found: !!batch, isPending, isFetching, refetch });
 
-  if (isPending) {
+  if (isPending || checking) {
     return (
       <Screen header={<ScreenHeader back={strings.common.queue} />}>
         <View style={styles.skeletonContainer}>
@@ -109,22 +111,8 @@ export default function BatchAction() {
       },
     );
 
-  const handleRelease = () =>
-    Alert.alert(strings.cutting.releaseTitle, strings.cutting.releaseBody, [
-      { text: strings.cutting.keep, style: "cancel" },
-      {
-        text: strings.cutting.releaseConfirm,
-        style: "destructive",
-        onPress: () =>
-          releaseBatch.mutate(batch.id, {
-            onSuccess: () => {
-              Alert.alert(strings.common.done, strings.cutting.released(batch.batch_code));
-              router.back();
-            },
-            onError,
-          }),
-      },
-    ]);
+  // The cutter says why on the next screen (D48); the admin sees it on the batch page.
+  const handleRelease = () => router.push(`/batch/give-back/${batch.id}`);
 
   const stepDecrement = () => {
     const current = Number.isNaN(qtyNum) ? 1 : qtyNum;
@@ -305,13 +293,7 @@ export default function BatchAction() {
       )}
 
       {isCutter && mine && (
-        <AppButton
-          title={strings.cutting.release}
-          variant="ghost"
-          size="md"
-          onPress={handleRelease}
-          loading={releaseBatch.isPending}
-        />
+        <AppButton title={strings.cutting.release} variant="ghost" size="md" onPress={handleRelease} />
       )}
 
       {isCutter && !mine && batch.status === "in_progress" && (

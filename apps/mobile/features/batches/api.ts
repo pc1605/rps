@@ -1,3 +1,4 @@
+import type { GiveBackReason } from "@rps/shared";
 import { http } from "../../lib/api-client";
 import type { Batch, ScanResult, UnitPeek } from "./types";
 
@@ -20,9 +21,9 @@ export const batchApi = {
       notes,
     });
   },
-  /** Cutter gives back their own cutting claim (before reporting the cut). */
-  release: async (batchId: string): Promise<void> => {
-    await http.post(`/worker/batches/${batchId}/release`);
+  /** Cutter gives back their own cutting claim (before reporting the cut), saying why (D48). */
+  release: async (batchId: string, reason: GiveBackReason, note?: string): Promise<void> => {
+    await http.post(`/worker/batches/${batchId}/release`, { reason, note });
   },
   scanUnit: async (unitCode: string): Promise<ScanResult> => {
     const res = await http.post("/worker/units/scan", { unit_code: unitCode });

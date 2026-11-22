@@ -212,10 +212,20 @@ export const hi: Strings = {
   },
   cutting: {
     release: "यह बैच वापस करें",
-    releaseTitle: "यह बैच वापस करें?",
     releaseBody: "यह एडमिन के पास वापस जाएगा, वे इसे फिर किसी कटर को देंगे। कुछ भी कटा हुआ नहीं गिना जाएगा।",
     releaseConfirm: "वापस करें",
-    keep: "रखें",
+    reasonTitle: "आप इसे वापस क्यों कर रहे हैं?",
+    reasons: {
+      machine_issue: { emoji: "🛠️", label: "मशीन में खराबी" },
+      material_issue: { emoji: "🧻", label: "माल में दिक्कत" },
+      too_much_work: { emoji: "⏳", label: "काम ज़्यादा है" },
+      shift_over: { emoji: "🌙", label: "शिफ्ट ख़त्म" },
+      other: { emoji: "❓", label: "कुछ और" },
+    },
+    chooseReason: "कारण चुनें",
+    noteLabel: "नोट (ज़रूरी नहीं)",
+    noteNeeded: "नोट — लिखें क्या हुआ",
+    notePlaceholder: "क्या हुआ?",
     released: (code: string) => `${code} एडमिन के पास वापस गया।`,
   },
   rework: {
