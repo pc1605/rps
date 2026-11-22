@@ -50,8 +50,11 @@ WITH open AS (
   SELECT o.*,
     COALESCE(
       (SELECT MAX(e.at) FROM batch_events e WHERE e.batch_id = o.id AND e.to_phase = o.current_phase
-         AND e.to_status = CASE o.stage WHEN 'awaiting_assignment' THEN 'awaiting_assignment'::batch_status
-                                        ELSE 'pending'::batch_status END),
+         AND CASE o.stage
+               -- cutting (D48): waiting for a cutter counts as cutting; assigning one doesn't restart it
+               WHEN 'cutting' THEN e.kind IN ('created', 'short_resolved', 'claim_released')
+               WHEN 'awaiting_assignment' THEN e.to_status = 'awaiting_assignment'
+               ELSE e.to_status = 'pending' END),
       (SELECT MAX(e.at) FROM batch_events e WHERE e.batch_id = o.id AND e.to_phase = o.current_phase),
       o.created_at) AS entered_at,
     GREATEST(o.created_at,

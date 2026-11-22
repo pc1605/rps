@@ -58,7 +58,7 @@ func TestNotifications(t *testing.T) {
 
 	bt := f.create(CreateInput{Quantity: 2})
 	f.cut(bt.ID, 2)
-	expect("cutting", nil, nil)
+	expect("cutter assigned (D48)", []string{pair(bt.ID, f.cutter)}, nil)
 
 	f.assign(bt.ID, AssignmentInput{WorkerID: a})
 	expect("first assignment", []string{pair(bt.ID, a)}, nil)

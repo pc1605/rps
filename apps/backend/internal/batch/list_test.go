@@ -120,7 +120,7 @@ func TestListPageAndSearch(t *testing.T) {
 		t.Errorf("has_rework split %d + %d != %d", rw.Total, norw.Total, all.Total)
 	}
 	short, _ := s.ListPage(ctx, ListFilter{Short: &yes})
-	if want := count(`b.status = 'awaiting_assignment' AND b.cut_qty < b.quantity`); short.Total != want {
+	if want := count(`b.current_phase = 'stitching' AND b.status = 'awaiting_assignment' AND b.cut_qty < b.quantity`); short.Total != want {
 		t.Errorf("short: %d, sql %d", short.Total, want)
 	}
 	future := time.Now().AddDate(1, 0, 0)

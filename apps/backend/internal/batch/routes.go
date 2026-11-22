@@ -19,6 +19,7 @@ func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 	api.Get("/units/:code", admin, h.UnitJourney)
 	api.Get("/search", admin, h.Search)
 	api.Get("/stitchers/load", admin, h.StitcherLoads)
+	api.Get("/cutters/load", admin, h.CutterLoads)
 	api.Get("/spares", admin, h.ListSpares)
 	api.Get("/stitchers/:id/open", admin, h.OpenStitching)
 

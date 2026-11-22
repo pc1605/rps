@@ -12,7 +12,8 @@ import (
 // Views mirror apps/admin-web/features/batches/views.ts (the sidebar phase tabs).
 // A cancelled batch keeps the phase it stopped in, so it is only in the "cancelled" view.
 var listViews = map[string]string{
-	"cutting":   `b.current_phase = 'cutting' AND b.status <> 'cancelled'`,
+	"to_cut":    `b.current_phase = 'cutting' AND b.status = 'awaiting_assignment'`,
+	"cutting":   `b.current_phase = 'cutting' AND b.status NOT IN ('awaiting_assignment', 'cancelled')`,
 	"ready":     `b.current_phase = 'stitching' AND b.status = 'awaiting_assignment'`,
 	"stitching": `b.current_phase = 'stitching' AND b.status NOT IN ('awaiting_assignment', 'cancelled')`,
 	"packing":   `b.current_phase = 'packing' AND b.status <> 'cancelled'`,
@@ -20,12 +21,17 @@ var listViews = map[string]string{
 	"cancelled": `b.status = 'cancelled'`,
 }
 
-// readySinceExpr: for a batch waiting for a stitching assignment, when cutting last finished
-// (owner, U3: resolving a short cut or clearing an assignment does not restart the wait; a re-cut
-// does, since cutting finishes again). NULL when not awaiting_assignment. Falls back to updated_at
-// for a batch with no cut_completed event.
+// readySinceExpr: how long a batch has waited for the admin to assign it. NULL when not
+// awaiting_assignment; falls back to updated_at for a batch with no such event.
+//   - Ready to stitch: when cutting last finished (owner, U3: resolving a short cut or clearing an
+//     assignment does not restart the wait; a re-cut does, since cutting finishes again).
+//   - Needs a cutter (D48): when it last came to cutting — created, sent back to re-cut, or given
+//     back by its cutter. Clearing an assignment doesn't restart it either.
 const readySinceExpr = `CASE WHEN b.status = 'awaiting_assignment' THEN COALESCE(
-	  (SELECT MAX(e.at) FROM batch_events e WHERE e.batch_id = b.id AND e.kind = 'cut_completed'),
+	  CASE WHEN b.current_phase = 'cutting'
+	    THEN (SELECT MAX(e.at) FROM batch_events e WHERE e.batch_id = b.id AND e.to_phase = 'cutting'
+	          AND e.kind IN ('created', 'short_resolved', 'claim_released'))
+	    ELSE (SELECT MAX(e.at) FROM batch_events e WHERE e.batch_id = b.id AND e.kind = 'cut_completed') END,
 	  b.updated_at) END`
 
 // activeWorkersExpr: who's working on the batch right now — names of the open phase logs at the
@@ -48,7 +54,8 @@ var listSorts = map[string]string{
 	"created":  `b.created_at`,
 	"code":     `b.batch_code`,
 	"quantity": `b.quantity`,
-	"phase": `CASE b.current_phase WHEN 'cutting' THEN 1 WHEN 'stitching' THEN
+	"phase": `CASE b.current_phase WHEN 'cutting' THEN
+	            CASE WHEN b.status = 'awaiting_assignment' THEN 0 ELSE 1 END WHEN 'stitching' THEN
 	            CASE WHEN b.status = 'awaiting_assignment' THEN 2 ELSE 3 END WHEN 'packing' THEN 4 ELSE 5 END`,
 	"car": `lower(cb.name || ' ' || cm.name)`,
 }
@@ -78,7 +85,7 @@ type ListPage struct {
 func ValidateListFilter(f ListFilter) error {
 	if f.View != "" {
 		if _, ok := listViews[f.View]; !ok {
-			return fmt.Errorf("%w: view must be one of cutting, ready, stitching, packing, completed, cancelled", ErrInvalidInput)
+			return fmt.Errorf("%w: view must be one of to_cut, cutting, ready, stitching, packing, completed, cancelled", ErrInvalidInput)
 		}
 	}
 	if f.Sort != "" {
@@ -161,7 +168,7 @@ func (s *Service) ListPage(ctx context.Context, f ListFilter) (*ListPage, error)
 		where = append(where, cond)
 	}
 	if f.Short != nil {
-		cond := `(b.status = 'awaiting_assignment' AND b.cut_qty < b.quantity)`
+		cond := `(b.current_phase = 'stitching' AND b.status = 'awaiting_assignment' AND b.cut_qty < b.quantity)`
 		if !*f.Short {
 			cond = "NOT " + cond
 		}

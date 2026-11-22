@@ -12,7 +12,7 @@ import (
 	"github.com/pc1605/rps/apps/backend/internal/audit"
 )
 
-// ErrNotEditable: the batch has left the open cutting queue (claimed, cut, cancelled …).
+// ErrNotEditable: cutting has started on the batch, or it has left cutting (cut, cancelled …).
 var ErrNotEditable = errors.New("this batch can only be edited while it is waiting to be cut")
 
 // EditInput is PATCH /batches/:id. A nil field is left unchanged; roll_id "" clears the roll.
@@ -30,8 +30,8 @@ type editSnapshot struct {
 	Notes      string     `json:"notes"`
 }
 
-// Edit changes a batch before cutting (U3, D34): only while current_phase=cutting and
-// status=pending, i.e. nobody holds the cutting claim. Once some mats are cut (a re-cut after a
+// Edit changes a batch before cutting (U3, D34): only while current_phase=cutting and status is
+// awaiting_assignment or pending (D48), i.e. nobody holds the cutting claim. Once some mats are cut (a re-cut after a
 // short cut, or spares reused at creation) the car item is fixed and the quantity must stay above
 // cut_qty. A quantity change adds or removes the highest-numbered (uncut) units.
 func (s *Service) Edit(ctx context.Context, batchID uuid.UUID, in EditInput, actorID uuid.UUID, actorRole, ip string) error {
@@ -58,7 +58,7 @@ func (s *Service) Edit(ctx context.Context, batchID uuid.UUID, in EditInput, act
 	if err != nil {
 		return err
 	}
-	if phase != PhaseCutting || status != StatusPending {
+	if phase != PhaseCutting || (status != StatusPending && status != StatusAwaitingAssignment) {
 		return ErrNotEditable
 	}
 

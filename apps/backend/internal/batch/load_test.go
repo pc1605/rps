@@ -70,7 +70,7 @@ func TestStitcherLoads(t *testing.T) {
 		t.Fatalf("idle stitcher: %+v", l)
 	}
 
-	if err := s.StartPhase(ctx, bt.ID, cutterID, "cutter", ip); err != nil {
+	if err := startCutting(ctx, s, bt.ID, cutterID, ip); err != nil {
 		t.Fatalf("cut start: %v", err)
 	}
 	if err := s.CompletePhase(ctx, bt.ID, cutterID, "cutter", 5, "", ip); err != nil {
@@ -197,11 +197,19 @@ func TestReadySince(t *testing.T) {
 		return at
 	}
 
+	// Needs a cutter (D48): waiting since it was created; assigning a cutter ends the wait.
+	var createdAt time.Time
+	if err := pool.QueryRow(ctx, `SELECT at FROM batch_events WHERE batch_id = $1 AND kind = 'created'`, bt.ID).Scan(&createdAt); err != nil {
+		t.Fatal(err)
+	}
+	if b := find("to_cut"); b == nil || b.ReadySince == nil || !b.ReadySince.Equal(createdAt) {
+		t.Fatalf("needs a cutter: want ready_since %v, got %+v", createdAt, b)
+	}
+	if err := startCutting(ctx, s, bt.ID, cutterID, ip); err != nil {
+		t.Fatal(err)
+	}
 	if b := find("cutting"); b == nil || b.ReadySince != nil {
 		t.Fatalf("cutting: want no ready_since, got %+v", b)
-	}
-	if err := s.StartPhase(ctx, bt.ID, cutterID, "cutter", ip); err != nil {
-		t.Fatal(err)
 	}
 	if err := s.CompletePhase(ctx, bt.ID, cutterID, "cutter", 2, "", ip); err != nil {
 		t.Fatal(err)
@@ -232,7 +240,7 @@ func TestReadySince(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _, _ = pool.Exec(ctx, `DELETE FROM batches WHERE id = $1 OR parent_batch_id = $1`, sh.ID) }()
-	if err := s.StartPhase(ctx, sh.ID, cutterID, "cutter", ip); err != nil {
+	if err := startCutting(ctx, s, sh.ID, cutterID, ip); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.CompletePhase(ctx, sh.ID, cutterID, "cutter", 1, "", ip); err != nil {

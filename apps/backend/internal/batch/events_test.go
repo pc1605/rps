@@ -75,7 +75,7 @@ func TestBatchEvents(t *testing.T) {
 			t.Fatalf("%s: %v", what, err)
 		}
 	}
-	must("cut start", s.StartPhase(ctx, b.ID, cutterID, "cutter", ip))
+	must("cut start", startCutting(ctx, s, b.ID, cutterID, ip))
 	must("cut complete (short)", s.CompletePhase(ctx, b.ID, cutterID, "cutter", 2, "", ip))
 	// W5: a reason is required for every action; "other" needs a note.
 	for _, c := range []struct {
@@ -122,7 +122,8 @@ func TestBatchEvents(t *testing.T) {
 	rows.Close()
 
 	want := []struct{ kind, toPhase, toStatus string }{
-		{"created", "cutting", "pending"},
+		{"created", "cutting", "awaiting_assignment"},
+		{"assigned", "cutting", "pending"},
 		{"cut_started", "cutting", "in_progress"},
 		{"cut_completed", "stitching", "awaiting_assignment"},
 		{"short_resolved", "stitching", "awaiting_assignment"},
@@ -140,14 +141,14 @@ func TestBatchEvents(t *testing.T) {
 			t.Errorf("event %d = %s→%s/%s, want %s→%s/%s", i, got[i].kind, got[i].toPhase, got[i].toStatus, w.kind, w.toPhase, w.toStatus)
 		}
 	}
-	if d := got[2].data; d["short"] != true || d["cut"] != float64(2) {
+	if d := got[3].data; d["short"] != true || d["cut"] != float64(2) {
 		t.Errorf("cut_completed data = %v", d)
 	}
-	if d := got[3].data; d["action"] != "split" || d["reason"] != "roll_ran_out" || d["remainder"] != rem {
+	if d := got[4].data; d["action"] != "split" || d["reason"] != "roll_ran_out" || d["remainder"] != rem {
 		t.Errorf("short_resolved data = %v", d)
 	}
-	if after, _ := got[4].data["after"].([]any); len(after) != 1 {
-		t.Errorf("assigned data = %v", got[4].data)
+	if after, _ := got[5].data["after"].([]any); len(after) != 1 {
+		t.Errorf("assigned data = %v", got[5].data)
 	} else if a := after[0].(map[string]any); a["target_qty"] != float64(2) || a["worker_id"] != stitcherID.String() {
 		t.Errorf("assigned after = %v", a)
 	}

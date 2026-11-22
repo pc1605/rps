@@ -55,6 +55,7 @@ func (s *Service) notifyReworkSent(reworkID uuid.UUID, stitcherID *uuid.UUID) {
 }
 
 type Stats struct {
+	NeedsCutter         int `json:"needs_cutter"` // cutting, no cutter assigned yet (D48)
 	InCutting           int `json:"in_cutting"`
 	InStitching         int `json:"in_stitching"`
 	InPacking           int `json:"in_packing"`
@@ -134,11 +135,11 @@ func (s *Service) Create(ctx context.Context, in CreateInput, actorID uuid.UUID,
 		return nil, err
 	}
 
-	// 4. Insert batch
+	// 4. Insert batch — it waits for the admin to assign a cutter (D48)
 	var b Batch
 	err = tx.QueryRow(ctx, `
-		INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, notes, created_by)
-		VALUES ($1, $2, $3, $4, NULLIF($5,''), $6)
+		INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, notes, created_by, status)
+		VALUES ($1, $2, $3, $4, NULLIF($5,''), $6, 'awaiting_assignment')
 		RETURNING id, batch_code, car_model_id, roll_id, quantity,
 		          current_phase, status, COALESCE(notes,''), rework_count,
 		          created_by, version, created_at, updated_at
@@ -426,6 +427,7 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 	var st Stats
 	err := s.pool.QueryRow(ctx, `
 		SELECT
+		  COUNT(*) FILTER (WHERE current_phase = 'cutting'   AND status = 'awaiting_assignment'),
 		  COUNT(*) FILTER (WHERE current_phase = 'cutting'   AND status IN ('pending','in_progress')),
 		  COUNT(*) FILTER (WHERE current_phase = 'stitching' AND status = 'awaiting_assignment'),
 		  COUNT(*) FILTER (WHERE current_phase = 'stitching' AND status IN ('pending','in_progress')),
@@ -445,6 +447,7 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 		                    WHERE l.material_type_id = t.id AND l.is_active), 0) < t.min_level)
 		FROM batches
 	`, factorytime.Name()).Scan(
+		&st.NeedsCutter,
 		&st.InCutting,
 		&st.AwaitingAssignment,
 		&st.InStitching,
@@ -487,7 +490,8 @@ func (s *Service) GetStats(ctx context.Context) (*Stats, error) {
 
 // ListByPhase returns batches at one phase for a worker's queue, oldest first.
 // Visibility: a phase with no assignment is an open queue; a phase with
-// assignments is visible only to its assignees. Carries who's working now,
+// assignments is visible only to its assignees. Cutting is never open: a cutter
+// sees only the batches assigned to them (D48). Carries who's working now,
 // whether THIS worker joined/is assigned, and their quota + done count.
 func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UUID) ([]Batch, error) {
 	rows, err := s.pool.Query(ctx, `
@@ -534,6 +538,8 @@ func (s *Service) ListByPhase(ctx context.Context, phase Phase, workerID uuid.UU
 		LEFT JOIN material_lots rm ON rm.id = b.roll_id
 		WHERE b.current_phase = $1
 		  AND b.status IN ('pending', 'in_progress')
+		  AND (b.current_phase <> 'cutting' OR EXISTS (SELECT 1 FROM batch_assignments ba
+		       WHERE ba.batch_id = b.id AND ba.phase = 'cutting' AND ba.worker_id = $2))
 		  AND (
 		    NOT EXISTS (SELECT 1 FROM batch_assignments ba
 		                WHERE ba.batch_id = b.id AND ba.phase = b.current_phase)
@@ -638,6 +644,10 @@ func (s *Service) StartPhase(ctx context.Context, batchID, workerID uuid.UUID, s
 	if assigned && !isMine {
 		return ErrNotAssigned
 	}
+	// Cutting needs an assigned cutter (D48): nobody picks a batch on their own.
+	if phase == PhaseCutting && !isMine {
+		return ErrNotAssigned
+	}
 
 	if phase == PhaseCutting {
 		// Cutting: exclusive claim, unchanged
@@ -700,7 +710,9 @@ func (s *Service) StartPhase(ctx context.Context, batchID, workerID uuid.UUID, s
 // SetAssignments replaces one phase's assignees with optional per-head quotas.
 // Rules: quotas (if any) must all be present and sum to batch quantity; a target
 // can't drop below units already done by that worker; a worker with completed
-// units can't be removed. Stitching also operates the awaiting/pending gate.
+// units can't be removed. Cutting and stitching also operate the awaiting/pending
+// gate. Cutting (D48): one active cutter, no quota, only while the batch is in
+// cutting and nobody has started it.
 func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase Phase, entries []AssignmentInput, adminID uuid.UUID, ip string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -721,6 +733,11 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 	}
 	if phase == PhaseStitching && cutQty < quantity && len(entries) > 0 {
 		return fmt.Errorf("%w: only %d of %d mats are cut — resolve the short cut before assigning", ErrInvalidInput, cutQty, quantity)
+	}
+	if phase == PhaseCutting {
+		if err := checkCutterAssignment(ctx, tx, currentPhase, currentStatus, entries); err != nil {
+			return err
+		}
 	}
 
 	attrCol := map[Phase]string{PhaseStitching: "stitched_by", PhasePacking: "packed_by"}[phase]
@@ -810,15 +827,15 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 	}
 
 	ev := Event{BatchID: batchID, Kind: EvAssigned, UserID: uid(adminID)}
-	if phase == PhaseStitching {
+	if phase == PhaseStitching || phase == PhaseCutting {
 		var tag pgconn.CommandTag
 		if len(entries) > 0 {
 			tag, err = tx.Exec(ctx, `UPDATE batches SET status='pending', version=version+1
-				WHERE id=$1 AND current_phase='stitching' AND status='awaiting_assignment'`, batchID)
+				WHERE id=$1 AND current_phase=$2 AND status='awaiting_assignment'`, batchID, phase)
 			ev.FromStatus, ev.ToStatus = StatusAwaitingAssignment, StatusPending
 		} else {
 			tag, err = tx.Exec(ctx, `UPDATE batches SET status='awaiting_assignment', version=version+1
-				WHERE id=$1 AND current_phase='stitching' AND status='pending'`, batchID)
+				WHERE id=$1 AND current_phase=$2 AND status='pending'`, batchID, phase)
 			ev.FromStatus, ev.ToStatus = StatusPending, StatusAwaitingAssignment
 		}
 		if err != nil {
@@ -827,7 +844,7 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 		if tag.RowsAffected() == 0 {
 			ev.FromStatus, ev.ToStatus = "", ""
 		} else {
-			ev.FromPhase, ev.ToPhase = PhaseStitching, PhaseStitching
+			ev.FromPhase, ev.ToPhase = phase, phase
 		}
 	}
 	after, err := assignmentTargets(ctx, tx, batchID, phase)
@@ -859,6 +876,48 @@ func (s *Service) SetAssignments(ctx context.Context, batchID uuid.UUID, phase P
 		s.notifyBatchAssigned(batchID, addedWorkers(before, after))
 	}
 	return nil
+}
+
+// checkCutterAssignment: the cutting rules of SetAssignments (D48). One cutter, no quota (cutting is
+// one claim with a typed count), an active cutter, and only before cutting starts — someone cutting
+// now gives the batch back (or the admin releases the claim) first.
+func checkCutterAssignment(ctx context.Context, tx pgx.Tx, phase Phase, status Status, entries []AssignmentInput) error {
+	if phase != PhaseCutting || status == StatusCancelled {
+		return fmt.Errorf("%w: this batch is not in cutting", ErrInvalidInput)
+	}
+	if status == StatusInProgress {
+		return fmt.Errorf("%w: cutting has started — release the claim before changing the cutter", ErrInvalidInput)
+	}
+	if len(entries) > 1 {
+		return fmt.Errorf("%w: a batch has one cutter — make two batches to split a big order", ErrInvalidInput)
+	}
+	for _, e := range entries {
+		if e.TargetQty != nil {
+			return fmt.Errorf("%w: a cutter gets the whole batch, without a number", ErrInvalidInput)
+		}
+		var ok bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM workers WHERE id=$1 AND station='cutter' AND is_active)`,
+			e.WorkerID).Scan(&ok); err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("%w: pick an active cutter", ErrInvalidInput)
+		}
+	}
+	return nil
+}
+
+// clearCutter takes the cutter off a batch going back to "needs a cutter" (D48: given back, released
+// or re-cut — the admin assigns again). Returns who was assigned, for the event.
+func clearCutter(ctx context.Context, tx pgx.Tx, batchID uuid.UUID) ([]AssignmentTarget, error) {
+	before, err := assignmentTargets(ctx, tx, batchID, PhaseCutting)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM batch_assignments WHERE batch_id=$1 AND phase='cutting'`, batchID); err != nil {
+		return nil, err
+	}
+	return before, nil
 }
 
 // closeRemovedLogs ends the open logs of workers taken off a phase's assignment (assignment edit or
@@ -962,6 +1021,7 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 	}
 	short := b.Quantity - b.CutQty
 	remainderCode := ""
+	var recutCleared []AssignmentTarget
 
 	switch action {
 	case ShortSplit, ShortReduce:
@@ -975,14 +1035,14 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 			}
 			var remID uuid.UUID
 			if err := tx.QueryRow(ctx, `
-				INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, notes, created_by, parent_batch_id)
-				VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+				INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, notes, created_by, parent_batch_id, status)
+				VALUES ($1,$2,$3,$4,$5,$6,$7,'awaiting_assignment') RETURNING id`,
 				remainderCode, b.CarModel, b.RollID, short,
 				fmt.Sprintf("Remainder of %s (%d of %d were cut)", b.Code, b.CutQty, b.Quantity),
 				b.CreatedBy, batchID).Scan(&remID); err != nil {
 				return "", fmt.Errorf("remainder batch: %w", err)
 			}
-			if err := writeEvent(ctx, tx, Event{BatchID: remID, Kind: EvCreated, ToPhase: PhaseCutting, ToStatus: StatusPending,
+			if err := writeEvent(ctx, tx, Event{BatchID: remID, Kind: EvCreated, ToPhase: PhaseCutting, ToStatus: StatusAwaitingAssignment,
 				UserID: uid(adminID), Data: map[string]any{"quantity": short, "parent": batchID, "via": "split"}}); err != nil {
 				return "", err
 			}
@@ -1002,9 +1062,17 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 		}
 
 	case ShortRecut:
-		// back to the open cutting queue; units untouched; cut_qty keeps accumulating
+		// back to cutting, waiting for the admin to assign a cutter (D48: the first cutter's assignment is
+		// cleared); units untouched; cut_qty keeps accumulating
+		cleared, err := clearCutter(ctx, tx, batchID)
+		if err != nil {
+			return "", err
+		}
+		if len(cleared) > 0 {
+			recutCleared = cleared
+		}
 		if _, err := tx.Exec(ctx, `
-			UPDATE batches SET current_phase = 'cutting', status = 'pending',
+			UPDATE batches SET current_phase = 'cutting', status = 'awaiting_assignment',
 			  notes = CONCAT_WS(E'\n', NULLIF(notes,''), $1::text), version = version + 1
 			WHERE id = $2`, fmt.Sprintf("Sent back to cut remaining %d (%s)", short, label), batchID); err != nil {
 			return "", err
@@ -1029,7 +1097,10 @@ func (s *Service) ResolveShort(ctx context.Context, batchID uuid.UUID, action Sh
 		ev.Data["note"] = note
 	}
 	if action == ShortRecut {
-		ev.ToPhase, ev.ToStatus = PhaseCutting, StatusPending
+		ev.ToPhase, ev.ToStatus = PhaseCutting, StatusAwaitingAssignment
+		if recutCleared != nil {
+			ev.Data["cutter_cleared"] = recutCleared
+		}
 	}
 	if remainderCode != "" {
 		ev.Data["remainder"] = remainderCode

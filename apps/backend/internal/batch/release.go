@@ -16,8 +16,8 @@ import (
 var ErrNoClaim = errors.New("nobody is cutting this batch right now")
 
 // ReleaseClaim frees a stuck cutting claim (U3, D37): the open cutting log is deleted (nothing was
-// reported on it; the event + audit keep the record) and the batch goes back to the open cutting
-// queue (cutting/pending). By the admin (userID set) or by the cutter holding it (workerID set,
+// reported on it; the event + audit keep the record) and the batch goes back to the admin as
+// "needs a cutter" (cutting/awaiting_assignment, cutter cleared — D48). By the admin (userID set) or by the cutter holding it (workerID set,
 // before Complete — someone else's claim is ErrNotYours).
 func (s *Service) ReleaseClaim(ctx context.Context, batchID uuid.UUID, userID, workerID *uuid.UUID, actorRole, ip string) error {
 	tx, err := s.pool.Begin(ctx)
@@ -59,7 +59,10 @@ func (s *Service) ReleaseClaim(ctx context.Context, batchID uuid.UUID, userID, w
 	if _, err := tx.Exec(ctx, `DELETE FROM phase_logs WHERE id = $1`, logID); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `UPDATE batches SET status = 'pending', version = version + 1 WHERE id = $1`, batchID); err != nil {
+	if _, err := clearCutter(ctx, tx, batchID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE batches SET status = 'awaiting_assignment', version = version + 1 WHERE id = $1`, batchID); err != nil {
 		return err
 	}
 
@@ -73,7 +76,7 @@ func (s *Service) ReleaseClaim(ctx context.Context, batchID uuid.UUID, userID, w
 	}
 	data := map[string]any{"worker_id": holder, "worker_name": holderName, "started_at": startedAt, "by": by}
 	if err := writeEvent(ctx, tx, Event{BatchID: batchID, Kind: EvClaimReleased, FromPhase: PhaseCutting, ToPhase: PhaseCutting,
-		FromStatus: status, ToStatus: StatusPending, UserID: userID, WorkerID: workerID, Data: data}); err != nil {
+		FromStatus: status, ToStatus: StatusAwaitingAssignment, UserID: userID, WorkerID: workerID, Data: data}); err != nil {
 		return err
 	}
 	if err := audit.Write(ctx, tx, audit.Entry{
@@ -81,7 +84,7 @@ func (s *Service) ReleaseClaim(ctx context.Context, batchID uuid.UUID, userID, w
 		EntityType: "batch", EntityID: batchID.String(),
 		Action: audit.ActionTransition,
 		Before: map[string]any{"phase": phase, "status": status, "claimed_by": holder},
-		After:  map[string]any{"event": "claim_released", "status": StatusPending, "by": by, "started_at": startedAt.Format(time.RFC3339)},
+		After:  map[string]any{"event": "claim_released", "status": StatusAwaitingAssignment, "by": by, "started_at": startedAt.Format(time.RFC3339)},
 		IP:     ip,
 	}); err != nil {
 		return fmt.Errorf("audit: %w", err)

@@ -312,6 +312,14 @@
     {
       "key": "u3bReuseId",
       "value": ""
+    },
+    {
+      "key": "matCutterId",
+      "value": ""
+    },
+    {
+      "key": "u3bCutterId",
+      "value": ""
     }
   ],
   "item": [
@@ -2163,7 +2171,23 @@
                   "}",
                   "",
                   "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('Response data is an array', function () { pm.expect(responseData).to.be.an('array'); });"
+                  "pm.test('Response data is an array', function () { pm.expect(responseData).to.be.an('array'); });",
+                  "pm.test('A cutter sees only the batches assigned to them (D48)', function () {",
+                  "    responseData.forEach(function (b) { pm.expect(b.assigned_to_me).to.eql(true); });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// D48: the admin assigns the cutter before cutting starts.",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/batches/' + pm.collectionVariables.get('batchId') + '/assignments', method: 'PUT',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken'), 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ phase: 'cutting', assignments: [{ worker_id: pm.collectionVariables.get('workerId') }] }) } },",
+                  "  (err, res) => { if (err || res.code !== 200) console.log('assign cutter failed', err || res.text()); });"
                 ]
               }
             }
@@ -3103,6 +3127,19 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// D48: the admin assigns the cutter before cutting starts.",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/batches/' + pm.collectionVariables.get('scanBatchId') + '/assignments', method: 'PUT',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken'), 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ phase: 'cutting', assignments: [{ worker_id: pm.collectionVariables.get('workerId') }] }) } },",
+                  "  (err, res) => { if (err || res.code !== 200) console.log('assign cutter failed', err || res.text()); });"
                 ]
               }
             }
@@ -4468,6 +4505,19 @@
                   "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
                 ]
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// D48: the admin assigns the cutter before cutting starts.",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/batches/' + pm.collectionVariables.get('shortBatchId') + '/assignments', method: 'PUT',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken'), 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ phase: 'cutting', assignments: [{ worker_id: pm.collectionVariables.get('workerId') }] }) } },",
+                  "  (err, res) => { if (err || res.code !== 200) console.log('assign cutter failed', err || res.text()); });"
+                ]
+              }
             }
           ],
           "request": {
@@ -4632,6 +4682,19 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// D48: the admin assigns the cutter before cutting starts.",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/batches/' + pm.collectionVariables.get('splitBatchId') + '/assignments', method: 'PUT',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken'), 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ phase: 'cutting', assignments: [{ worker_id: pm.collectionVariables.get('workerId') }] }) } },",
+                  "  (err, res) => { if (err || res.code !== 200) console.log('assign cutter failed', err || res.text()); });"
                 ]
               }
             }
@@ -4799,6 +4862,19 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// D48: the admin assigns the cutter before cutting starts.",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/batches/' + pm.collectionVariables.get('reduceBatchId') + '/assignments', method: 'PUT',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken'), 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ phase: 'cutting', assignments: [{ worker_id: pm.collectionVariables.get('workerId') }] }) } },",
+                  "  (err, res) => { if (err || res.code !== 200) console.log('assign cutter failed', err || res.text()); });"
                 ]
               }
             }
@@ -5013,6 +5089,19 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// D48: the admin assigns the cutter before cutting starts.",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/batches/' + pm.collectionVariables.get('assignBatchId') + '/assignments', method: 'PUT',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken'), 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ phase: 'cutting', assignments: [{ worker_id: pm.collectionVariables.get('workerId') }] }) } },",
+                  "  (err, res) => { if (err || res.code !== 200) console.log('assign cutter failed', err || res.text()); });"
                 ]
               }
             }
@@ -5233,6 +5322,19 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('Response status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// D48: the admin assigns the cutter before cutting starts.",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/batches/' + pm.collectionVariables.get('reworkBatchId') + '/assignments', method: 'PUT',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken'), 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ phase: 'cutting', assignments: [{ worker_id: pm.collectionVariables.get('workerId') }] }) } },",
+                  "  (err, res) => { if (err || res.code !== 200) console.log('assign cutter failed', err || res.text()); });"
                 ]
               }
             }
@@ -7811,7 +7913,7 @@
                   "const base = pm.variables.get('baseUrl'); // environment (RPS test) wins over the collection value",
                   "const admin = { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken') };",
                   "pm.sendRequest({ url: base + '/workers', header: admin }, (e1, r1) => {",
-                  "  const cutter = r1.json().data.find((w) => w.station === 'cutter' && w.is_active);",
+                  "  const cutter = r1.json().data.find((w) => w.station === 'cutter' && w.is_active);\n  pm.collectionVariables.set('matCutterId', cutter.id);",
                   "  pm.sendRequest({ url: base + '/workers/' + cutter.id + '/enrollment', method: 'POST', header: admin }, (e2, r2) => {",
                   "    pm.sendRequest({ url: base + '/worker/login', method: 'POST', header: { 'Content-Type': 'application/json' },",
                   "      body: { mode: 'raw', raw: JSON.stringify({ code: r2.json().data.code, pin: '1234' }) } }, (e3, r3) => {",
@@ -7903,6 +8005,19 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// D48: the admin assigns the cutter before cutting starts.",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/batches/' + pm.collectionVariables.get('matBatchId') + '/assignments', method: 'PUT',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken'), 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ phase: 'cutting', assignments: [{ worker_id: pm.collectionVariables.get('matCutterId') }] }) } },",
+                  "  (err, res) => { if (err || res.code !== 200) console.log('assign cutter failed', err || res.text()); });"
                 ]
               }
             }
@@ -10617,7 +10732,8 @@
                   "pm.test('status 201', () => pm.response.to.have.status(201));",
                   "const d = pm.response.json().data;",
                   "pm.collectionVariables.set('u3bBatchId', d.id);",
-                  "pm.test('4 mats waiting to be cut', () => { pm.expect(d.units_total).to.eql(4); pm.expect(d.current_phase).to.eql('cutting'); });"
+                  "pm.test('4 mats waiting to be cut', () => { pm.expect(d.units_total).to.eql(4); pm.expect(d.current_phase).to.eql('cutting'); });",
+                  "pm.test('waits for a cutter (D48)', () => pm.expect(d.status).to.eql('awaiting_assignment'));"
                 ]
               }
             }
@@ -10725,6 +10841,155 @@
           }
         },
         {
+          "name": "Cutter start before assignment \u2192 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{u3bCutterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/worker/batches/{{u3bBatchId}}/start"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));",
+                  "pm.test('code not_assigned', () => pm.expect(pm.response.json().code).to.eql('not_assigned'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Assign two cutters \u2192 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}/assignments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"phase\": \"cutting\", \"assignments\": [{\"worker_id\": \"{{u3bCutterId}}\"}, {\"worker_id\": \"{{workerId}}\"}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Assign a stitcher as cutter \u2192 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}/assignments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"phase\": \"cutting\", \"assignments\": [{\"worker_id\": \"{{u3bStitcherId}}\"}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Assign the cutter",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/batches/{{u3bBatchId}}/assignments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"phase\": \"cutting\", \"assignments\": [{\"worker_id\": \"{{u3bCutterId}}\"}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cutter load",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/cutters/load"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const d = pm.response.json().data;",
+                  "const me = d.find((x) => x.worker_id === pm.collectionVariables.get('u3bCutterId'));",
+                  "pm.test('the assigned batch counts for the cutter', () => { pm.expect(me.open_batches).to.be.at.least(1); pm.expect(me.on_floor).to.eql(false); });",
+                  "pm.test('least open first', () => d.slice(1).forEach((x, i) => pm.expect(x.open_mats).to.be.at.least(d[i].open_mats)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Cutter start",
           "event": [
             {
@@ -10821,6 +11086,19 @@
                   "pm.test('status 200', () => pm.response.to.have.status(200));"
                 ]
               }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// D48: the admin assigns the cutter before cutting starts.",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/batches/' + pm.collectionVariables.get('u3bBatchId') + '/assignments', method: 'PUT',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken'), 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ phase: 'cutting', assignments: [{ worker_id: pm.collectionVariables.get('u3bCutterId') }] }) } },",
+                  "  (err, res) => { if (err || res.code !== 200) console.log('assign cutter failed', err || res.text()); });"
+                ]
+              }
             }
           ],
           "request": {
@@ -10884,7 +11162,7 @@
           }
         },
         {
-          "name": "Batch is back in the cutting queue",
+          "name": "Batch is back with the admin (needs a cutter)",
           "event": [
             {
               "listen": "test",
@@ -10893,7 +11171,8 @@
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));",
                   "const d = pm.response.json().data;",
-                  "pm.test('cutting / pending', () => { pm.expect(d.current_phase).to.eql('cutting'); pm.expect(d.status).to.eql('pending'); });",
+                  "pm.test('cutting / awaiting_assignment (D48)', () => { pm.expect(d.current_phase).to.eql('cutting'); pm.expect(d.status).to.eql('awaiting_assignment'); });",
+                  "pm.test('cutter cleared', () => pm.expect(d.assignments.filter((a) => a.phase === 'cutting').length).to.eql(0));",
                   "pm.test('released claims leave no timeline rows', () => pm.expect(d.timeline.length).to.eql(0));"
                 ]
               }
@@ -10919,6 +11198,19 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// D48: the admin assigns the cutter before cutting starts.",
+                  "pm.sendRequest({ url: pm.variables.get('baseUrl') + '/batches/' + pm.collectionVariables.get('u3bBatchId') + '/assignments', method: 'PUT',",
+                  "  header: { Authorization: 'Bearer ' + pm.collectionVariables.get('accessToken'), 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({ phase: 'cutting', assignments: [{ worker_id: pm.collectionVariables.get('u3bCutterId') }] }) } },",
+                  "  (err, res) => { if (err || res.code !== 200) console.log('assign cutter failed', err || res.text()); });"
                 ]
               }
             }

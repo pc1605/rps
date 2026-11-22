@@ -6,7 +6,8 @@ import (
 )
 
 // TestReleaseClaim pins releasing a cutting claim (D37): the open log is deleted, the batch goes
-// back to cutting/pending with a claim_released event; only the holder (or the admin) may release.
+// back to the admin (cutting/awaiting_assignment, cutter cleared — D48) with a claim_released event;
+// only the holder (or the admin) may release.
 func TestReleaseClaim(t *testing.T) {
 	f := newU3(t, "release")
 	b := f.create(CreateInput{Quantity: 3})
@@ -22,7 +23,7 @@ func TestReleaseClaim(t *testing.T) {
 	if err := f.s.ReleaseClaim(f.ctx, b.ID, nil, &f.cutter, "cutter", u3ip); err != nil {
 		t.Fatal(err)
 	}
-	if p, st := f.state(b.ID); p != PhaseCutting || st != StatusPending {
+	if p, st := f.state(b.ID); p != PhaseCutting || st != StatusAwaitingAssignment {
 		t.Fatalf("after cutter release: %s/%s", p, st)
 	}
 	if n := f.count(`SELECT COUNT(*) FROM phase_logs WHERE batch_id=$1`, b.ID); n != 0 {

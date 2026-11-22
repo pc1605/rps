@@ -91,7 +91,7 @@ func TestEditBeforeCutting(t *testing.T) {
 	}
 
 	// claimed by the cutter → refused
-	if err := s.StartPhase(ctx, bt.ID, cutterID, "cutter", ip); err != nil {
+	if err := startCutting(ctx, s, bt.ID, cutterID, ip); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.Edit(ctx, bt.ID, EditInput{Quantity: ptr(5)}, adminID, "owner", ip); !errors.Is(err, ErrNotEditable) {

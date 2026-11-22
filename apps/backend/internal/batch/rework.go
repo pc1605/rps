@@ -488,8 +488,8 @@ func (s *Service) DecideRework(ctx context.Context, reworkID uuid.UUID, decision
 		}
 		var newBatchID uuid.UUID
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, notes, created_by, parent_batch_id)
-			VALUES ($1, $2, $3, 1, $4, $5, $6) RETURNING id
+			INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, notes, created_by, parent_batch_id, status)
+			VALUES ($1, $2, $3, 1, $4, $5, $6, 'awaiting_assignment') RETURNING id
 		`, code, carModelID, rollID, batchNotes, adminID, batchID).Scan(&newBatchID); err != nil {
 			return nil, fmt.Errorf("create recut batch: %w", err)
 		}
@@ -499,7 +499,7 @@ func (s *Service) DecideRework(ctx context.Context, reworkID uuid.UUID, decision
 		`, newBatchID, code); err != nil {
 			return nil, fmt.Errorf("create recut units: %w", err)
 		}
-		if err := writeEvent(ctx, tx, Event{BatchID: newBatchID, Kind: EvCreated, ToPhase: PhaseCutting, ToStatus: StatusPending,
+		if err := writeEvent(ctx, tx, Event{BatchID: newBatchID, Kind: EvCreated, ToPhase: PhaseCutting, ToStatus: StatusAwaitingAssignment,
 			UserID: uid(adminID), Data: map[string]any{"quantity": 1, "parent": batchID, "via": "recut", "recut_of": unitCode}}); err != nil {
 			return nil, err
 		}

@@ -100,7 +100,7 @@ func TestStitchingCompletionRule(t *testing.T) {
 	}
 
 	// Real path to stitching: cut all 3 → assign (uncapped) → join.
-	if err := s.StartPhase(ctx, b.ID, cutterID, "cutter", ip); err != nil {
+	if err := startCutting(ctx, s, b.ID, cutterID, ip); err != nil {
 		t.Fatalf("cutter start: %v", err)
 	}
 	if err := s.CompletePhase(ctx, b.ID, cutterID, "cutter", 3, "", ip); err != nil {

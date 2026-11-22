@@ -47,7 +47,7 @@ func TestSpareReuse(t *testing.T) {
 
 	// Partial: 10 mats, reuse 2 stitched + 3 unstitched → cutter cuts 5.
 	nb := f.create(CreateInput{Quantity: 10, SparesStitched: 2, SparesUnstitched: 3})
-	if p, st := f.state(nb.ID); p != PhaseCutting || st != StatusPending {
+	if p, st := f.state(nb.ID); p != PhaseCutting || st != StatusAwaitingAssignment {
 		t.Fatalf("partial reuse state = %s/%s", p, st)
 	}
 	d, err := f.s.Get(f.ctx, nb.ID)
@@ -79,7 +79,7 @@ func TestSpareReuse(t *testing.T) {
 	f.wantReusedIn(src1.ID, 1, ReusedIn{nb.ID, nb.BatchCode, 5}) // the cancelled batch says where its mats went
 
 	// The cutter cuts the 5 remaining; quotas must total 8 (10 − 2 came in stitched).
-	if err := f.s.StartPhase(f.ctx, nb.ID, f.cutter, "cutter", u3ip); err != nil {
+	if err := startCutting(f.ctx, f.s, nb.ID, f.cutter, u3ip); err != nil {
 		t.Fatal(err)
 	}
 	if err := f.s.CompletePhase(f.ctx, nb.ID, f.cutter, "cutter", 6, "", u3ip); !errors.Is(err, ErrInvalidInput) {

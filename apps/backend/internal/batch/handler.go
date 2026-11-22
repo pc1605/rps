@@ -148,6 +148,16 @@ func (h *Handler) StitcherLoads(c *fiber.Ctx) error {
 	return httpx.OK(c, out)
 }
 
+// CutterLoads: GET /cutters/load — active cutters with open cutting work, on-floor status and today's output (D48).
+func (h *Handler) CutterLoads(c *fiber.Ctx) error {
+	out, err := h.svc.CutterLoads(c.Context(), time.Now())
+	if err != nil {
+		log.Error().Err(err).Msg("cutter loads")
+		return httpx.Internal(c, "failed to load cutters")
+	}
+	return httpx.OK(c, out)
+}
+
 type handOverInput struct {
 	FromWorkerID string `json:"from_worker_id"`
 	Moves        []struct {

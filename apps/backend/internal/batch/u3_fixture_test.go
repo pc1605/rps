@@ -83,7 +83,7 @@ func (f *u3fx) create(in CreateInput) *Batch {
 
 func (f *u3fx) cut(id uuid.UUID, n int) {
 	f.t.Helper()
-	if err := f.s.StartPhase(f.ctx, id, f.cutter, "cutter", u3ip); err != nil {
+	if err := startCutting(f.ctx, f.s, id, f.cutter, u3ip); err != nil {
 		f.t.Fatal(err)
 	}
 	if err := f.s.CompletePhase(f.ctx, id, f.cutter, "cutter", n, "", u3ip); err != nil {
@@ -109,7 +109,13 @@ func (f *u3fx) scan(code string, w uuid.UUID, station string) *ScanResult {
 
 func (f *u3fx) join(id, w uuid.UUID, station string) {
 	f.t.Helper()
-	if err := f.s.StartPhase(f.ctx, id, w, station, u3ip); err != nil {
+	start := f.s.StartPhase
+	if station == "cutter" {
+		start = func(ctx context.Context, id, w uuid.UUID, _, ip string) error {
+			return startCutting(ctx, f.s, id, w, ip)
+		}
+	}
+	if err := start(f.ctx, id, w, station, u3ip); err != nil {
 		f.t.Fatal(err)
 	}
 }

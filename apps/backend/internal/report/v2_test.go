@@ -90,6 +90,7 @@ func TestReportsV2(t *testing.T) {
 	a, err := bs.Create(ctx, batch.CreateInput{CarModelID: carID, Quantity: 2}, adminID, "owner", ip)
 	must("create A", err)
 	made = append(made, a.ID)
+	must("cut assign", bs.SetAssignments(ctx, a.ID, batch.PhaseCutting, []batch.AssignmentInput{{WorkerID: cutterID}}, adminID, ip))
 	must("cut start", bs.StartPhase(ctx, a.ID, cutterID, "cutter", ip))
 	must("cut", bs.CompletePhase(ctx, a.ID, cutterID, "cutter", 2, "", ip))
 	two := 2

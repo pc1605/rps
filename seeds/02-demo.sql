@@ -156,11 +156,11 @@ BEGIN
   END IF;
 
   -- ────────────────────────────────────────────────────────────────────────────
-  -- BATCH 1: Pending Cutting (Qty 4)
-  -- Phase: cutting, Status: pending
+  -- BATCH 1: Needs a cutter (Qty 4) — no cutter assigned yet (D48)
+  -- Phase: cutting, Status: awaiting_assignment
   -- ────────────────────────────────────────────────────────────────────────────
   INSERT INTO batches (batch_code, car_model_id, roll_id, quantity, cut_qty, current_phase, status, created_by, created_at, updated_at)
-  VALUES ('B-2026-001', v_baleno_id, v_roll_id, 4, 0, 'cutting', 'pending', v_owner_id, NOW() - INTERVAL '4 hours', NOW() - INTERVAL '4 hours')
+  VALUES ('B-2026-001', v_baleno_id, v_roll_id, 4, 0, 'cutting', 'awaiting_assignment', v_owner_id, NOW() - INTERVAL '4 hours', NOW() - INTERVAL '4 hours')
   RETURNING id INTO v_b1_id;
 
   FOR i IN 1..4 LOOP

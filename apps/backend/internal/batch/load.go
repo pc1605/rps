@@ -69,3 +69,51 @@ func (s *Service) StitcherLoads(ctx context.Context, now time.Time) ([]StitcherL
 	}
 	return out, rows.Err()
 }
+
+// CutterLoad is one active cutter's current workload, for the cutter assign panel (D48).
+type CutterLoad struct {
+	WorkerID uuid.UUID `json:"worker_id"`
+	Name     string    `json:"name"`
+	// OpenBatches / OpenMats: batches assigned to this cutter and still in cutting (not started or
+	// being cut), and the pieces left to cut on them (quantity − cut so far).
+	OpenBatches int  `json:"open_batches"`
+	OpenMats    int  `json:"open_mats"`
+	OnFloor     bool `json:"on_floor"`  // cutting a batch right now (open cutting claim)
+	CutToday    int  `json:"cut_today"` // pieces reported cut since the start of the factory day
+}
+
+// CutterLoads lists active cutters, least open work first, then on-floor first, then by name.
+func (s *Service) CutterLoads(ctx context.Context, now time.Time) ([]CutterLoad, error) {
+	rows, err := s.pool.Query(ctx, `
+		WITH agg AS (
+		  SELECT ba.worker_id, COUNT(*)::int AS open_batches, SUM(b.quantity - b.cut_qty)::int AS open_mats
+		  FROM batch_assignments ba
+		  JOIN batches b ON b.id = ba.batch_id
+		  WHERE ba.phase = 'cutting' AND b.current_phase = 'cutting' AND b.status IN ('pending', 'in_progress')
+		  GROUP BY ba.worker_id
+		)
+		SELECT w.id, w.name, COALESCE(a.open_batches, 0), COALESCE(a.open_mats, 0),
+		       EXISTS (SELECT 1 FROM phase_logs pl JOIN batches b ON b.id = pl.batch_id
+		               WHERE pl.worker_id = w.id AND pl.phase = 'cutting' AND pl.completed_at IS NULL
+		                 AND b.current_phase = 'cutting' AND b.status = 'in_progress') AS on_floor,
+		       (SELECT COALESCE(SUM(pl.quantity_completed), 0)::int FROM phase_logs pl
+		        WHERE pl.worker_id = w.id AND pl.phase = 'cutting' AND pl.completed_at >= $1)
+		FROM workers w
+		LEFT JOIN agg a ON a.worker_id = w.id
+		WHERE w.station = 'cutter' AND w.is_active
+		ORDER BY 4, on_floor DESC, w.name
+	`, factorytime.StartOfDay(now))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []CutterLoad{}
+	for rows.Next() {
+		var l CutterLoad
+		if err := rows.Scan(&l.WorkerID, &l.Name, &l.OpenBatches, &l.OpenMats, &l.OnFloor, &l.CutToday); err != nil {
+			return nil, err
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
+}

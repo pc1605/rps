@@ -55,7 +55,7 @@ func TestHandOver(t *testing.T) {
 		}
 		t.Cleanup(func() { _, _ = pool.Exec(ctx, `DELETE FROM batches WHERE id = $1`, bt.ID) })
 		if cut {
-			if err := s.StartPhase(ctx, bt.ID, cutterID, "cutter", ip); err != nil {
+			if err := startCutting(ctx, s, bt.ID, cutterID, ip); err != nil {
 				t.Fatal(err)
 			}
 			if err := s.CompletePhase(ctx, bt.ID, cutterID, "cutter", qty, "", ip); err != nil {

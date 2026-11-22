@@ -156,7 +156,7 @@ func (f *matFixture) batch(car, qty int, roll *uuid.UUID) uuid.UUID {
 
 func (f *matFixture) cut(batchID uuid.UUID, n int) {
 	f.t.Helper()
-	if err := f.s.StartPhase(f.ctx, batchID, f.cutterID, "cutter", ip); err != nil {
+	if err := startCutting(f.ctx, f.s, batchID, f.cutterID, ip); err != nil {
 		f.t.Fatalf("start cutting: %v", err)
 	}
 	if err := f.s.CompletePhase(f.ctx, batchID, f.cutterID, "cutter", n, "", ip); err != nil {
@@ -407,7 +407,7 @@ func TestConsumeConcurrentCuts(t *testing.T) {
 	ids := make([]uuid.UUID, n)
 	for i := range ids {
 		ids[i] = f.batch(f.car, mats, nil)
-		if err := f.s.StartPhase(f.ctx, ids[i], f.cutterID, "cutter", ip); err != nil {
+		if err := startCutting(f.ctx, f.s, ids[i], f.cutterID, ip); err != nil {
 			t.Fatalf("start %d: %v", i, err)
 		}
 	}
