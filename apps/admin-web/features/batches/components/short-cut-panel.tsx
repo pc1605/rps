@@ -30,7 +30,9 @@ export function ShortCutPanel({ batch }: { batch: BatchDetail }) {
   const [note, setNote] = useState("");
   const short = batch.quantity - batch.cut_qty;
 
-  if (batch.status !== "awaiting_assignment" || short <= 0) return null;
+  // Only after cutting is done (Ready to stitch). In cutting, awaiting_assignment means "Needs a cutter" (D48).
+  if (batch.current_phase !== "stitching" || batch.status !== "awaiting_assignment" || short <= 0)
+    return null;
 
   const copy: Record<ShortAction, { icon: typeof Split; title: string; body: string; confirm: string }> = {
     split: {
