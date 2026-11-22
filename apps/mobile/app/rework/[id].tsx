@@ -11,6 +11,7 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { useMyRework } from "../../features/rework/hooks";
 import { useStrings } from "../../lib/language";
+import { useConfirmMissing } from "../../lib/use-confirm-missing";
 
 function formatTime(iso: string): string {
   try {
@@ -26,13 +27,15 @@ export default function ReworkDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { data: reworkItems, isPending } = useMyRework();
+  const { data: reworkItems, isPending, isFetching, refetch } = useMyRework();
 
   const [modalPhotoUrl, setModalPhotoUrl] = useState<string | null>(null);
 
   const item = reworkItems?.find((r) => r.id === id);
+  // Opened from a notification: the list may not know the mat yet — re-read before "not found".
+  const checking = useConfirmMissing({ found: !!item, isPending, isFetching, refetch });
 
-  if (isPending) {
+  if (isPending || checking) {
     return (
       <Screen header={<ScreenHeader back title={strings.rework.title} />}>
         <View style={styles.skeletonWrap}>
