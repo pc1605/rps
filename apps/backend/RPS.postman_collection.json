@@ -11070,8 +11070,16 @@
               {
                 "key": "Authorization",
                 "value": "Bearer {{u3bCutterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"reason\": \"machine_issue\"}"
+            },
             "url": "{{baseUrl}}/worker/batches/{{u3bBatchId}}/release"
           }
         },

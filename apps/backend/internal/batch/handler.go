@@ -855,11 +855,11 @@ func (h *Handler) AdminReleaseClaim(c *fiber.Ctx) error {
 	if !ok {
 		return httpx.Unauthorized(c, "missing user context")
 	}
-	err = h.svc.ReleaseClaim(c.Context(), id, &userID, nil, auth.RoleFromCtx(c), c.IP())
+	err = h.svc.ReleaseClaim(c.Context(), id, &userID, nil, "", "", auth.RoleFromCtx(c), c.IP())
 	return transitionResponse(c, err, "claim released")
 }
 
-// WorkerReleaseClaim — POST /worker/batches/:id/release: the cutter gives back their own claim.
+// WorkerReleaseClaim — POST /worker/batches/:id/release {reason, note}: the cutter gives back their own claim.
 func (h *Handler) WorkerReleaseClaim(c *fiber.Ctx) error {
 	if auth.ActorType(c) != "worker" {
 		return httpx.Forbidden(c, "worker token required")
@@ -872,7 +872,14 @@ func (h *Handler) WorkerReleaseClaim(c *fiber.Ctx) error {
 	if err != nil {
 		return httpx.BadRequest(c, "invalid batch id")
 	}
-	err = h.svc.ReleaseClaim(c.Context(), id, nil, &wid, "cutter", c.IP())
+	var in struct {
+		Reason string `json:"reason"` // GiveBackReasonLabel code
+		Note   string `json:"note"`
+	}
+	if err := c.BodyParser(&in); err != nil {
+		return httpx.BadRequest(c, "invalid request body")
+	}
+	err = h.svc.ReleaseClaim(c.Context(), id, nil, &wid, strings.TrimSpace(in.Reason), strings.TrimSpace(in.Note), "cutter", c.IP())
 	return transitionResponse(c, err, "claim released")
 }
 

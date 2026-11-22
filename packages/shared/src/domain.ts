@@ -14,6 +14,9 @@ export type ShortAction = "split" | "reduce" | "recut";
 export type CancelReason =
   "order_cancelled" | "order_changed" | "created_by_mistake" | "material_problem" | "other";
 
+/** Why a cutter gave a batch back to the admin (D48). Required when the cutter gives it back. */
+export type GiveBackReason = "machine_issue" | "material_issue" | "too_much_work" | "shift_over" | "other";
+
 export type ReworkReason = "stitching_fault" | "stain" | "cutting_fault" | "material_defect" | "other";
 export type ReworkRoute = "stitcher" | "admin";
 export type ReworkDecision = "to_stitcher" | "recut" | "write_off";
@@ -159,6 +162,19 @@ export interface BatchDetail extends Batch {
   units: Unit[];
   timeline: PhaseLogEntry[];
   assignments: AssignmentEntry[];
+  /** While in cutting: the latest time a cutter's claim ended without a cut (D48). */
+  given_back?: GivenBack;
+}
+
+/** A cutting claim that ended without a cut: the cutter gave it back, or the admin released it. */
+export interface GivenBack {
+  worker_id: string;
+  worker_name: string;
+  at: string;
+  by: "cutter" | "admin";
+  /** Set when the cutter gave it back (by = "cutter"). */
+  reason?: GiveBackReason;
+  note?: string;
 }
 
 /** POST /batches. Spare mats of the same car item can be reused: they join already cut (U3). */

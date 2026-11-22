@@ -1,6 +1,7 @@
 import type {
   BatchStatus,
   CancelReason,
+  GiveBackReason,
   MaterialUnit,
   MovementKind,
   Phase,
@@ -84,6 +85,15 @@ export const SHORT_REASON_LABEL: Record<ShortReason, string> = {
   machine_issue: "Machine issue",
   cutter_error: "Cutter error",
   order_changed: "Order changed",
+  other: "Other",
+};
+
+/** Order = picker order on the phone. Mirrors GiveBackReasonLabel in the backend (batch/release.go). */
+export const GIVE_BACK_REASON_LABEL: Record<GiveBackReason, string> = {
+  machine_issue: "Machine problem",
+  material_issue: "Material problem",
+  too_much_work: "Too much work",
+  shift_over: "Shift over",
   other: "Other",
 };
 

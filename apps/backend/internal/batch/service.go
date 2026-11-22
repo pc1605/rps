@@ -420,6 +420,11 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*BatchDetail, error) {
 	if err := aRows.Err(); err != nil {
 		return nil, err
 	}
+	if detail.CurrentPhase == PhaseCutting {
+		if detail.GivenBack, err = s.latestGiveBack(ctx, id); err != nil {
+			return nil, err
+		}
+	}
 	return detail, nil
 }
 

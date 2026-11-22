@@ -116,6 +116,8 @@ type BatchDetail struct {
 	Units       []Unit            `json:"units"`
 	Timeline    []PhaseLogEntry   `json:"timeline"`
 	Assignments []AssignmentEntry `json:"assignments"`
+	// While in cutting: the latest claim that ended without a cut (D48), so the admin sees why.
+	GivenBack *GivenBack `json:"given_back,omitempty"`
 }
 
 // CreateInput is the request body for creating a batch.

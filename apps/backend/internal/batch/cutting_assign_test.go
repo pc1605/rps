@@ -182,7 +182,7 @@ func TestCutterAssignment(t *testing.T) {
 	if err := f.setCutter(bt.ID, b); !errors.Is(err, ErrInvalidInput) {
 		t.Fatalf("change while cutting: %v", err)
 	}
-	if err := f.s.ReleaseClaim(f.ctx, bt.ID, nil, &a, "cutter", u3ip); err != nil {
+	if err := f.s.ReleaseClaim(f.ctx, bt.ID, nil, &a, "machine_issue", "", "cutter", u3ip); err != nil {
 		t.Fatal(err)
 	}
 	if _, st := f.state(bt.ID); st != StatusAwaitingAssignment {
