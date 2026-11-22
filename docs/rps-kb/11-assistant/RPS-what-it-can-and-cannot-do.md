@@ -6,7 +6,7 @@ Ahmedabad. It has two parts:
 - **Admin website** — for the owner and supervisors, on a laptop or computer.
 - **RPS Worker phone app** — for cutters, stitchers and packers, on Android phones.
 
-This document describes RPS **as of 21 November 2026**. "Cannot" means it is not available in RPS on that date.
+This document describes RPS **as of 22 November 2026**. "Cannot" means it is not available in RPS on that date.
 
 ---
 
@@ -14,8 +14,9 @@ This document describes RPS **as of 21 November 2026**. "Cannot" means it is not
 
 1. The admin creates a **batch**: one car item (e.g. "Baleno, Rexine R") × a number of mats. Every mat gets its own
    code (e.g. `B-2026-005-003`) from the start.
-2. **Cutting**: a cutter takes the batch from the cutting queue, presses Start, cuts, then enters how many pieces were
-   cut and presses Complete. The batch goes back to the admin as "Ready for stitching".
+2. **Cutting**: the new batch waits as "Needs a cutter" until the admin assigns one cutter; that cutter gets a
+   notification, presses Start, cuts, then enters how many pieces were cut and presses Complete. The batch goes back
+   to the admin as "Ready for stitching".
 3. The admin **assigns stitchers**, either a fixed share each (e.g. Surya 8, Raj 2) or a shared pile, and prints the
    fabric (taffeta) labels.
 4. **Stitching**: each assigned stitcher joins the batch and scans each mat's label when the mat is finished. Each
@@ -29,7 +30,7 @@ This document describes RPS **as of 21 November 2026**. "Cannot" means it is not
 ## 2. Admin website — can do
 
 **Dashboard**
-- Counts per stage: in cutting, ready for stitching, in stitching, in packing, completed today.
+- Counts per stage: needs a cutter, in cutting, ready for stitching, in stitching, in packing, completed today.
 - Warnings: stuck batches, short cuts, rework waiting for a decision, low material stock, material shortfalls.
 
 **Batches**
@@ -40,7 +41,7 @@ This document describes RPS **as of 21 November 2026**. "Cannot" means it is not
 - **Edit** a batch only before cutting starts (item, quantity, roll, notes).
 - **Cancel** a batch until the first mat is packed. Cut and stitched mats become **spare stock**, never lost; it shows
   the outcome before you confirm.
-- **Release** a cutting batch that a cutter started but cannot finish, so another cutter can take it.
+- **Release** a cutting batch that a cutter started but cannot finish; it goes back to Needs a cutter.
 - **Short cut** (fewer pieces cut than ordered): the admin chooses **Split** (the rest becomes a new batch),
   **Reduce** (the batch becomes smaller) or **Re-cut** (back to cutting for the missing pieces). A reason is required.
 - **Undo a scan** made by mistake, with a reason, only until the next stage has started on that mat.
@@ -52,6 +53,8 @@ This document describes RPS **as of 21 November 2026**. "Cannot" means it is not
 - The panel shows each cutter's open batches, mats left to cut and pieces cut today.
 - Change or remove the cutter until cutting starts. A batch given back, released, re-cut or split goes back to
   Needs a cutter.
+- When a cutter gives a batch back, the batch page shows who, when and why (the reason the cutter picked, and their
+  note).
 
 **Assigning stitchers**
 - Pick stitchers; the panel shows who is on the floor today and how busy each is.
@@ -123,7 +126,8 @@ This document describes RPS **as of 21 November 2026**. "Cannot" means it is not
 **Cutter**
 - Sees only the batches the admin assigned to them (a notification arrives); Start → Complete with the number of
   pieces cut.
-- Can give a started batch back; it goes back to the admin.
+- Can give a started batch back to the admin, saying why: machine problem, material problem, too much work, shift
+  over, or other (with a note).
 
 **Stitcher**
 - Sees **only** batches assigned to them, with their share (e.g. 3 / 8).
@@ -166,7 +170,7 @@ This document describes RPS **as of 21 November 2026**. "Cannot" means it is not
 - Android only; no iPhone app.
 - Not on the Play Store; the app is installed from a file shared by the admin.
 - Needs internet to scan. No offline scanning; scans are not saved for later.
-- No notifications for cutters or packers (their queues are open), and no notifications to the admin.
+- No notifications for packers (their queue is open), and no notifications to the admin.
 - Workers cannot see other workers' output, and never see money.
 - A worker cannot sign in on two phones at once.
 
