@@ -6,3 +6,4 @@ ios
 apps/backend
 apps/admin-web/components/ui
 pnpm-lock.yaml
+apps/mobile/google-services.json
