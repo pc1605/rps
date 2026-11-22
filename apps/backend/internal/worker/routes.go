@@ -31,4 +31,5 @@ func RegisterRoutes(api fiber.Router, svc *Service, authSvc *auth.Service) {
 	api.Patch("/workers/:id", admin, h.Update)
 	api.Post("/workers/:id/reset-pin", admin, h.ResetPIN)
 	api.Post("/workers/:id/enrollment", admin, h.NewEnrollment)
+	api.Get("/workers/:id/enrollment", admin, h.EnrollmentStatus)
 }

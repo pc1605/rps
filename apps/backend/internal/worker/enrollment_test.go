@@ -203,3 +203,68 @@ func TestOnePhonePerWorker(t *testing.T) {
 		t.Errorf("first phone after the second signed in: %d %q", status, code)
 	}
 }
+
+// The "Set up phone" dialog's status: live code with tries left, then nothing live once the code is
+// used (last sign-in moves) or blocked by wrong PINs (it doesn't).
+func TestEnrollmentStatus(t *testing.T) {
+	ctx := context.Background()
+	pool := testutil.DB(t)
+	s := NewService(pool)
+	var adminID uuid.UUID
+	if err := pool.QueryRow(ctx, `SELECT id FROM users LIMIT 1`).Scan(&adminID); err != nil {
+		t.Fatal(err)
+	}
+	w, err := s.Create(ctx, CreateInput{Name: fmt.Sprintf("T enroll status %d", time.Now().UnixNano()), Station: "packer", PIN: "4321"}, adminID, "owner", "127.0.0.1")
+	if err != nil {
+		t.Fatalf("create worker: %v", err)
+	}
+	t.Cleanup(func() { _, _ = pool.Exec(ctx, `DELETE FROM workers WHERE id = $1`, w.ID) })
+	status := func() *EnrollmentStatus {
+		t.Helper()
+		st, err := s.GetEnrollmentStatus(ctx, w.ID)
+		if err != nil {
+			t.Fatalf("status: %v", err)
+		}
+		return st
+	}
+
+	if st := status(); st.ExpiresAt != nil || st.LastLoginAt != nil {
+		t.Errorf("new worker: %+v, want no code and no sign-in", st)
+	}
+
+	code, expires, err := s.NewEnrollmentCode(ctx, w.ID, adminID, "owner", "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st := status(); st.ExpiresAt == nil || !st.ExpiresAt.Equal(expires) || st.TriesLeft != maxEnrollTries {
+		t.Errorf("waiting code: %+v, want expiry %v and %d tries", st, expires, maxEnrollTries)
+	}
+	if _, _, err := s.Login(ctx, code, "0000", "127.0.0.1"); !errors.Is(err, ErrInvalidLogin) {
+		t.Fatal(err)
+	}
+	if st := status(); st.TriesLeft != maxEnrollTries-1 {
+		t.Errorf("after a wrong pin: %d tries left", st.TriesLeft)
+	}
+	if _, _, err := s.Login(ctx, code, "4321", "127.0.0.1"); err != nil {
+		t.Fatal(err)
+	}
+	used := status()
+	if used.ExpiresAt != nil || used.LastLoginAt == nil || used.LastLoginAt.Before(expires.Add(-EnrollCodeTTL)) {
+		t.Errorf("used code: %+v, want no code and a sign-in after it was made", used)
+	}
+
+	code, _, err = s.NewEnrollmentCode(ctx, w.ID, adminID, "owner", "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < maxEnrollTries; i++ {
+		_, _, _ = s.Login(ctx, code, "0000", "127.0.0.1")
+	}
+	if st := status(); st.ExpiresAt != nil || st.LastLoginAt == nil || !st.LastLoginAt.Equal(*used.LastLoginAt) {
+		t.Errorf("blocked code: %+v, want no code and the same last sign-in", st)
+	}
+
+	if _, err := s.GetEnrollmentStatus(ctx, uuid.New()); !errors.Is(err, ErrNotFound) {
+		t.Errorf("unknown worker: %v", err)
+	}
+}

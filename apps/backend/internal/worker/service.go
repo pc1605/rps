@@ -168,6 +168,37 @@ func (s *Service) tryNewEnrollmentCode(ctx context.Context, id, actorID uuid.UUI
 	return code, expires, tx.Commit(ctx)
 }
 
+// EnrollmentStatus is what the admin's "Set up phone" dialog needs to tell whether the code it shows
+// still works: the live code's expiry (nil = no live code), wrong PINs left on it, and the last sign-in.
+// The dialog compares these with its own code — the code itself is never returned again.
+type EnrollmentStatus struct {
+	ExpiresAt   *time.Time `json:"expires_at"`
+	TriesLeft   int        `json:"tries_left"`
+	LastLoginAt *time.Time `json:"last_login_at"`
+}
+
+// GetEnrollmentStatus reads the worker's current enrollment code state (see EnrollmentStatus).
+func (s *Service) GetEnrollmentStatus(ctx context.Context, id uuid.UUID) (*EnrollmentStatus, error) {
+	var (
+		st    EnrollmentStatus
+		tries int
+	)
+	err := s.pool.QueryRow(ctx, `
+		SELECT CASE WHEN enroll_code_hash IS NOT NULL AND enroll_expires_at > NOW() THEN enroll_expires_at END,
+		       enroll_tries, last_login_at
+		FROM workers WHERE id = $1`, id).Scan(&st.ExpiresAt, &tries, &st.LastLoginAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if st.ExpiresAt != nil {
+		st.TriesLeft = maxEnrollTries - tries
+	}
+	return &st, nil
+}
+
 // Login signs a phone in with a one-time enrollment code + the worker's PIN. On success the code is
 // used up and the worker's session number goes up, which signs out any other phone (one phone per
 // worker). Returns the worker and the new session number for the token.

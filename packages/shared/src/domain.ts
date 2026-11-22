@@ -277,6 +277,15 @@ export interface EnrollmentCode {
   expires_at: string;
 }
 
+/** GET /workers/:id/enrollment — whether the worker's code still works (the code itself is never sent). */
+export interface EnrollmentStatus {
+  /** Expiry of the live code; null when none is live (used, blocked by wrong PINs, or expired). */
+  expires_at: string | null;
+  /** Wrong PINs the live code still allows (0 when none is live). */
+  tries_left: number;
+  last_login_at: string | null;
+}
+
 export type PeekReason =
   "already_packed" | "in_rework" | "written_off" | "spare" | "wrong_phase" | "not_started";
 

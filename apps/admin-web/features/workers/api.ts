@@ -1,5 +1,6 @@
 import type {
   EnrollmentCode,
+  EnrollmentStatus,
   WorkerDetail,
   WorkerHistoryPage,
   WorkerSummary,
@@ -25,4 +26,7 @@ export const workerApi = {
     d(await http.post(`/workers/${id}/reset-pin`, pin ? { pin } : {})),
   /** Makes a fresh one-time code for setting up the worker's phone; any earlier code stops working. */
   enrollment: async (id: string): Promise<EnrollmentCode> => d(await http.post(`/workers/${id}/enrollment`)),
+  /** Whether the worker's code still works — the dialog compares it with the code it shows. */
+  enrollmentStatus: async (id: string): Promise<EnrollmentStatus> =>
+    d(await http.get(`/workers/${id}/enrollment`)),
 };

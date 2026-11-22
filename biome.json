@@ -9,7 +9,8 @@
       "!**/.expo",
       "!**/android",
       "!**/ios",
-      "!apps/admin-web/components/ui"
+      "!apps/admin-web/components/ui",
+      "!!**/.claude"
     ]
   },
   "css": {
