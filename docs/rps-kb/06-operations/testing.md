@@ -109,8 +109,10 @@ Cast: cutter (Ramesh), two stitchers (Surya, Mahesh), packer (Raju) — 2–3 ph
 Setup: your dev DB must have migrations up to 019 (`set -a; source .env; set +a; migrate -path apps/backend/migrations -database "$DATABASE_URL" up`),
 a dev build of the app pointed at your backend, one cutter, one stitcher and one packer phone (PIN 1234). Tick each:
 1. [ ] **Cutter — Give back this batch.** Cutter starts a batch → batch screen shows "Give back this batch" under the
-   stepper → tap → dialog "Give back this batch?" → **Give back** → "Done ✓ … is back with the admin." → the batch leaves
-   the cutter's queue and waits in the admin's **Needs a cutter** (D48; admin timeline no longer shows the claim).
+   stepper → tap → "Why are you giving it back?" → the footer says "Choose a reason" until a tile is picked; **Other**
+   needs a note → **Give back** → "Done ✓ … is back with the admin." → home; the batch leaves the cutter's queue and waits
+   in the admin's **Needs a cutter** (D48). The batch page's Cutter card says "<cutter> gave it back · <time> — <reason>:
+   <note>" (the timeline no longer shows the claim).
 2. [ ] **My work card** (home, top) on each phone: title "My work · pieces cut / mats stitched / mats packed"; *today* and
    *this week* match what that worker did (admin Reports → Workers for the same days). Stitcher: after a mat of theirs is sent
    to rework, "1 came back for rework this week" and "1 waiting for you"; packer: "1 sent to rework this week" after flagging one.
@@ -221,10 +223,11 @@ Needs a cutter). Setup: dev DB on migration 022, two cutter phones (A and B), th
 3. [ ] **Change.** Batch page → Cutter card → **Change cutter** → B → it moves from A's phone to B's.
 4. [ ] **Started.** B starts it → the Cutter card says "B is cutting it now", no change button; the panel says to release
    the claim first.
-5. [ ] **Give back.** B gives it back → back in Needs a cutter, gone from B's phone.
+5. [ ] **Give back.** B gives it back with a reason → back in Needs a cutter, gone from B's phone; the batch page shows
+   no short-cut box, and the Cutter card says B gave it back, when and why.
 6. [ ] **Short cut.** Assign A, A cuts fewer than planned → Ready to stitch shows the short cut → **Re-cut** → the batch
    is in Needs a cutter (not on A's phone) until the admin assigns someone. **Split** → the remainder is in Needs a cutter.
-7. [ ] **Hindi.** A's phone in हिन्दी → give back dialog: "यह एडमिन के पास वापस जाएगा…".
+7. [ ] **Hindi.** A's phone in हिन्दी → give back screen: "आप इसे वापस क्यों कर रहे हैं?", "यह एडमिन के पास वापस जाएगा…".
 
 ## Notifications (N1) — real phones, run by the owner
 Automated: `go test ./internal/push` (the Firebase request, dead tokens, who gets what in which language),

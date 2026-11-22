@@ -27,7 +27,9 @@ open mats first; one radio row each: ● Cutting now / Not seen today / Not on a
 today`; the current one says "assigned now". Footer: **Remove cutter** (when one is assigned → back to Needs a cutter)
 and **Assign to <name>**. A batch being cut shows "<name> is cutting it now — release the claim" instead (no changes
 while cutting). Batch page: **Cutter** card while the batch is in cutting — "Nobody is assigned yet" + **Assign a
-cutter**, or "<name> has it in their queue" + **Change cutter**, or "<name> is cutting it now".
+cutter**, or "<name> has it in their queue" + **Change cutter**, or "<name> is cutting it now". Under it, when a claim
+ended without a cut: "↶ <cutter> gave it back · 22 Nov, 15:40 — Machine problem: <note>" (or "<cutter>'s claim was
+released by the admin · <time>"), from `given_back`. The short-cut box shows only in Ready to stitch, never in cutting.
 
 ## Assign panel — `AssignSheet` (U3, shared by Ready list and batch page)
 Right-side sheet: `Assign <code>` · car · mats · waiting. Stitchers from `GET /stitchers/load` in load order, each with

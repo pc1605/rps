@@ -19,8 +19,11 @@ you"). A notification arrives when a batch is assigned (D47).
 Batch → **Start cutting ▶** (exclusive) → same screen shows PIECES COMPLETED input (prefilled with quantity; short count
 asks to confirm) → **Complete → send for assignment** → Alert "sent to admin for stitching assignment" → back to queue.
 
-U3: while the cutter holds the claim, **Give back this batch** (ghost button under the stepper, confirm Alert) returns it
-to the admin, who assigns a cutter again (`POST /worker/batches/:id/release`; D48).
+U3: while the cutter holds the claim, **Give back this batch** (ghost button under the stepper) opens the give-back screen
+(`app/batch/give-back/[id].tsx`): "Why are you giving it back?" — five reason tiles (Machine problem · Material problem ·
+Too much work · Shift over · Other), a note (needed for Other), footer **Give back**. It returns the batch to the admin,
+who assigns a cutter again (`POST /worker/batches/:id/release {reason, note}`; D48) → "Done ✓ … is back with the admin."
+→ home.
 
 ## My work (U3, home)
 Card at the top of every home queue: "MY WORK · mats stitched" (or pieces cut / mats packed), **today** and **this week**

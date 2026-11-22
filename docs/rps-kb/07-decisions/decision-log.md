@@ -347,6 +347,10 @@ phone and can start it. Supersedes the cutting part of D31.
   claim is released first.
 - **Back to the admin**: a batch the cutter gives back, the admin releases, a re-cut after a short cut, a split
   remainder and a rework re-cut all wait as Needs a cutter with no cutter (the first cutter's assignment is cleared).
+- **Why it came back**: a cutter giving a batch back picks a reason (machine, material, too much work, shift over,
+  other + note), stored on the `claim_released` event. While the batch is in cutting, the batch page's Cutter card
+  shows the latest give-back or release: who, when, why (`given_back` on `GET /batches/:id`). The short-cut box is
+  only for a batch in Ready to stitch — in cutting, `awaiting_assignment` means Needs a cutter.
 - **Phone**: the assigned cutter is notified (D47) and sees "Assigned to you"; the queue shows only their batches.
 - **Reports**: waiting for a cutter counts as the cutting stage (WIP age from when it came to cutting); assigning
   doesn't restart it. No new stuck threshold.

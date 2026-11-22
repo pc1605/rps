@@ -55,7 +55,8 @@ Packing scans: verification of the finished physical mat.
 ## 4b. Corrections (U3)
 - **Release claim (D37)** — a cutter who started a batch and can't finish gives it back on the phone ("Give back this
   batch"), or the admin releases it from the open timeline entry. The open cutting log is deleted (nothing was
-  reported on it); the `claim_released` event + audit keep the record.
+  reported on it); the `claim_released` event + audit keep the record. The cutter picks a reason (machine, material,
+  too much work, shift over, other + note); the admin sees who, when and why on the batch page's Cutter card (D48).
 - **Undo scan (D38)** — owner/supervisor only, from the admin (unit page, batch unit cards), with a reason. Undoes the
   mat's latest stitch or pack scan; when that scan finished the stage, the batch moves back and the logs that
   completion closed reopen — but only while nothing has happened in the next stage (no packer joined, nothing packed;

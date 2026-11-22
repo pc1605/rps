@@ -72,7 +72,7 @@ Cutter error · Order changed · Other (+ note, required for Other). The reason 
 | `completed` | last packing scan, or a write-off / re-cut decision that finishes packing | completed / completed | |
 | `edited` (U3) | PATCH before cutting | unchanged | fields, before, after |
 | `cancelled` (U3) | cancel | phase kept / cancelled | reason, note, spare_stitched, spare_unstitched, removed, written_off |
-| `claim_released` (U3) | admin or cutter release | cutting / awaiting_assignment (D48; pending before) | worker_id, worker_name, started_at, by (`admin`/`cutter`) |
+| `claim_released` (U3) | admin or cutter release | cutting / awaiting_assignment (D48; pending before) | worker_id, worker_name, started_at, by (`admin`/`cutter`), reason + note (cutter only, D48) |
 | `scan_undone` (U3, migration 019) | undo-scan | stitching or packing / in_progress when it moved back; else none | unit_code, scan, worker_id, scanned_at, reason, moved_back |
 
 `created` (U3) also carries `spares_stitched`, `spares_unstitched`, `spare_codes` when spares were reused, and its
