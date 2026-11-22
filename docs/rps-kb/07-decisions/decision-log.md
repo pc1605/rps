@@ -128,7 +128,7 @@ Shared TypeScript package (`packages/shared/`) contains phase labels, status lab
 **Decision**: The assign panel, load view and hand-over exist for stitching only. Packing stays an open queue with no
 assignment UI (the backend still accepts packing assignments; nothing in the admin sets them).
 **Why**: Owner (U3): assigning packers would make the process more complicated.
-**Status**: Built (U3).
+**Status**: Built (U3). Cutting part superseded by D48 (cutters are assigned too); packing stays open.
 
 ### D32 — Stitching assignment defaults and hand-over (Nov 2026)
 **Decision**: Assign from the Ready list in a side panel (not a board). Fixed share each is the default, shared pile an
@@ -324,8 +324,9 @@ the stitcher, or "back to stitcher" by the owner). Owner, 21 Nov 2026: "assigned
   names only.
 - **Never in the way**: sent after the change is saved, in the background, with a time limit; a failure is logged and
   the admin's request is unaffected. No key configured (`FCM_CREDENTIALS_FILE` empty) = notifications off.
-- **Not notified** (on purpose, for now): cutting and packing work (open queues), batches assigned before they reach
-  the worker's station, anything to the admin.
+- **Not notified** (on purpose, for now): packing work (open queue), batches assigned before they reach
+  the worker's station, anything to the admin. (Cutting was an open queue too until D48; an assigned cutter is now
+  notified like a stitcher.)
 **Needs from the owner**: a Firebase project (Android app `com.rpsworker.app`): `google-services.json` into the app
 build, and a service-account key on the server.
 **Status**: Built. Checked: Go tests, Postman 331 / 560, and on a real phone (Realme RMX1801, Android 10, debug build,
@@ -333,3 +334,24 @@ Firebase project `riddhi-production-system`, 21 Nov 2026): notifications arrive 
 admin assignment notified the stitcher; tapping opened the batch. Android 10 asks no permission (the prompt exists from
 Android 13). Not yet checked on a phone: Hindi titles, rework, sign-out, second phone (covered by Go tests) —
 `06-operations/testing.md` → Notifications (N1). App id is `com.rpsworker.app` from this slice on.
+
+### D48 — Cutters are assigned by the admin, like stitchers (Nov 2026)
+**Decision**: No cutter picks a batch on their own. A batch in cutting waits as **Needs a cutter**
+(`cutting/awaiting_assignment`, admin only) until the admin assigns **one** cutter; only that cutter sees it on the
+phone and can start it. Supersedes the cutting part of D31.
+- **Where**: a **Needs a cutter** list (sidebar + dashboard pipeline, longest waiting first) with an Assign side panel,
+  and a Cutter card on the batch page. Not on the New batch form (owner: list + batch page are enough to start;
+  re-cut, split and given-back batches never pass the form anyway).
+- **One cutter, no number**: cutting stays one claim with a typed count. A big order is made as two batches.
+- **Change** the cutter any time before cutting starts (or remove them → back to Needs a cutter). Once started, the
+  claim is released first.
+- **Back to the admin**: a batch the cutter gives back, the admin releases, a re-cut after a short cut, a split
+  remainder and a rework re-cut all wait as Needs a cutter with no cutter (the first cutter's assignment is cleared).
+- **Phone**: the assigned cutter is notified (D47) and sees "Assigned to you"; the queue shows only their batches.
+- **Reports**: waiting for a cutter counts as the cutting stage (WIP age from when it came to cutting); assigning
+  doesn't restart it. No new stuck threshold.
+- **Existing data** (migration 022): a batch a cutter had started keeps that cutter as its assigned cutter; a batch
+  nobody had started moves to Needs a cutter.
+**Why**: Owner after the demo (Nov 2026): cutter assignment like stitchers — cutters should not pick batches themselves.
+Answers: one cutter per batch; given back / re-cut goes back to the admin.
+**Status**: Built (`agent/cutter-assignment`). Go tests, Postman 346 requests / 571 assertions.

@@ -95,7 +95,8 @@ Use **Collection Runner → Run folder** to avoid ordering mistakes. Re-runs cre
 
 ## Full manual test (the "does the factory work" script)
 Cast: cutter (Ramesh), two stitchers (Surya, Mahesh), packer (Raju) — 2–3 phones/emulator, PIN 1234.
-1. Admin creates batch qty 10 → appears under Batches → Cutting; sidebar count.
+1. Admin creates batch qty 10 → appears under Batches → **Needs a cutter**; the cutter phone shows nothing. Assign →
+   Ramesh → batch moves to Cutting and appears on Ramesh's phone (D48).
 2. Cutter: Start → Complete (10) → batch moves to **Ready to stitch**; both stitcher phones show nothing.
 3. Admin: batch detail → check Surya 8, Mahesh 2 → `10/10 ✓` → **Assign & print labels** → taffeta PDF; batch under Stitching.
 4. Surya's phone: `📌 Your share: 0/8`; Mahesh: `0/2`. Both Join.
@@ -108,8 +109,8 @@ Cast: cutter (Ramesh), two stitchers (Surya, Mahesh), packer (Raju) — 2–3 ph
 Setup: your dev DB must have migrations up to 019 (`set -a; source .env; set +a; migrate -path apps/backend/migrations -database "$DATABASE_URL" up`),
 a dev build of the app pointed at your backend, one cutter, one stitcher and one packer phone (PIN 1234). Tick each:
 1. [ ] **Cutter — Give back this batch.** Cutter starts a batch → batch screen shows "Give back this batch" under the
-   stepper → tap → dialog "Give back this batch?" → **Give back** → "Done ✓ … is back in the cutting queue." → back on the
-   queue the batch is free again (another cutter phone can start it; admin timeline no longer shows the claim).
+   stepper → tap → dialog "Give back this batch?" → **Give back** → "Done ✓ … is back with the admin." → the batch leaves
+   the cutter's queue and waits in the admin's **Needs a cutter** (D48; admin timeline no longer shows the claim).
 2. [ ] **My work card** (home, top) on each phone: title "My work · pieces cut / mats stitched / mats packed"; *today* and
    *this week* match what that worker did (admin Reports → Workers for the same days). Stitcher: after a mat of theirs is sent
    to rework, "1 came back for rework this week" and "1 waiting for you"; packer: "1 sent to rework this week" after flagging one.
@@ -209,6 +210,22 @@ native rebuild). One admin browser, one stitcher phone, one packer or second sti
 10. [ ] **Through ngrok / the hotspot** (however the phones reach the backend): check 3 still works — a proxy that
     buffers the stream would make changes arrive late (they would still arrive within a minute by the fallback).
 
+## Cutter assignment (D48) — real phones, run by the owner
+Automated: `go test ./internal/batch -run 'TestCutterAssignment|TestReleaseClaim|TestNotifications'`; Postman "Workflow
+corrections (U3b)" (start before assignment 403, two cutters 400, stitcher as cutter 400, cutter load, give back →
+Needs a cutter). Setup: dev DB on migration 022, two cutter phones (A and B), the admin in a browser. Tick each:
+1. [ ] **Nothing to pick.** Admin creates a batch → it is under **Needs a cutter** (sidebar + dashboard, amber); neither
+   cutter phone shows it.
+2. [ ] **Assign.** Assign → the panel lists both cutters (least busy first) → pick A → A's phone shows it with "📌 Assigned
+   to you" (and a notification, with the Firebase key set); B sees nothing.
+3. [ ] **Change.** Batch page → Cutter card → **Change cutter** → B → it moves from A's phone to B's.
+4. [ ] **Started.** B starts it → the Cutter card says "B is cutting it now", no change button; the panel says to release
+   the claim first.
+5. [ ] **Give back.** B gives it back → back in Needs a cutter, gone from B's phone.
+6. [ ] **Short cut.** Assign A, A cuts fewer than planned → Ready to stitch shows the short cut → **Re-cut** → the batch
+   is in Needs a cutter (not on A's phone) until the admin assigns someone. **Split** → the remainder is in Needs a cutter.
+7. [ ] **Hindi.** A's phone in हिन्दी → give back dialog: "यह एडमिन के पास वापस जाएगा…".
+
 ## Notifications (N1) — real phones, run by the owner
 Automated: `go test ./internal/push` (the Firebase request, dead tokens, who gets what in which language),
 `go test ./internal/batch -run TestNotifications` (when the server notifies whom), `go test ./internal/worker -run
@@ -247,7 +264,8 @@ curl -s -X POST $API/worker/units/scan -H "Authorization: Bearer $STITCHER" -H "
 ```
 
 ### U3b folder — "Workflow corrections (U3b)"
-Self-contained (creates its own car item, cutter and stitcher; run after `Auth`): edit before cutting, cutter + admin
-release, undo scan, cancel → spare stock, cancelled view, scanning a spare, reuse on New batch, spare write-off,
+Self-contained (creates its own car item, cutter and stitcher; run after `Auth`): edit before cutting, cutter
+assignment (D48: start before assignment 403, two cutters / a stitcher 400, cutter load; each start is preceded by an
+assignment), cutter + admin release (back to Needs a cutter), undo scan, cancel → spare stock, cancelled view, scanning a spare, reuse on New batch, spare write-off,
 My work, work history (M1: 200 + shape, bad month 400, future month 400, admin token 401). Full-run command with `--folder Auth --folder "Workflow corrections (U3b)"`.
 

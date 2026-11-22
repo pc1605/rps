@@ -35,7 +35,7 @@ This document describes RPS **as of 21 November 2026**. "Cannot" means it is not
 **Batches**
 - Create a batch (car item, quantity, which roll to cut from, notes). Before creating, it shows the materials the
   batch will need and any shortfall.
-- Lists per stage (Cutting, Ready to stitch, Stitching, Packing, Completed, Cancelled) with live counts.
+- Lists per stage (Needs a cutter, Cutting, Ready to stitch, Stitching, Packing, Completed, Cancelled) with live counts.
 - Search, filter (car, product line, dates, rework, short cut) and sort; 50 per page.
 - **Edit** a batch only before cutting starts (item, quantity, roll, notes).
 - **Cancel** a batch until the first mat is packed. Cut and stitched mats become **spare stock**, never lost; it shows
@@ -46,6 +46,12 @@ This document describes RPS **as of 21 November 2026**. "Cannot" means it is not
 - **Undo a scan** made by mistake, with a reason, only until the next stage has started on that mat.
 - Batch page: full timeline (who did what, when, how long), every mat with who stitched and packed it, and the
   materials used.
+
+**Assigning cutters**
+- Every new batch waits in **Needs a cutter** until the admin picks one cutter for it; only that cutter sees it.
+- The panel shows each cutter's open batches, mats left to cut and pieces cut today.
+- Change or remove the cutter until cutting starts. A batch given back, released, re-cut or split goes back to
+  Needs a cutter.
 
 **Assigning stitchers**
 - Pick stitchers; the panel shows who is on the floor today and how busy each is.
@@ -115,8 +121,9 @@ This document describes RPS **as of 21 November 2026**. "Cannot" means it is not
   vibration feedback.
 
 **Cutter**
-- Sees the cutting queue; Start (only one cutter per batch) → Complete with the number of pieces cut.
-- Can give a started batch back to the queue.
+- Sees only the batches the admin assigned to them (a notification arrives); Start → Complete with the number of
+  pieces cut.
+- Can give a started batch back; it goes back to the admin.
 
 **Stitcher**
 - Sees **only** batches assigned to them, with their share (e.g. 3 / 8).
@@ -150,7 +157,8 @@ This document describes RPS **as of 21 November 2026**. "Cannot" means it is not
 - Not in other languages on the admin website (English only).
 
 **Stations and assignments**
-- Cutting and packing are open queues; only stitching is assigned by the admin with shares.
+- Packing is an open queue. Cutting is assigned by the admin (one cutter per batch, no shares); stitching is assigned
+  with shares.
 - A batch is one car item; mixed batches are not possible.
 - No machine integration (cutting machine, scales) and no label printer connection; labels are PDFs.
 

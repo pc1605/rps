@@ -6,7 +6,9 @@ Attention cards include **N batches stuck** (R1, from `/reports/stuck`) → Repo
 
 ## Batches (list) — `/batches[?phase=…]`
 (U3: a **Cancelled** tab under the sidebar views; cancelled batches are only there.)
-Sidebar sub-nav: Cutting · Ready to stitch · Stitching · Packing · Completed, each with a live count pill (from `/batches/stats`).
+Sidebar sub-nav: **Needs a cutter** (D48) · Cutting · Ready to stitch · Stitching · Packing · Completed, each with a live
+count pill (from `/batches/stats`). The dashboard pipeline has the same stages; the two assigning ones (Needs a cutter,
+Ready to stitch) turn amber when something waits.
 No `phase` param → all batches. Table columns: Code (link) · Model/size · Qty · Phase badge (amber **ready** for parked) ·
 Packed n/m · Created. **Packing view only**: extra column **Print stickers** → downloads sticker PDF and POSTs
 `stickers-printed` → label flips to **Reprint**.
@@ -16,6 +18,16 @@ Sortable headers (Code, Model, Qty, Phase, Created). Whole row opens the batch (
 **Ready to stitch view (U3)** — `?phase=ready` is the assigning screen: Car (large) + code · Mats · Waiting (`ready_since`)
 · **Assign** (opens the assign panel in place; the row drops out when assigned). Short-cut batches show **Resolve short
 cut** (→ batch page) instead. Opens longest-waiting first (`sort=waiting`).
+**Needs a cutter view (D48)** — `?phase=to_cut`, the same layout: Car + code · Mats (still to cut) · Waiting (since it
+came to cutting) · **Assign** → `CutterAssignSheet`. Longest waiting first.
+
+## Cutter panel — `CutterAssignSheet` (D48, Needs a cutter list and batch page)
+Right-side sheet: `Assign a cutter · <code>` · car · N to cut · waiting. Active cutters from `GET /cutters/load`, least
+open mats first; one radio row each: ● Cutting now / Not seen today / Not on a batch · `N batches · M mats open · K cut
+today`; the current one says "assigned now". Footer: **Remove cutter** (when one is assigned → back to Needs a cutter)
+and **Assign to <name>**. A batch being cut shows "<name> is cutting it now — release the claim" instead (no changes
+while cutting). Batch page: **Cutter** card while the batch is in cutting — "Nobody is assigned yet" + **Assign a
+cutter**, or "<name> has it in their queue" + **Change cutter**, or "<name> is cutting it now".
 
 ## Assign panel — `AssignSheet` (U3, shared by Ready list and batch page)
 Right-side sheet: `Assign <code>` · car · mats · waiting. Stitchers from `GET /stitchers/load` in load order, each with
@@ -29,12 +41,14 @@ Right-side sheet: `Assign <code>` · car · mats · waiting. Stitchers from `GET
   disabled while the draft has unsaved edits). Unticking someone with stitched mats is refused (toast).
 
 ## Batch detail — `/batches/[id]`
-- Header: code, model · qty · size, notes; **Labels PDF** (taffeta reprint); badge shows `ready for stitching` when parked.
-  **U3**: **Edit** (`EditBatchDialog`, only while cutting/pending: item — fixed once some are cut —, quantity,
+- Header: code, model · qty · size, notes; **Labels PDF** (taffeta reprint); badge shows `ready for stitching` when parked
+  (`Needs a cutter` in cutting, D48).
+  **U3**: **Edit** (`EditBatchDialog`, only while in cutting and not started (D48: with or without a cutter): item — fixed once some are cut —, quantity,
   roll, notes) and **Cancel batch** (`CancelBatchDialog`, until the first pack: AlertDialog loads
   `/cancel-preview` and shows the outcome, e.g. "4 mats → spare stock (2 stitched) · 2 never cut → removed", reason +
   note). A cancelled batch shows a "spare" stat.
 - **U3 Release**: the open cutting entry on the timeline has **Release** (AlertDialog) while the batch is cutting/in_progress.
+  D48: the batch goes back to Needs a cutter and the cutter is cleared.
 - **U3 Undo last scan**: on stitched / packed unit cards (quiet ghost button) and on the unit page header; AlertDialog
   with a required reason; the API refuses what can't be undone. Unit cards of reused spares say "↩ spare from B-…".
 - **Short-cut panel** (`ShortCutPanel`): renders when `cut_qty < quantity` and `current_phase === "stitching"`. Displays amber warning banner with short piece count, and three resolution actions (`Split`, `Reduce`, `Recut`) triggering `POST /batches/:id/resolve-short`.

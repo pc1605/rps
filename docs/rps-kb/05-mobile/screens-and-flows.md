@@ -14,12 +14,13 @@ or a server error never sign out — opened offline, the app keeps the token and
 (`lib/session.ts`). Every sign-out empties the query cache, so the next worker on the phone never sees the last one's data.
 
 ## Cutter
-Home = cutting queue (open; blocked/dimmed cards for batches another cutter has in progress).
+Home = the batches the admin assigned to this cutter (D48 — no open cutting queue; each card says "📌 Assigned to
+you"). A notification arrives when a batch is assigned (D47).
 Batch → **Start cutting ▶** (exclusive) → same screen shows PIECES COMPLETED input (prefilled with quantity; short count
 asks to confirm) → **Complete → send for assignment** → Alert "sent to admin for stitching assignment" → back to queue.
 
 U3: while the cutter holds the claim, **Give back this batch** (ghost button under the stepper, confirm Alert) returns it
-to the cutting queue (`POST /worker/batches/:id/release`).
+to the admin, who assigns a cutter again (`POST /worker/batches/:id/release`; D48).
 
 ## My work (U3, home)
 Card at the top of every home queue: "MY WORK · mats stitched" (or pieces cut / mats packed), **today** and **this week**

@@ -5,7 +5,7 @@
 ## 1. Three phases, three interaction styles
 | Phase | Who | Claim style | How work is recorded | Parallelism |
 |---|---|---|---|---|
-| Cutting | cutters | **Exclusive** — one cutter per batch | Manual: Start, then Complete with a typed count | Across batches (3 stations, one batch each). Huge order → admin makes 2 batches. |
+| Cutting | the **assigned** cutter (D48) | **Exclusive** — one cutter per batch | Manual: Start, then Complete with a typed count | Across batches (3 stations, one batch each). Huge order → admin makes 2 batches. |
 | Stitching | **assigned** stitchers | **Join** — many per batch | **Scan-per-mat**: stitcher sews the taffeta label in, scans it → `stitched_by/at` | Within batch, bounded by per-head quotas |
 | Packing | packers | Join — many per batch | Scan-per-mat → `packed_by/at`, status `packed` | Within batch (quotas optional) |
 
@@ -18,7 +18,13 @@ Packing scans: verification of the finished physical mat.
   they can Join (`ErrNotAssigned` 403). No rows → open queue for that station.
 - **Stitching requires assignment** by construction: cutting-complete parks the batch as `awaiting_assignment`, which
   no worker queue returns. Assigning ≥1 stitcher flips it to `pending`.
-- Cutting/packing are open today; assigning someone makes them private too (same rule, no special case).
+- **Cutting requires assignment too (D48)**: a new batch (also a split remainder, a re-cut, a rework re-cut, a batch
+  given back) waits as `cutting/awaiting_assignment` ("Needs a cutter"). The admin assigns **one** active cutter, no
+  `target_qty`; that flips it to `pending`, removing the cutter flips it back. Only while nobody has started it.
+  `ListByPhase` never returns a cutting batch that isn't assigned to the asking cutter, and `StartPhase` refuses an
+  unassigned cutter (`ErrNotAssigned`) — no open cutting queue.
+- Giving back / releasing a cutting claim and a re-cut clear the cutter (`clearCutter`): back to the admin.
+- Packing is open; assigning someone would make it private too (same rule — nothing in the admin sets it, D31).
 - A stitcher's queue shows **only their own** batches — never "assigned to someone else" cards (owner: no cherry-picking).
 
 ## 3. Quotas (`target_qty`)
@@ -68,6 +74,7 @@ Per batch beyond display fields: `units_total`, `units_packed`, `units_stitched`
 
 ## 7. What the owner rejected (don't re-propose)
 - Open self-service stitching queue → cherry-picking of small mats.
+- Open self-service cutting queue → replaced by admin-assigned cutters (D48).
 - Soft targets / permission-only assignment → they want strict per-head quotas.
 - Unit-level pre-assignment ("Surya gets 001–008") → forces sorting the label strip by person; rejected for count quotas.
 

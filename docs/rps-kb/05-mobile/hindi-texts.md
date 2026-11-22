@@ -317,8 +317,8 @@ Every text of the phone app, grouped by screen: the English line first, the Hind
 94. Give back this batch?  
    **यह बैच वापस करें?**
 
-95. It goes back to the cutting queue so any cutter can start it. Nothing is reported as cut.  
-   **यह कटिंग की लिस्ट में वापस जाएगा, ताकि कोई भी कटर इसे शुरू कर सके। कुछ भी कटा हुआ नहीं गिना जाएगा।**
+95. It goes back to the admin, who gives it to a cutter again. Nothing is reported as cut.  
+   **यह एडमिन के पास वापस जाएगा, वे इसे फिर किसी कटर को देंगे। कुछ भी कटा हुआ नहीं गिना जाएगा।**
 
 96. Give back  
    **वापस करें**
@@ -326,8 +326,8 @@ Every text of the phone app, grouped by screen: the English line first, the Hind
 97. Keep it  
    **रखें**
 
-98. {code} is back in the cutting queue.  
-   **{code} कटिंग की लिस्ट में वापस गया।**
+98. {code} is back with the admin.  
+   **{code} एडमिन के पास वापस गया।**
 
 ## Scanner (stitcher / packer) and packer inspect sheet
 

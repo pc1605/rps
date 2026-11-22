@@ -3,7 +3,10 @@
 ```
 admin creates
      │
-cutting / pending ── cutter Start ──▶ cutting / in_progress
+cutting / awaiting_assignment     ← "Needs a cutter": admin only, cutters see nothing (D48)
+     │ admin SetAssignments(cutting, 1 cutter)          ▲ remove cutter · give back · release · re-cut
+     ▼                                                  │
+cutting / pending ── assigned cutter Start ──▶ cutting / in_progress
                                             │ cutter Complete (qty)
                                             ▼
                          stitching / awaiting_assignment   ← "Ready for stitching": admin only, workers see nothing
@@ -21,7 +24,8 @@ cutting / pending ── cutter Start ──▶ cutting / in_progress
 ## Transition rules (where in code)
 | Transition | Trigger | Code |
 |---|---|---|
-| cutting pending → in_progress | `POST /worker/batches/:id/start` by a cutter | `StartPhase` (exclusive via `idx_phase_logs_open_cutting`) |
+| cutting awaiting_assignment → pending (D48) | `PUT /batches/:id/assignments` `{phase: cutting}` with one cutter | `SetAssignments` (empty list flips back while pending) |
+| cutting pending → in_progress | `POST /worker/batches/:id/start` by the assigned cutter | `StartPhase` (exclusive via `idx_phase_logs_open_cutting`; unassigned → `ErrNotAssigned`) |
 | cutting → stitching/awaiting_assignment | `POST /worker/batches/:id/complete` by *the* cutter, `quantity_completed` | `CompletePhase` → records `cut_qty`. If `cut_qty < quantity`, flags short-cut. |
 | short-cut resolution | `POST /batches/:id/resolve-short` (`split` / `reduce` / `recut`) | `ResolveShort` (admin decides: splits remainder, cancels un-cut units, or recuts) |
 | awaiting_assignment → pending | `PUT /batches/:id/assignments` with ≥1 stitcher + quotas | `SetAssignments` (validates quotas sum to batch quantity) |
@@ -32,7 +36,7 @@ cutting / pending ── cutter Start ──▶ cutting / in_progress
 | packing → completed | The scan that packs the last unit | `ScanUnit` |
 
 | edit before cutting (U3) | `PATCH /batches/:id` while cutting/pending | `Edit` (`edit.go`) |
-| cutting in_progress → pending (U3) | admin `POST /batches/:id/release-claim` or the cutter `POST /worker/batches/:id/release` | `ReleaseClaim` (`release.go`) — open cutting log deleted |
+| cutting in_progress → awaiting_assignment (U3, D48) | admin `POST /batches/:id/release-claim` or the cutter `POST /worker/batches/:id/release` | `ReleaseClaim` (`release.go`) — open cutting log deleted, cutter cleared |
 | any (before the first pack) → cancelled (U3) | `POST /batches/:id/cancel` | `Cancel` (`cancel.go`) — phase kept, mats → spare / removed / written off |
 | packing → stitching, completed → packing (U3) | `POST /units/:code/undo-scan` | `UndoScan` (`undo.go`) — only while nothing happened in the next stage |
 | create straight into stitching / packing (U3) | `POST /batches` with spares covering the whole quantity | `Create` — awaiting_assignment, or packing/pending when all came in stitched |
@@ -45,7 +49,9 @@ The batch pauses in `awaiting_assignment` with a short-cut banner visible to the
 Admin selects one of three resolution paths:
 1. **Split**: Reduces current batch to `N` units and creates a linked child batch with `quantity = Q - N` (`parent_batch_id = parent.id`).
 2. **Reduce**: Clamps batch quantity to `N`, **deletes** the un-cut units, and stores `short_reason`.
-3. **Recut**: Keeps batch quantity `Q` and transitions back to cutting so another cutter can cut the remaining pieces.
+3. **Recut**: Keeps batch quantity `Q` and transitions back to cutting (`awaiting_assignment`, cutter cleared — D48) so the admin assigns a cutter for the remaining pieces.
+
+A split remainder is created in `cutting/awaiting_assignment` too (D48).
 
 Every action is confirmed in a dialog and needs a reason (R1/W5): Roll ran out · Material defect · Machine issue ·
 Cutter error · Order changed · Other (+ note, required for Other). The reason goes into the batch notes,
@@ -56,24 +62,25 @@ Cutter error · Order changed · Other (+ note, required for Other). The reason 
 
 | Kind | Written by | to_phase / to_status | data |
 |---|---|---|---|
-| `created` | Create · split remainder · rework re-cut | cutting / pending | quantity, parent, via (`split`/`recut`), recut_of |
+| `created` | Create · split remainder · rework re-cut | cutting / awaiting_assignment (D48; pending before) | quantity, parent, via (`split`/`recut`), recut_of |
 | `cut_started` | cutter Start (every claim) | cutting / in_progress | |
 | `cut_completed` | cutter Complete | stitching / awaiting_assignment | cut, cut_total, quantity, short |
-| `short_resolved` | resolve-short | recut → cutting / pending; else unchanged | action, reason, note, remainder, cut, quantity |
-| `assigned` | SetAssignments | stitching / pending (or back to awaiting) when the gate flips | phase, `before` / `after` [{worker_id, target_qty}] — quota history (D6) |
+| `short_resolved` | resolve-short | recut → cutting / awaiting_assignment (D48); else unchanged | action, reason, note, remainder, cut, quantity, cutter_cleared (recut) |
+| `assigned` | SetAssignments | stitching or cutting (D48) / pending (or back to awaiting) when the gate flips | phase, `before` / `after` [{worker_id, target_qty}] — quota history (D6) |
 | `stitching_started` / `packing_started` | first worker joins the phase | phase / in_progress | |
 | `stitching_completed` | last stitching scan | packing / pending | |
 | `completed` | last packing scan, or a write-off / re-cut decision that finishes packing | completed / completed | |
 | `edited` (U3) | PATCH before cutting | unchanged | fields, before, after |
 | `cancelled` (U3) | cancel | phase kept / cancelled | reason, note, spare_stitched, spare_unstitched, removed, written_off |
-| `claim_released` (U3) | admin or cutter release | cutting / pending | worker_id, worker_name, started_at, by (`admin`/`cutter`) |
+| `claim_released` (U3) | admin or cutter release | cutting / awaiting_assignment (D48; pending before) | worker_id, worker_name, started_at, by (`admin`/`cutter`) |
 | `scan_undone` (U3, migration 019) | undo-scan | stitching or packing / in_progress when it moved back; else none | unit_code, scan, worker_id, scanned_at, reason, moved_back |
 
 `created` (U3) also carries `spares_stitched`, `spares_unstitched`, `spare_codes` when spares were reused, and its
 to_phase/to_status is wherever the batch started (cutting, or stitching/packing when spares covered it).
 
 - **Stage entry** (WIP ageing) = newest event with `to_phase` = current phase and `to_status` = the stage's entry status
-  (`pending`; `awaiting_assignment` for Ready). **Last activity** (stuck) = newest of: any event, unit scan, phase claim,
+  (`pending`; `awaiting_assignment` for Ready; for cutting (D48) the newest `created` / `short_resolved` /
+  `claim_released` — waiting for a cutter counts as cutting, assigning one doesn't restart it). **Last activity** (stuck) = newest of: any event, unit scan, phase claim,
   rework step. Stuck = last activity older than `app_settings.stuck_hours[stage]`.
 - "Completed today" (`/batches/stats`) counts `completed` events by factory day (D5), not `updated_at`.
 - Backfilled rows (`data.backfill`) are approximate: stitching/packing start = first scan, completion = last pack scan;
@@ -91,9 +98,10 @@ to_phase/to_status is wherever the batch started (cutting, or stitching/packing 
   (`prestitched`), credit staying with their stitcher.
 
 ## Visibility per status
-- `awaiting_assignment`: admin only (Batches → Ready to stitch). Worker queues filter `status IN ('pending','in_progress')`.
+- `awaiting_assignment`: admin only (Batches → Needs a cutter / Ready to stitch). Worker queues filter `status IN ('pending','in_progress')`.
+- Cutting pending/in_progress: only the assigned cutter (D48).
 - Stitching pending/in_progress: only assigned stitchers.
-- Cutting / packing: open queues (unless an assignment exists for that phase — then assignees only).
+- Packing: open queue (unless an assignment exists for that phase — then assignees only).
 
 ## Timeline
 `GET /batches/:id` → `timeline[]` = every `phase_logs` row with worker name, start/end, duration, quantity.
