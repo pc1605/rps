@@ -7,7 +7,15 @@ import { useCallback, useMemo } from "react";
 // URL is the single source of truth for the batch list (U2): shareable, back-button safe.
 // `phase` keeps its old name (sidebar tabs, dashboard pipeline links); the API calls it `view`.
 export const PAGE_SIZE = 50;
-const VIEWS: BatchListView[] = ["cutting", "ready", "stitching", "packing", "completed", "cancelled"];
+const VIEWS: BatchListView[] = [
+  "to_cut",
+  "cutting",
+  "ready",
+  "stitching",
+  "packing",
+  "completed",
+  "cancelled",
+];
 const SORTS: BatchSort[] = ["created", "code", "quantity", "phase", "car", "waiting"];
 
 export type UrlState = {
@@ -49,8 +57,9 @@ export function useListParams() {
     };
   }, [sp]);
 
-  const params = useMemo<BatchListParams>(
-    () => ({
+  const params = useMemo<BatchListParams>(() => {
+    const waits = state.phase === "ready" || state.phase === "to_cut";
+    return {
       view: state.phase,
       q: state.q || undefined,
       car_model_id: state.car ? Number(state.car) : undefined,
@@ -59,14 +68,13 @@ export function useListParams() {
       to: state.to,
       has_rework: state.rework ? true : undefined,
       short: state.short ? true : undefined,
-      // Ready to stitch opens longest-waiting first.
-      sort: state.sort ?? (state.phase === "ready" ? "waiting" : undefined),
-      order: state.order ?? (!state.sort && state.phase === "ready" ? "asc" : undefined),
+      // The assigning views (Needs a cutter, Ready to stitch) open longest-waiting first.
+      sort: state.sort ?? (waits ? "waiting" : undefined),
+      order: state.order ?? (!state.sort && waits ? "asc" : undefined),
       page: Math.max(1, Number(state.page) || 1),
       limit: PAGE_SIZE,
-    }),
-    [state],
-  );
+    };
+  }, [state]);
 
   /** Merge a patch into the URL. Any change other than `page` resets to page 1. */
   const set = useCallback(

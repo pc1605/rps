@@ -95,7 +95,8 @@ export interface Batch {
   assigned_to_me?: boolean;
   my_target_qty?: number;
   my_done_qty?: number;
-  /** GET /batches only: for an awaiting_assignment batch, when cutting last finished (waiting time). */
+  /** GET /batches only: for an awaiting_assignment batch, since when it has waited for the admin
+   * (Ready to stitch: cutting last finished; Needs a cutter: it last came to cutting — D48). */
   ready_since?: string;
   /** Cancelled batch only (P1): the batches its spare mats were reused in (the mats moved there). */
   reused_in?: ReusedIn[];
@@ -233,6 +234,9 @@ export interface UndoScanResult {
 }
 
 export interface BatchStats {
+  /** In cutting with no cutter assigned yet (D48). */
+  needs_cutter: number;
+  /** In cutting with a cutter assigned (not started or being cut). */
   in_cutting: number;
   awaiting_assignment: number;
   in_stitching: number;
@@ -775,6 +779,20 @@ export interface StitcherLoad {
   mats_today: number;
 }
 
+/** GET /cutters/load — one active cutter's workload (cutter assign panel, D48). Sorted least open work first. */
+export interface CutterLoad {
+  worker_id: string;
+  name: string;
+  /** Batches assigned to this cutter still in cutting (not started or being cut). */
+  open_batches: number;
+  /** Pieces left to cut on those batches. */
+  open_mats: number;
+  /** Cutting a batch right now. */
+  on_floor: boolean;
+  /** Pieces reported cut since the start of the factory day. */
+  cut_today: number;
+}
+
 /** GET /stitchers/:id/open — a stitcher's live stitching assignments (hand-over dialog). */
 export interface OpenStitching {
   batch_id: string;
@@ -910,7 +928,8 @@ export interface MaterialLotDetail extends MaterialLotRow {
 
 // ───── Lists & search (U2) ─────
 
-export type BatchListView = "cutting" | "ready" | "stitching" | "packing" | "completed" | "cancelled";
+export type BatchListView =
+  "to_cut" | "cutting" | "ready" | "stitching" | "packing" | "completed" | "cancelled";
 export type BatchSort = "created" | "code" | "quantity" | "phase" | "car" | "waiting";
 
 /** GET /batches query params — every one is also the admin's URL state. */

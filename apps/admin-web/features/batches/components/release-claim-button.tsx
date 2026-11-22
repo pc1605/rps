@@ -16,13 +16,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { useReleaseClaim } from "../hooks";
 
-/** Free a stuck cutting claim: the batch goes back to the open cutting queue. */
+/** Free a stuck cutting claim: the batch goes back to Needs a cutter (D48). */
 export function ReleaseClaimButton({ batchId, workerName }: { batchId: string; workerName: string }) {
   const release = useReleaseClaim(batchId);
   const confirm = async () => {
     try {
       await release.mutateAsync();
-      toast.success("Claim released", { description: "The batch is back in the cutting queue." });
+      toast.success("Claim released", {
+        description: "The batch is back in Needs a cutter. Assign a cutter again.",
+      });
     } catch (err) {
       toast.error("Couldn't release", { description: (err as Error).message });
     }
@@ -38,8 +40,9 @@ export function ReleaseClaimButton({ batchId, workerName }: { batchId: string; w
         <AlertDialogHeader>
           <AlertDialogTitle>Release {workerName}'s claim?</AlertDialogTitle>
           <AlertDialogDescription>
-            The batch goes back to the cutting queue so any cutter can start it. Nothing was reported cut on
-            this claim, so it is removed from the timeline (the batch history keeps a record).
+            The batch goes back to Needs a cutter and {workerName} no longer has it; assign a cutter again.
+            Nothing was reported cut on this claim, so it is removed from the timeline (the batch history
+            keeps a record).
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

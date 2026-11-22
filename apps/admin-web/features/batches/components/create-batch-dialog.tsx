@@ -69,9 +69,9 @@ export function CreateBatchDialog() {
       toast.success(`Batch ${batch.batch_code} created`, {
         description:
           useSt + useUn === 0
-            ? `${batch.units_total} mats waiting for cutting.`
+            ? `${batch.units_total} mats to cut — assign a cutter in Needs a cutter.`
             : toCut > 0
-              ? `${useSt + useUn} spare mats reused · ${toCut} to cut.`
+              ? `${useSt + useUn} spare mats reused · ${toCut} to cut — assign a cutter.`
               : `All ${batch.units_total} mats from spares — no cutting needed.`,
       });
       reset();

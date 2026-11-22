@@ -10,6 +10,7 @@ import { Stat } from "@/components/rps/stat";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StitchingAssignmentCard } from "@/features/batches/components/stitching-assignment-card";
+import { CuttingAssignmentCard } from "@/features/batches/components/cutting-assignment-card";
 import { BatchMaterials } from "@/features/batches/components/batch-materials";
 import { CancelBatchDialog } from "@/features/batches/components/cancel-batch-dialog";
 import { EditBatchDialog } from "@/features/batches/components/edit-batch-dialog";
@@ -132,6 +133,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* The one thing the admin may need to do */}
       <ShortCutPanel batch={batch} />
+      <CuttingAssignmentCard batch={batch} />
       <StitchingAssignmentCard batch={batch} />
 
       <section>

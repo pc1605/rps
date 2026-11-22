@@ -17,7 +17,7 @@ export function Pipeline() {
 
   // Who's on each stage right now (from /batches/stats — no full batch list needed)
   const who = (key: string): string[] => {
-    if (key === "ready") return [];
+    if (key === "ready" || key === "to_cut") return [];
     return (stats?.working?.[key as keyof typeof stats.working] ?? []).slice(0, 3);
   };
   if (isPending) return <Skeleton className="h-36 w-full" />;
@@ -27,7 +27,7 @@ export function Pipeline() {
       <ol className="flex min-w-[640px] items-stretch gap-2 sm:gap-4">
         {stages.map((v, i) => {
           const n = v.count && stats ? v.count(stats) : 0;
-          const ready = v.key === "ready";
+          const ready = v.assign === true;
           const names = who(v.key);
           return (
             <li key={v.key} className="flex flex-1 items-stretch gap-2 sm:gap-4">

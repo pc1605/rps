@@ -113,6 +113,7 @@ export function useSetAssignments(id: string) {
       qc.invalidateQueries({ queryKey: ["batches"] });
       qc.invalidateQueries({ queryKey: ["batch-stats"] });
       qc.invalidateQueries({ queryKey: ["stitcher-load"] });
+      qc.invalidateQueries({ queryKey: ["cutter-load"] });
     },
   });
 }
@@ -120,6 +121,10 @@ export function useSetAssignments(id: string) {
 /** Stitcher workload for the assign panel. */
 export const useStitcherLoads = (enabled = true) =>
   useQuery({ queryKey: ["stitcher-load"], queryFn: batchApi.stitcherLoads, enabled, ...LIVE });
+
+/** Cutter workload for the cutter assign panel (D48). */
+export const useCutterLoads = (enabled = true) =>
+  useQuery({ queryKey: ["cutter-load"], queryFn: batchApi.cutterLoads, enabled, ...LIVE });
 
 /** A stitcher's live stitching assignments (hand-over dialog). */
 export const useOpenStitching = (workerId: string, enabled = true) =>

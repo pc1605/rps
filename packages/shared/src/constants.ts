@@ -57,6 +57,8 @@ export const STATUS_LABEL: Partial<Record<BatchStatus, string>> = {
   awaiting_assignment: "Ready for stitching",
   cancelled: "Cancelled",
 };
+/** A batch in cutting that is awaiting_assignment waits for the admin to assign a cutter (D48). */
+export const NEEDS_CUTTER_LABEL = "Needs a cutter";
 
 export const REWORK_REASON_LABEL: Record<ReworkReason, string> = {
   stitching_fault: "Stitching fault",

@@ -15,12 +15,17 @@ import { batchApi } from "../api";
 import { useBatchPage, useMarkStickersPrinted } from "../hooks";
 import { PAGE_SIZE, useListParams } from "../use-list-params";
 import { AssignSheet, waitingFor } from "./assign-sheet";
+import { CutterAssignSheet } from "./cutter-assign-sheet";
 import { BatchFilters } from "./batch-filters";
 import { ReusedInLine } from "./reused-in";
 import { generateLabelPdf } from "../label-pdf";
 import type { Batch } from "../types";
 import { batchViews } from "../views";
 import { CarLink } from "@/components/rps/entity-link";
+
+// A short cut waits for the admin's decision in Ready to stitch (a re-cut back in cutting is not one).
+const isShort = (b: Batch) =>
+  b.current_phase === "stitching" && b.status === "awaiting_assignment" && b.cut_qty < b.quantity;
 
 const baseColumns: Column<Batch>[] = [
   {
@@ -46,7 +51,7 @@ const baseColumns: Column<Batch>[] = [
               🔧 {b.rework_open}
             </Chip>
           )}
-          {b.status === "awaiting_assignment" && b.cut_qty < b.quantity && (
+          {isShort(b) && (
             <span className="text-caption text-brand" title={`${b.cut_qty} of ${b.quantity} cut`}>
               ⚠ short
             </span>
@@ -137,9 +142,7 @@ const baseColumns: Column<Batch>[] = [
   },
 ];
 
-// Ready to stitch (U3): an assigning screen — car large, mats, waiting time, Assign.
-const isShort = (b: Batch) => b.status === "awaiting_assignment" && b.cut_qty < b.quantity;
-
+// Ready to stitch (U3) and Needs a cutter (D48): assigning screens — car large, mats, waiting time, Assign.
 function readyColumns(onAssign: (b: Batch) => void): Column<Batch>[] {
   return [
     {
@@ -169,7 +172,12 @@ function readyColumns(onAssign: (b: Batch) => void): Column<Batch>[] {
       sortKey: "quantity",
       align: "center",
       width: "w-[90px]",
-      cell: (b) => <span className="text-h2 tabular">{b.quantity}</span>,
+      // In cutting: the pieces still to cut (a re-cut has some cut already).
+      cell: (b) => (
+        <span className="text-h2 tabular">
+          {b.current_phase === "cutting" ? b.quantity - b.cut_qty : b.quantity}
+        </span>
+      ),
     },
     {
       key: "waiting",
@@ -222,6 +230,12 @@ export function BatchList() {
     setAssigning(b);
     setAssignOpen(true);
   };
+  const [cutterFor, setCutterFor] = useState<Batch | null>(null);
+  const [cutterOpen, setCutterOpen] = useState(false);
+  const openCutter = (b: Batch) => {
+    setCutterFor(b);
+    setCutterOpen(true);
+  };
 
   const printStickers = async (b: Batch) => {
     try {
@@ -269,7 +283,9 @@ export function BatchList() {
       ? [...baseColumns, stickerColumn]
       : view?.key === "ready"
         ? readyColumns(openAssign)
-        : baseColumns;
+        : view?.key === "to_cut"
+          ? readyColumns(openCutter)
+          : baseColumns;
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const page = params.page ?? 1;
@@ -375,6 +391,12 @@ export function BatchList() {
         readySince={assigning?.ready_since}
         open={assignOpen}
         onOpenChange={setAssignOpen}
+      />
+      <CutterAssignSheet
+        batchId={cutterFor?.id ?? null}
+        readySince={cutterFor?.ready_since}
+        open={cutterOpen}
+        onOpenChange={setCutterOpen}
       />
     </div>
   );

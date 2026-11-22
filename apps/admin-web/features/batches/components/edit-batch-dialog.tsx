@@ -22,8 +22,9 @@ import type { BatchDetail } from "../types";
 import { CarModelSelect } from "./car-model-select";
 import { RollSelect } from "./roll-select";
 
-/** True while the batch waits in the open cutting queue (nobody has claimed it). */
-export const canEditBatch = (b: BatchDetail) => b.current_phase === "cutting" && b.status === "pending";
+/** True while the batch waits to be cut (nobody has started it — with or without a cutter assigned). */
+export const canEditBatch = (b: BatchDetail) =>
+  b.current_phase === "cutting" && (b.status === "pending" || b.status === "awaiting_assignment");
 
 export function EditBatchDialog({ batch }: { batch: BatchDetail }) {
   const [open, setOpen] = useState(false);

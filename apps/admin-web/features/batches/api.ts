@@ -3,6 +3,7 @@ import type {
   CancelBatchInput,
   CancelOutcome,
   BatchListParams,
+  CutterLoad,
   BatchPage,
   HandOverInput,
   HandOverResult,
@@ -71,6 +72,8 @@ export const batchApi = {
   },
   /** Active stitchers, least open work first (assign panel). */
   stitcherLoads: async (): Promise<StitcherLoad[]> => (await http.get("/stitchers/load")).data.data,
+  /** Active cutters, least open work first (cutter assign panel, D48). */
+  cutterLoads: async (): Promise<CutterLoad[]> => (await http.get("/cutters/load")).data.data,
   openStitching: async (workerId: string): Promise<OpenStitching[]> =>
     (await http.get(`/stitchers/${workerId}/open`)).data.data,
   handOver: async (input: HandOverInput): Promise<HandOverResult[]> =>

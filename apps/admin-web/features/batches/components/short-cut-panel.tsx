@@ -67,10 +67,10 @@ export function ShortCutPanel({ batch }: { batch: BatchDetail }) {
       const res = await resolve.mutateAsync({ action, reason, note: note.trim() || undefined });
       toast.success(
         action === "split"
-          ? `Split — remainder batch ${res.remainder_batch_code} is in the cutting queue`
+          ? `Split — remainder batch ${res.remainder_batch_code} needs a cutter`
           : action === "reduce"
             ? `Reduced to ${batch.cut_qty} mats`
-            : `Sent back to cutting for the remaining ${short}`,
+            : `Sent back to cutting for the remaining ${short} — assign a cutter`,
       );
       setAction(null);
     } catch (err) {

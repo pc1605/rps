@@ -1,4 +1,4 @@
-import { PHASE_LABEL, SIZE_LABEL, STATUS_LABEL } from "@rps/shared";
+import { NEEDS_CUTTER_LABEL, PHASE_LABEL, SIZE_LABEL, STATUS_LABEL } from "@rps/shared";
 import type { Phase, Status } from "@/features/batches/types";
 
 /** Phase → utility classes. The ONLY place phase colors are defined on the web. */
@@ -74,7 +74,11 @@ export const unitTone = {
 
 export const sizeLabel = SIZE_LABEL;
 
-/** Resolve the display tone for a batch (status wins over phase). */
+/** Resolve the display tone for a batch (status wins over phase). Waiting for an assignment in
+ * cutting is "Needs a cutter" (D48); in stitching, "Ready for stitching". */
 export function batchTone(phase: Phase, status: Status) {
-  return statusTone[status] ?? phaseTone[phase];
+  const tone = statusTone[status];
+  if (tone && status === "awaiting_assignment" && phase === "cutting")
+    return { ...tone, label: NEEDS_CUTTER_LABEL };
+  return tone ?? phaseTone[phase];
 }
