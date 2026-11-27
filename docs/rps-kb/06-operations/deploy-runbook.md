@@ -162,6 +162,8 @@ ssh -t ubuntu@<ip> sudo /srv/rps/restore.sh
   uncompressed, backup to an S3 stand-in, restore from a copy on the server and from the bucket (data and photos).
 - First real server (27 Nov 2026): Lightsail **Sydney** trial (the account can only use Sydney until it moves to
   Mumbai), `rps.riddhicarmats.com`. `server-setup.sh` worked as written. `ship.sh` built, sent and migrated but never
-  started the app: `docker compose run` without `-T` read the rest of the remote script as its input, and the script
-  still ended with exit 0. Fixed with `-T`. If an update ever stops after "Database changes", finish it on the
-  server with `cd /srv/rps && sudo docker compose up -d --remove-orphans`.
+  started the app, and still ended with exit 0: the remote steps reach bash on its input, and `docker compose run` /
+  `exec` read that input too (even with `-T`) and swallowed the remaining steps. `-T` alone did not fix it; the remote
+  steps now sit in a `{ … } </dev/null` block. If an update ever stops part way (`RPS_VERSION` in `/srv/rps/.env`
+  differs from the running images), finish it on the server with
+  `cd /srv/rps && sudo docker compose up -d --remove-orphans`.
