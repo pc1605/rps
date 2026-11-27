@@ -41,7 +41,8 @@ fi
 sed -i "s|^RPS_VERSION=.*|RPS_VERSION=$VERSION|" .env
 echo "==> Database changes"
 docker compose up -d --wait postgres
-docker compose run --rm --no-deps backend sh -c 'migrate -path /app/migrations -database "\$DATABASE_URL" up'
+# -T: without it the command reads this script's remaining lines as its input, and nothing after it runs.
+docker compose run --rm -T --no-deps backend sh -c 'migrate -path /app/migrations -database "\$DATABASE_URL" up'
 echo "==> Starting $VERSION"
 docker compose up -d --remove-orphans
 docker image prune -af --filter "until=720h" >/dev/null

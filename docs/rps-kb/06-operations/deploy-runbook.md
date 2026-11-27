@@ -160,4 +160,8 @@ ssh -t ubuntu@<ip> sudo /srv/rps/restore.sh
 - Tested on the dev machine (19 Nov 2026) under the project name `rps-deploytest`: the stack starts, HTTPS + headers,
   the login cookie (`secure`), the login limit sees each client's own address through Caddy, the live stream passes
   uncompressed, backup to an S3 stand-in, restore from a copy on the server and from the bucket (data and photos).
-  **Not yet run on a real server**: `server-setup.sh` and `ship.sh` over SSH.
+- First real server (27 Nov 2026): Lightsail **Sydney** trial (the account can only use Sydney until it moves to
+  Mumbai), `rps.riddhicarmats.com`. `server-setup.sh` worked as written. `ship.sh` built, sent and migrated but never
+  started the app: `docker compose run` without `-T` read the rest of the remote script as its input, and the script
+  still ended with exit 0. Fixed with `-T`. If an update ever stops after "Database changes", finish it on the
+  server with `cd /srv/rps && sudo docker compose up -d --remove-orphans`.
