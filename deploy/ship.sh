@@ -31,8 +31,11 @@ echo "==> Sending server files"
 tar -C deploy -cz compose.yml Caddyfile backup.sh restore.sh uptime.sh |
   ssh "$SERVER" "sudo tar -xz -C /srv/rps && sudo chmod 0755 /srv/rps/*.sh"
 
+# The steps arrive on bash's input. Docker commands (compose exec / run, even with -T) read that input too and swallow
+# the lines after them, so nothing else runs. The { } block is read whole first and its commands get no input.
 ssh "$SERVER" "sudo bash -s" <<REMOTE
 set -euo pipefail
+{
 cd /srv/rps
 if [ -n "\$(docker compose ps -q postgres 2>/dev/null)" ]; then
   echo "==> Database copy before the update"
@@ -41,10 +44,11 @@ fi
 sed -i "s|^RPS_VERSION=.*|RPS_VERSION=$VERSION|" .env
 echo "==> Database changes"
 docker compose up -d --wait postgres
-docker compose run --rm --no-deps backend sh -c 'migrate -path /app/migrations -database "\$DATABASE_URL" up'
+docker compose run --rm -T --no-deps backend sh -c 'migrate -path /app/migrations -database "\$DATABASE_URL" up'
 echo "==> Starting $VERSION"
 docker compose up -d --remove-orphans
 docker image prune -af --filter "until=720h" >/dev/null
+} </dev/null
 REMOTE
 
 echo "==> Checking"
