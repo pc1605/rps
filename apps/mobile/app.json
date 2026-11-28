@@ -54,7 +54,8 @@
           "color": "#B45309",
           "defaultChannel": "work"
         }
-      ]
+      ],
+      "./plugins/with-release-signing"
     ]
   }
 }
