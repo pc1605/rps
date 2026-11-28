@@ -22,7 +22,13 @@ JS-only changes: Metro reload (dev build) — but phones on a release APK need a
 ```bash
 unzip -p android/app/build/outputs/apk/release/app-release.apk assets/index.android.bundle | strings | grep -E "api/v1" | head
 ```
-Options, and when each fits:
+**Release APKs use the live server.** `apps/mobile/.env.production` (committed — the address is public) sets
+`https://rps.riddhicarmats.com/api/v1`. A release build bundles with `NODE_ENV=production`, and Expo reads
+`.env.production.local` → `.env.local` → `.env.production` → `.env` (first wins), so it beats the dev `.env`. Dev
+builds keep using `.env` (ngrok / LAN below). A `.env.local` would win over `.env.production` — don't keep one when
+building for the factory. Run the `unzip … | grep api/v1` check above on every APK before sending it out.
+
+Options for development, and when each fits:
 | URL | Works for | Caveat |
 |---|---|---|
 | `http://10.0.2.2:8080` | emulator only | phones can't use it |
@@ -33,7 +39,8 @@ Backend binds `":" + PORT` (all interfaces) — no change needed. Test reachabil
 
 ## Distribution (private, no store)
 Direct APK (WhatsApp/Drive/USB), "allow unknown sources" once. Auth (enrollment code + PIN) is the real access control.
-Post-deploy plan: EAS Build with a proper keystore + EAS Update for OTA JS updates; API URL becomes the Railway domain.
+Later, maybe: EAS Build with a proper keystore + EAS Update for OTA JS updates. The API URL stays
+`rps.riddhicarmats.com` (Lightsail, D46) — moving the server only changes the DNS record, not the APK.
 
 ## pnpm + Expo essentials
 Hoisted node_modules (root `.npmrc` + `pnpm-workspace.yaml nodeLinker: hoisted`). Packages with postinstall scripts must be
