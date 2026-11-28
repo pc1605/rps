@@ -3,10 +3,10 @@
 **RPS (Riddhi Production System)** tracks car floor-mat production at Riddhi Car Floor Laminates (Ambika Enterprise),
 Ahmedabad. It has two parts:
 
-- **Admin website** — for the owner and supervisors, on a laptop or computer.
+- **Admin website** — for the owner and supervisors, in the browser on a laptop, computer or tablet.
 - **RPS Worker phone app** — for cutters, stitchers and packers, on Android phones.
 
-This document describes RPS **as of 22 November 2026**. "Cannot" means it is not available in RPS on that date.
+This document describes RPS **as of 28 November 2026**. "Cannot" means it is not available in RPS on that date.
 
 ---
 
@@ -164,7 +164,8 @@ This document describes RPS **as of 22 November 2026**. "Cannot" means it is not
 - Packing is an open queue. Cutting is assigned by the admin (one cutter per batch, no shares); stitching is assigned
   with shares.
 - A batch is one car item; mixed batches are not possible.
-- No machine integration (cutting machine, scales) and no label printer connection; labels are PDFs.
+- No machine integration (cutting machine, scales) and no label printer connection; labels are PDFs,
+  printed from a computer or tablet to any printer that device can use.
 
 **Phone app**
 - Android only; no iPhone app.
@@ -174,10 +175,11 @@ This document describes RPS **as of 22 November 2026**. "Cannot" means it is not
 - Workers cannot see other workers' output, and never see money.
 - A worker cannot sign in on two phones at once.
 
-**Not yet live**
-- RPS is not yet running on a server on the internet. It runs on the developer's computer for testing.
-  The server (AWS, Mumbai) is decided and prepared but not set up.
-- App icon, splash screen and logo are still placeholders.
+**Server**
+- RPS is live at **https://rps.riddhicarmats.com** since 27 November 2026 (admin website and phone app). The
+  database is copied every night, also to storage outside the server.
+- The server is a trial in Sydney, so each action takes a little longer (about half a second). It moves to Mumbai
+  before 25 May 2027; the address stays the same and the phones need no new app.
 
 ---
 
@@ -188,7 +190,7 @@ This document describes RPS **as of 22 November 2026**. "Cannot" means it is not
 - **Car item** — a car model in one product line (e.g. Baleno · Rexine R), with size S/M/L and a barcode.
 - **Product line** — the material family of the mat: Rexine (R), Rexine (87), PVC 1.8 mm, PVC 2.1 mm.
 - **Taffeta label** — fabric QR label stitched into the mat during stitching.
-- **Packing sticker** — paper QR sticker put on the bag at packing.
+- **Packing sticker** — paper QR sticker put on the bag at packing; it also shows the car item's barcode (Code128).
 - **Share / quota** — how many mats of a batch one stitcher must stitch.
 - **Hand over** — moving a stitcher's remaining share to another stitcher.
 - **Short cut** — fewer pieces cut than the batch needs.

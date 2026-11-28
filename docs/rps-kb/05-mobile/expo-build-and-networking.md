@@ -29,8 +29,9 @@ after uninstalling it.
 - **How**: `android/` is generated and not in Git, so `plugins/with-release-signing.js` (listed in `app.json`) writes
   the release signing into `android/app/build.gradle` on every `expo prebuild`. A release build without the
   properties stops with an error instead of falling back to the debug key.
-- Check an APK's signer: `keytool -printcert -jarfile android/app/build/outputs/apk/release/app-release.apk`
-  → `Owner: CN=RPS…`, never `CN=Android Debug`.
+- Check an APK's signer (SDK build-tools; `keytool -printcert -jarfile` shows nothing, the APK has no v1 signature):
+  `~/Android/Sdk/build-tools/<version>/apksigner verify --print-certs android/app/build/outputs/apk/release/app-release.apk`
+  → `Signer #1 certificate DN: CN=RPS Worker, …`, never `CN=Android Debug`. Key SHA-256 starts `add0ed8e`.
 
 ## API URL — baked at build time
 `EXPO_PUBLIC_API_URL` is compiled into the bundle. Verify what an APK carries:
