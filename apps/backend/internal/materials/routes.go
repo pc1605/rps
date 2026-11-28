@@ -3,8 +3,9 @@ package materials
 import "github.com/gofiber/fiber/v2"
 
 // RegisterRoutes mounts the materials API. `admin` is the owner/supervisor role gate (U0 / G4);
+// `owner` lets only the owner through (recipes are hidden from supervisors).
 // /worker/* routes check the worker token in their handlers.
-func RegisterRoutes(api fiber.Router, svc *Service, admin fiber.Handler) {
+func RegisterRoutes(api fiber.Router, svc *Service, admin, owner fiber.Handler) {
 	h := NewHandler(svc)
 
 	api.Get("/materials/types", admin, h.ListTypes)
@@ -30,9 +31,9 @@ func RegisterRoutes(api fiber.Router, svc *Service, admin fiber.Handler) {
 	api.Patch("/consumption-groups/:id", admin, h.UpdateGroup)
 	api.Delete("/consumption-groups/:id", admin, h.DeleteGroup)
 
-	api.Get("/recipes", admin, h.RecipeGrid)
+	api.Get("/recipes", owner, h.RecipeGrid)
 	api.Get("/recipes/resolve", admin, h.Resolve)
-	api.Put("/recipes/:product_line_id/:group_id/lines", admin, h.PutRecipeLines)
+	api.Put("/recipes/:product_line_id/:group_id/lines", owner, h.PutRecipeLines)
 	api.Get("/car-models/:id/material-overrides", admin, h.GetOverrides)
 	api.Put("/car-models/:id/material-overrides", admin, h.PutOverrides)
 

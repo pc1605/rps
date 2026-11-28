@@ -139,7 +139,8 @@ Tabs are routes: **Stock** `/materials` · **Ledger** `/materials/ledger` · **T
 - **Types:** card per material (unit, stock, low level, active) + edit dialog (Delete only when unused — else it says
   why and points to Active; turning Active off warns about recipe lines / overrides that will be skipped); variants as chips with add/edit (name +
   width in inches → `specs.width_in`, other spec keys kept).
-- **Recipes:** product line select (`?line=`), grid material(+width) × consumption group, per-group edit dialog
+- **Recipes:** owner only — supervisors don't see the tab or the car page's "Recipe" link, and the page shows
+  "Only the owner can see recipes" (28 Nov 2026). Product line select (`?line=`), grid material(+width) × consumption group, per-group edit dialog
   (`LinesEditor`: material, any width / specific width, qty > 0) → full replace; PLACEHOLDER warning; consumption groups
   table + new/edit dialog (Delete only with no cars, recipe lines or size default).
 - **Car:** item dialog has the consumption group; the car page has **Materials** (engine dry run for N mats: source,

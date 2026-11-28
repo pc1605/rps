@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/features/auth/store";
 import { type Draft, fromDrafts, LinesEditor, toDrafts } from "@/features/materials/components/lines-editor";
 import { useOverrides, usePutOverrides, useResolve } from "@/features/materials/hooks";
 import { cn } from "@/lib/utils";
@@ -106,13 +107,14 @@ export function CarMaterials({
   const [qty, setQty] = useState("1");
   const n = Math.max(1, Math.min(999, Number(qty) || 1));
   const { data, isPending, isError } = useResolve(carId, n);
+  const isOwner = useAuth((s) => s.user?.role === "owner");
 
   return (
     <section className="space-y-3">
       <SectionTitle
         aside={
           <span className="flex items-center gap-2">
-            {lineId && (
+            {lineId && isOwner && (
               <Link href={`/materials/recipes?line=${lineId}`} className="text-small hover:text-foreground">
                 Recipe
               </Link>

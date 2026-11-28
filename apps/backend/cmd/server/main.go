@@ -90,7 +90,7 @@ func main() {
 	worker.RegisterRoutes(api, workerSvc, authSvc)
 	stock.RegisterRoutes(api, stockSvc, authSvc)
 	report.RegisterRoutes(api, reportSvc, authSvc)
-	materials.RegisterRoutes(api, materialsSvc, authSvc.RequireRole("owner", "supervisor"))
+	materials.RegisterRoutes(api, materialsSvc, authSvc.RequireRole("owner", "supervisor"), authSvc.RequireRole("owner"))
 
 	// ───── Lifecycle ─────
 	runServer(app, cfg, liveHub)
