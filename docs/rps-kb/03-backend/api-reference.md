@@ -88,8 +88,8 @@ Quantities are JSON numbers with ≤ 3 decimals (money ≤ 2), parsed exactly (n
 | GET/POST | `/consumption-groups` | rows add `car_count`, `recipe_lines`, `deletable`. `{name, sort?, is_active?, default_for_size?}` — name and size default unique; no `sort` = after the last group (MAX + 10) |
 | DELETE | `/consumption-groups/:id` | 204; empty recipe headers go with it. 409 `group_in_use` (cars) · `group_is_default` · `group_has_recipes`. tx + audit |
 | PATCH | `/consumption-groups/:id` | same fields (`default_for_size: null` clears). Can't deactivate while cars use it (409 `group_in_use`) or while it's a size default (409 `group_is_default`) |
-| GET | `/recipes?product_line_id` | grid: every group with its recipe lines for the line |
-| PUT | `/recipes/:product_line_id/:group_id/lines` | body = array `[{material_type_id, variant_id?, qty_per_mat > 0}]`, full replace; creates the recipe row |
+| GET | `/recipes?product_line_id` | grid: every group with its recipe lines for the line. **Owner only** (supervisor → 403, owner, 28 Nov 2026) |
+| PUT | `/recipes/:product_line_id/:group_id/lines` | body = array `[{material_type_id, variant_id?, qty_per_mat > 0}]`, full replace; creates the recipe row. **Owner only** |
 | GET/PUT | `/car-models/:id/material-overrides` | body = array, `qty_per_mat ≥ 0` (0 = doesn't use it), full replace |
 | GET | `/recipes/resolve?car_model_id&quantity&lot_id?` | **dry run** of the engine (same planner): per type `source, variant, qty_per_mat, need, available, shortfall, draws[]`; no writes |
 | GET | `/batches/:id/materials` | plan rows + consume/shortfall movements grouped by cutting completion |

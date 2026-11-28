@@ -16,11 +16,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MATERIAL_UNIT_LABEL } from "@rps/shared";
-import { useResolve } from "@/features/materials/hooks";
 import { useSpares } from "@/features/stock/hooks";
 import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
 import { useCreateBatch } from "../hooks";
 import { CarModelSelect } from "./car-model-select";
 import { RollSelect } from "./roll-select";
@@ -157,10 +154,6 @@ export function CreateBatchDialog() {
               <RollSelect id="batch-roll" carModelId={carModelId} value={rollId} onChange={setRollId} />
             </div>
 
-            {carModelId && toCut >= 1 && (
-              <MaterialsPreview carId={Number(carModelId)} qty={toCut} lotId={rollId || undefined} />
-            )}
-
             <div className="space-y-2">
               <Label htmlFor="batch-notes">
                 Notes <span className="font-normal text-muted-foreground">(optional)</span>
@@ -186,38 +179,5 @@ export function CreateBatchDialog() {
         </form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** What cutting this batch would draw right now (engine dry run) — shortfalls show before creating. */
-function MaterialsPreview({ carId, qty, lotId }: { carId: number; qty: number; lotId?: string }) {
-  const { data } = useResolve(carId, qty, lotId);
-  if (!data) return null;
-  if (data.lines.length === 0)
-    return (
-      <p className="text-caption text-muted-foreground">
-        No recipe for this car yet — materials won't be recorded.
-      </p>
-    );
-  return (
-    <div className="rounded-md border p-3">
-      <div className="mb-1.5 text-caption text-muted-foreground">Materials at cutting (if cut now)</div>
-      <ul className="space-y-1">
-        {data.lines
-          .filter((l) => l.need !== 0)
-          .map((l) => (
-            <li key={l.material_type_id} className="flex justify-between gap-3 text-small">
-              <span>
-                {l.type_name}
-                {l.variant_name && <span className="text-muted-foreground"> · {l.variant_name}</span>}
-              </span>
-              <span className={cn("tabular", (l.shortfall > 0 || l.source === "none") && "text-danger")}>
-                {l.need != null ? `${l.need} ${MATERIAL_UNIT_LABEL[l.unit]}` : "no recipe qty"}
-                {l.shortfall > 0 && ` · short ${l.shortfall}`}
-              </span>
-            </li>
-          ))}
-      </ul>
-    </div>
   );
 }

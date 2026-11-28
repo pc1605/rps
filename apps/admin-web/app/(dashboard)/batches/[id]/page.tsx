@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StitchingAssignmentCard } from "@/features/batches/components/stitching-assignment-card";
 import { CuttingAssignmentCard } from "@/features/batches/components/cutting-assignment-card";
-import { BatchMaterials } from "@/features/batches/components/batch-materials";
 import { CancelBatchDialog } from "@/features/batches/components/cancel-batch-dialog";
 import { EditBatchDialog } from "@/features/batches/components/edit-batch-dialog";
 import { BatchTimeline } from "@/features/batches/components/batch-timeline";
@@ -147,8 +146,6 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
       </section>
-
-      <BatchMaterials batchId={batch.id} />
 
       <section>
         <SectionTitle>Production timeline</SectionTitle>

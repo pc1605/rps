@@ -31,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/features/auth/store";
 import { useProductLines } from "@/features/catalog/hooks";
 import { DeleteButton, groupBlocked } from "@/features/materials/components/delete-button";
 import { type Draft, fromDrafts, LinesEditor, toDrafts } from "@/features/materials/components/lines-editor";
@@ -427,6 +428,15 @@ function Recipes() {
 }
 
 export default function RecipesPage() {
+  const isOwner = useAuth((s) => s.user?.role === "owner");
+  if (!isOwner)
+    return (
+      <div className="space-y-6">
+        <PageHeader title="Materials" />
+        <MaterialsNav />
+        <EmptyState icon={BookOpen} title="Only the owner can see recipes" />
+      </div>
+    );
   return (
     <Suspense fallback={null}>
       <Recipes />
