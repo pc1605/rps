@@ -144,7 +144,8 @@ Tabs are routes: **Stock** `/materials` · **Ledger** `/materials/ledger` · **T
   table + new/edit dialog (Delete only with no cars, recipe lines or size default).
 - **Car:** item dialog has the consumption group; the car page has **Materials** (engine dry run for N mats: source,
   width, qty/mat, lots it would draw, available, shortfall) + **Edit overrides** (qty ≥ 0, 0 = not used) + Edit.
-- **Batch:** **Materials used** per cutting completion (plan × mats, source, lots drawn, shortfall). **New batch:** the
-  roll picker lists active lots of the car's sheet material (type code = product line code) and a live "materials at
-  cutting" preview shows shortfalls before creating.
+- **Batch:** no materials section (removed at the owner's request, 28 Nov 2026; consumption is still recorded and
+  shows on the lot pages and dashboard). **New batch:** the
+  roll picker lists active lots of the car's sheet material (type code = product line code); no materials preview
+  (removed at the owner's request, 28 Nov 2026 — the car page's Materials dry run still shows it).
 - **Dashboard:** low-stock types and 30-day shortfalls (from `/batches/stats`) replace the old per-roll low cards.

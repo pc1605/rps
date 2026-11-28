@@ -1,6 +1,5 @@
 import type {
   AdjustLotInput,
-  BatchMaterials,
   CarMaterialOverrides,
   ConsumptionGroupInput,
   ConsumptionGroupRow,
@@ -91,8 +90,4 @@ export const materialsApi = {
     d(await http.put(`/car-models/${carId}/material-overrides`, lines)),
   resolve: async (carId: number, quantity: number, lotId?: string): Promise<MaterialsResolveResult> =>
     d(await http.get("/recipes/resolve", { params: { car_model_id: carId, quantity, lot_id: lotId } })),
-
-  // batch
-  batchMaterials: async (batchId: string): Promise<BatchMaterials> =>
-    d(await http.get(`/batches/${batchId}/materials`)),
 };

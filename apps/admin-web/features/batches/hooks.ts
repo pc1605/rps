@@ -63,7 +63,6 @@ export function useEditBatch(id: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["batch", id] });
       qc.invalidateQueries({ queryKey: ["batches"] });
-      qc.invalidateQueries({ queryKey: ["batch-materials", id] });
     },
   });
 }

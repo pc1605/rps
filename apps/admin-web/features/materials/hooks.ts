@@ -60,12 +60,6 @@ export const useResolve = (carId: number, quantity: number, lotId?: string) =>
     enabled: carId > 0 && quantity > 0,
     placeholderData: keepPreviousData,
   });
-export const useBatchMaterials = (batchId: string) =>
-  useQuery({
-    queryKey: ["batch-materials", batchId],
-    queryFn: () => materialsApi.batchMaterials(batchId),
-    ...live(10_000),
-  });
 
 /** Anything that moves stock or changes catalogue data refreshes every materials view. */
 function useStockMutation<TVars, TRes>(fn: (v: TVars) => Promise<TRes>, keys: string[][] = []) {

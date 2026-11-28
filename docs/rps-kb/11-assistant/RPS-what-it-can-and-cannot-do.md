@@ -45,8 +45,7 @@ This document describes RPS **as of 22 November 2026**. "Cannot" means it is not
 - **Short cut** (fewer pieces cut than ordered): the admin chooses **Split** (the rest becomes a new batch),
   **Reduce** (the batch becomes smaller) or **Re-cut** (back to cutting for the missing pieces). A reason is required.
 - **Undo a scan** made by mistake, with a reason, only until the next stage has started on that mat.
-- Batch page: full timeline (who did what, when, how long), every mat with who stitched and packed it, and the
-  materials used.
+- Batch page: full timeline (who did what, when, how long) and every mat with who stitched and packed it.
 
 **Assigning cutters**
 - Every new batch waits in **Needs a cutter** until the admin picks one cutter for it; only that cutter sees it.
