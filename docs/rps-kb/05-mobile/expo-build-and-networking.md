@@ -17,6 +17,21 @@ adb -s <SERIAL> logcat "*:S" ReactNativeJS:V                # JS logs (quote "*:
 ```
 JS-only changes: Metro reload (dev build) — but phones on a release APK need a rebuild + reinstall.
 
+## Release signing — RPS's own key (never change it)
+Phones install an update only when it is signed by the **same key** as the installed app. Lose or change the key and
+every phone must uninstall, reinstall and be set up again. Release APKs are signed with RPS's own key (from 28 Nov
+2026); the earlier test APKs used the public debug key, so a phone that has one installs the first signed APK only
+after uninstalling it.
+- **Key file**: `~/.rps/rps-release.keystore` (next to the Firebase files). Not in Git. Keep two copies off the
+  laptop (USB drive, password manager) together with its password.
+- **Passwords**: `~/.gradle/gradle.properties` (outside the repo, `chmod 600`):
+  `RPS_RELEASE_STORE_FILE`, `RPS_RELEASE_STORE_PASSWORD`, `RPS_RELEASE_KEY_ALIAS=rps`, `RPS_RELEASE_KEY_PASSWORD`.
+- **How**: `android/` is generated and not in Git, so `plugins/with-release-signing.js` (listed in `app.json`) writes
+  the release signing into `android/app/build.gradle` on every `expo prebuild`. A release build without the
+  properties stops with an error instead of falling back to the debug key.
+- Check an APK's signer: `keytool -printcert -jarfile android/app/build/outputs/apk/release/app-release.apk`
+  → `Owner: CN=RPS…`, never `CN=Android Debug`.
+
 ## API URL — baked at build time
 `EXPO_PUBLIC_API_URL` is compiled into the bundle. Verify what an APK carries:
 ```bash
